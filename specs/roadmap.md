@@ -2,147 +2,172 @@
 
 ## Intended initial release
 
-A responsive, playful web demo in which a user creates custom categories, describes one or more `$`-denominated expenses naturally, reviews AI classifications, corrects them when needed, and sees persistent categorized lists and a synchronized spending chart.
+A responsive, publicly hosted classification demo in which a visitor adjusts session-only categories, describes one or more expenses naturally, reviews and corrects AI classifications, and sees cumulative categorized results and a synchronized spending chart in English or Spanish.
 
-Detailed tasks, acceptance cases, and implementation notes belong in a dated phase specification rather than this roadmap.
+Detailed implementation decisions belong in dated phase specifications. Each roadmap phase ends with an observable review point.
 
 ## Phase 0 — Product and UI design
 
 Status: Complete
 
-Outcome: The core expense-capture experience has an agreed information architecture, interaction model, responsive layout, and visual direction that can guide implementation without relying on guesswork.
+Outcome: The core workflow, responsive layout, major interface states, and playful visual direction are represented by an approved HTML mockup and supporting assets.
 
 Scope:
 
-- Discuss and define the primary user flow from category setup and natural-language entry through classification review and spending insight.
-- Explore the interface through rough sketches, wireframes, and progressively higher-fidelity mockups.
-- Define desktop and mobile layouts for expense entry, category management, the five deletable default categories, **Unclassified** expenses, categorized lists, totals, and the pie or donut chart.
-- Specify important empty, loading, success, partial-success-as-success, complete-extraction-failure, provider-error, and retry states.
-- Establish the playful visual direction, category color behavior, accessible hierarchy, and appropriate placements for the rat mascot.
-- Design rat dialogue-bubble variants for success, error, warning, progress, and informational feedback across desktop and narrow screens.
-- Design a compact EN/ES sliding segmented control and validate both layouts with representative English and Spanish copy, including text expansion.
-- Select a provisional mascot asset while allowing a later human-drawn replacement.
+- Define the flow from category setup and natural-language entry through classification review and visualization.
+- Establish desktop and mobile layouts, accessible hierarchy, category color behavior, and mascot placement.
+- Represent empty, loading, success, extraction-failure, provider-error, and retry states.
+- Define rat dialogue variants and the compact English/Spanish language control.
+- Select the provisional mascot assets.
 
 Completion evidence:
 
-- At least one approved desktop mockup and one approved narrow-screen mockup cover the complete core workflow.
-- The mockups identify component hierarchy, primary actions, responsive changes, and all important system states.
-- Feedback mockups show concise rat dialogue, any required recovery action, and how field-level validation remains connected to its source.
-- Approved desktop and narrow-screen mockups show the language control and the complete core workflow in both English and Spanish.
-- The design remains understandable without color alone and includes keyboard focus and readable-chart considerations.
-- Material design decisions are reflected in the mission and technical constraints; unresolved choices are explicitly labeled.
+- `docs/ui-mockup.html` provides the visual source for the initial React migration.
+- Desktop and narrow layouts cover the principal workflow and feedback states.
+- English and Spanish variants are represented with realistic copy.
 
 Dependencies: None.
 
-## Phase 1 — Local expense workspace
+## Phase 1 — React project foundation
 
 Status: Not started
 
-Outcome: A user can manage categories and expenses in a responsive single-page workspace, with changes surviving refresh.
+Outcome: The repository has a maintainable React development environment in which the approved interface can be migrated and reviewed component by component.
 
 Scope:
 
-- Scaffold the approved Next.js, TypeScript, and Tailwind baseline.
-- Implement the approved playful visual system, responsive layouts, accessible interaction patterns, and reserved rat-mascot placements from Phase 0.
-- Implement the reusable, accessible rat-dialogue feedback component defined in Phase 0.
-- Implement typed English and Spanish message dictionaries, the accessible EN/ES segmented slider, immediate locale switching, and persisted locale preference.
-- Provision **Food**, **Home**, **Transport**, **Fun**, and **Unclassified** for a new workspace, then support rename, recolor, and safe deletion for every category, including those defaults.
-- Implement the expense and category data model, local persistence, validation, and migration boundary.
-- Provide editable local expense records, **Unclassified** grouping, and safe category-deletion reassignment without requiring the AI integration.
+- Scaffold Next.js, React, strict TypeScript, and Tailwind CSS.
+- Configure Storybook for isolated component and page-state review.
+- Establish the application, component, story, asset, localization, and test structure.
+- Add standard development, Storybook, formatting, linting, type-checking, test, and production-build commands.
+- Add only the dependencies needed by the approved technical baseline.
 
 Completion evidence:
 
-- Category and expense interactions work by keyboard and at representative mobile and desktop widths.
-- Valid state survives refresh; invalid stored data fails safely.
-- Deleting a used category requires reassignment; **Unclassified** is the default destination unless it is being deleted.
-- Unit and component tests cover the local domain rules.
+- The application and Storybook start from documented commands.
+- A production build, formatting check, lint check, and strict type check pass.
+- A representative component story verifies that Tailwind styles and public assets work in both environments.
 
 Dependencies: Phase 0.
 
-## Phase 2 — Natural-language AI capture
+## Phase 2 — HTML mockup migration
 
 Status: Not started
 
-Outcome: A user can submit a sentence containing one or several expenses and receive a validated, editable batch classified into current categories.
+Outcome: The approved HTML mockup is faithfully reproduced as reusable React components before intentional product or visual changes are introduced.
 
 Scope:
 
-- Add the server-only `/api/classify` boundary and OpenRouter configuration.
-- Use `google/gemma-4-26b-a4b-it:free` as the initial configurable model.
-- Extract descriptions and currency-neutral `$` amounts, normalize unknown categories to **Unclassified**, and accept any non-empty usable subset as success.
-- Accept natural-language expense batches in English and Spanish while preserving user wording.
-- Add loading, retry, provider error, malformed-output, and preserved-input behavior.
-- Allow review, correction, editing, and deletion of returned expenses.
+- Decompose the mockup into reusable layout, capture, category, result, chart, language-control, mascot, and rat-dialogue components.
+- Reproduce the complete responsive dashboard in React using fixture data.
+- Preserve the mockup's typography, spacing, hierarchy, colors, assets, and desktop-to-mobile behavior.
+- Move English and Spanish copy into complete typed dictionaries and reproduce the language variants.
+- Add Storybook stories for the components, responsive compositions, and important empty, loading, success, and error states.
+- Keep components driven by explicit props so later session and provider logic can be added without rewriting their presentation.
 
 Completion evidence:
 
-- A multi-expense sentence produces separate valid records through a mocked deterministic integration test.
-- No provider credential reaches the client bundle or response payload.
-- Partially usable provider output saves the valid expenses and presents the ordinary success state.
-- A result with zero usable expenses saves nothing, shows the confused-rat error, and retains the user's original textarea content.
-- Provider failures retain the user's original text and expose a retry action.
-- A manual test with the configured OpenRouter model validates the live integration when an API key is available.
+- Side-by-side review shows close visual parity with the approved HTML at representative desktop and narrow widths.
+- Storybook exposes the principal components and interface states in English and Spanish.
+- The migrated page contains no persistence or live AI integration and renders deterministically from fixtures.
+- Keyboard focus, semantic labels, and reduced-motion behavior represented by the mockup are preserved.
 
 Dependencies: Phase 1.
 
-## Phase 3 — Spending story and playful presentation
+## Phase 3 — Interactive session
 
 Status: Not started
 
-Outcome: Users can understand where their money went at a glance through synchronized totals, categorized lists, and an engaging visual summary.
+Outcome: The migrated interface behaves as a complete session-only demo using deterministic fixture classifications.
 
 Scope:
 
-- Add overall and per-category totals derived from stored expenses.
-- Add the donut or pie chart with accessible legend and textual equivalents.
-- Refine category grouping, **Unclassified** presentation, empty states, friendly copy, motion, and visual hierarchy.
-- Integrate the selected `public/assets/rat-mascot.png` artwork in suitable empty, welcome, or feedback states without letting it compete with financial information.
-- Refine rat dialogue tone, responsive placement, visual variants, and transitions while respecting reduced-motion preferences.
-- Complete and review English and Spanish chart labels, empty states, review copy, and rat dialogue for equivalent meaning and tone.
+- Add in-memory React state with no browser or server-side persistence.
+- Start every session with **Food**, **Home**, **Transport**, and permanent **Unclassified**.
+- Create categories subject to the ten-category and 24-character-name rules, assigning colors from an accessible palette.
+- Delete any category except **Unclassified** and move its expenses to **Unclassified**.
+- Accumulate fixture classification batches during the page session.
+- Reclassify and delete expenses without editing their description or amount.
+- Derive categorized lists, totals, and chart data from the same expense collection.
+- Reset the complete demo naturally on refresh; do not add a clear-session action.
+- Connect immediate English/Spanish switching without persistence.
 
 Completion evidence:
 
-- Adding, editing, reclassifying, or deleting an expense updates list totals and chart data immediately from one source of truth.
-- Chart information remains understandable without color and when the chart cannot be perceived.
-- Reduced-motion, focus, contrast, mobile layout, and empty-state checks pass.
+- Category creation, category deletion, reclassification, and expense deletion work by keyboard and at representative responsive widths.
+- Every supported change updates lists, totals, and the chart immediately from one source of truth.
+- Deleting a populated category moves its expenses to permanent **Unclassified**.
+- Refreshing restores the initial categories and clears all session changes without accessing browser storage.
+- Component and unit tests cover the session rules and derived visualization data.
 
-Dependencies: Phases 1 and 2.
+Dependencies: Phase 2.
 
-## Phase 4 — Demo hardening and handoff
+## Phase 4 — AI classification
 
 Status: Not started
 
-Outcome: The complete core workflow can be demonstrated reliably, configured safely, and run by someone other than its author.
+Outcome: Visitors can replace fixture submissions with validated English or Spanish AI extraction and classification through a server-only provider boundary.
 
 Scope:
 
-- Complete automated quality gates and the end-to-end core-flow smoke test.
-- Add server timeout, rate-limit, privacy warning, safe logging, and error-boundary behavior.
-- Document local setup, environment configuration, testing, production build, and deployment requirements.
-- Validate a production build and a server-capable deployment target.
+- Add the same-origin `POST /api/classify` route and server-only OpenRouter configuration.
+- Accept messages of up to 500 characters and amounts written with or without `$`.
+- Send the current category IDs and names to the configured model and request structured output.
+- Validate response items independently, produce concise descriptions, normalize unknown categories to **Unclassified**, and convert amounts to integer minor units.
+- Treat any non-empty usable subset as normal success, add the results, clear the input, and report **“Extracted X expenses.”**
+- When zero expenses are usable or the provider fails, add nothing and preserve the exact input for correction or retry.
+- Keep prior session categories and expenses usable while classification is loading or unavailable.
+- Implement localized progress, success, validation, provider-error, and retry feedback through rat dialogue and inline validation.
 
 Completion evidence:
 
-- Formatting, lint, strict type checking, unit/component/route tests, accessibility scan, end-to-end smoke test, and production build pass.
-- A fresh setup succeeds using repository documentation and `.env.example` without exposing a secret.
-- The deployed demo completes the workflow or presents a recoverable message when OpenRouter is unavailable.
-- The English and Spanish end-to-end workflows pass, including language persistence and switching without data loss.
+- Deterministic route tests cover English and Spanish input, full success, partial usable success, unknown-category normalization, zero-usable-item failure, malformed output, timeout, and rate limiting.
+- A multi-expense submission creates separate cumulative results and updates the chart.
+- Successful submissions clear the input and report the extracted count; zero-result and provider failures preserve the exact input.
+- No provider credential, hidden prompt, or raw provider error reaches the browser.
+- A manual test validates the configured live model when a development API key is available.
 
-Dependencies: Phases 1 through 3.
+Dependencies: Phase 3.
+
+## Phase 5 — Public demo release
+
+Status: Not started
+
+Outcome: The complete demo is accessible, safe to expose anonymously, and reliably deployed on Vercel.
+
+Scope:
+
+- Complete responsive, bilingual, accessibility, and reduced-motion review.
+- Enforce request and category bounds on both client and server.
+- Add anonymous classification rate limiting with localized rat feedback.
+- Add a concise notice that submitted text is sent to an external AI provider.
+- Log request IDs, outcomes, and latency without raw expense text, secrets, or unnecessary model data.
+- Complete automated unit, component, route, accessibility, and end-to-end checks.
+- Document local setup, environment configuration, Storybook review, testing, and deployment.
+- Deploy to Vercel with encrypted server-side environment variables and verify the production workflow.
+
+Completion evidence:
+
+- Formatting, linting, strict type checking, automated tests, accessibility checks, and the production build pass.
+- The English and Spanish end-to-end workflows pass at desktop and mobile sizes.
+- Anonymous limits and provider failures produce recoverable messages without losing the current input or session.
+- A fresh setup succeeds from repository documentation and `.env.example` without exposing a secret.
+- The Vercel deployment completes the core workflow and does not persist or log submitted expense text.
+
+Dependencies: Phases 1 through 4.
 
 ## Deferred beyond the initial release
 
-Authentication, cloud synchronization, database persistence, financial integrations, currency codes or conversion, mixed-currency accounting, languages beyond English and Spanish, budgets, recurring expenses, model training from corrections, native applications, and user-authored category descriptions supplied to the AI as classification context remain outside active phases until explicitly promoted through a constitution update.
+Category renaming, manual category colors, AI-facing category descriptions, expense editing, manual expense entry, accounts, persistence, synchronization, financial integrations, budgets, recurring expenses, currency conversion, additional languages, model training, and native applications remain outside the initial release until explicitly promoted.
 
 ## Mission trace
 
-| Mission outcome | Roadmap coverage | Primary technical constraint |
-| --- | --- | --- |
-| Custom category control | Phase 1 | Stable category IDs and safe local persistence |
-| Useful but fully editable defaults | Phases 0–1 | Five first-run categories, safe reassignment, and on-demand `unclassified` recreation |
-| Multi-expense natural-language capture | Phase 2 | Server-only OpenRouter route and validated structured output |
-| Classification correction | Phases 1–2 | Editable records and unknown-category normalization to `unclassified` |
-| English and Spanish experience | Phases 0–4 | Typed dictionaries, accessible locale control, bilingual AI input, and locale persistence |
-| Synchronized lists, totals, and chart | Phase 3 | Derived aggregates from one expense collection |
-| Playful, responsive, accessible experience | Phases 0, 1, and 3 | Approved mockups, Tailwind design system, and accessibility constraints |
-| Reliable, safe demo operation | Phase 4 | Secret isolation, bounded failures, tests, and server-capable deployment |
+| Mission outcome | Roadmap coverage |
+| --- | --- |
+| Faithful React and Storybook migration | Phases 1–2 |
+| Session-only category controls | Phase 3 |
+| Cumulative results, correction, totals, and chart | Phase 3 |
+| Multi-expense bilingual AI classification | Phase 4 |
+| Clear success and recoverable failure behavior | Phase 4 |
+| Accessible English and Spanish experience | Phases 2–5 |
+| Safe publicly hosted demo | Phase 5 |

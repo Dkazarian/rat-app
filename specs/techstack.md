@@ -1,161 +1,165 @@
 # Ratapp Technical Baseline
 
-## Project state
+## Target state
 
-**Current state:** Greenfield. At constitution creation, the workspace contains the original UI sketch and these specification files; no application scaffold, dependency manifest, tests, deployment configuration, or Git repository exists.
-
-**Target state:** A small full-stack web demo with a browser-rendered interface, a server-side OpenRouter boundary, and local browser persistence.
+Ratapp is a small, publicly hosted classification demo with a browser-rendered React interface, a server-side OpenRouter boundary, Storybook for isolated UI review, and session-only client state. It does not persist categories, expenses, or language choices.
 
 ## Technical goals and constraints
 
+- Migrate the approved HTML mockup faithfully before making intentional visual changes.
 - Keep the OpenRouter API key exclusively on the server.
-- Accept several expenses in one request and validate model output before persistence.
-- Keep the demo inexpensive to run; the initial model is a free OpenRouter model.
-- Remain functional for category browsing, editing, and previously saved expenses when the AI provider is unavailable.
+- Accept several expenses in one request and validate model output before adding results to the session.
+- Keep categories, expenses, locale, and feedback state only in the running React page.
+- Remain functional for browsing and editing current-session results when the AI provider is unavailable.
 - Keep the UI responsive, keyboard-operable, and understandable without color alone.
-- Optimize for a small demo codebase, not premature multi-user scalability.
+- Bound and rate-limit the anonymous public classification endpoint.
+- Optimize for a convincing demo and reviewable component system, not production finance infrastructure.
 
 ## Runtime and languages
 
-- **TypeScript** for client and server application code, with strict type checking.
-- **Node.js active LTS** as the development and server runtime.
+- **TypeScript** for client and server code, with strict type checking.
+- **Node.js active LTS** for development and server execution.
 - **Modern evergreen browsers** as the client target.
 
-Exact versions will be recorded in the generated lockfile when the application is scaffolded. Major-version upgrades require passing the existing quality gates.
+Exact versions are recorded in the generated lockfile. Major-version upgrades require passing the existing quality gates.
 
 ## Frameworks and major dependencies
 
-- **Next.js with the App Router** for the UI, server rendering where useful, and the server-side classification endpoint.
-- **React** through Next.js for interactive state and components.
-- **Tailwind CSS** for the responsive visual system and playful theme.
-- **Recharts** for the donut/pie visualization, provided its rendered chart is paired with accessible textual totals and labels.
-- **Zod** for runtime validation of API input, model output, and persisted data.
+- **Next.js with the App Router** for the React interface and same-origin classification route.
+- **React** for components and in-memory session state.
+- **Tailwind CSS** for the responsive visual system.
+- **Storybook** for isolated components, responsive compositions, and important UI states.
+- **Recharts** for the donut or pie visualization, paired with accessible textual totals and labels.
+- **Zod** for runtime validation of API input and model output.
 
-Use the platform `fetch` API for OpenRouter initially. Do not add an AI SDK unless direct HTTP handling becomes materially harder to maintain.
+Use platform `fetch` for OpenRouter initially. Do not add an AI SDK unless direct HTTP handling becomes materially harder to maintain.
 
 ## Architecture
 
-The initial application has three boundaries:
+The application has three runtime boundaries:
 
-1. **Browser UI:** owns interaction state, selected locale, localized message dictionaries, category and expense editing, grouped lists, totals, chart rendering, and local persistence.
-2. **Next.js classification route:** validates the submitted text and category choices, constructs the model request, calls OpenRouter, validates the response, and returns normalized expense candidates. It does not persist user data.
+1. **Browser UI:** owns the current categories, expenses, selected locale, rat feedback, grouped lists, totals, and chart data in React memory.
+2. **Next.js classification route:** validates the submitted text and category choices, constructs the provider request, calls OpenRouter, validates and normalizes the response, and returns expense candidates. It is stateless.
 3. **OpenRouter:** performs extraction and category selection using the configured model.
+
+Storybook renders the browser components outside the live application using deterministic fixtures. It does not require OpenRouter.
 
 Classification flow:
 
-1. The browser sends the natural-language text, selected locale, and category IDs and names to the server route.
-2. The route asks for structured output containing one item per expense: description, positive numeric amount, and a selected current category ID, with optional confidence/reason metadata.
-3. The route validates items independently. It discards unusable items, normalizes unknown category IDs to `unclassified`, and returns success whenever at least one usable expense remains.
-4. The browser ensures an **Unclassified** category exists when a normalized result needs it, persists the usable candidates, clears the textarea through the normal success flow, and shows success even when only part of the input was extracted.
-5. If validation leaves no usable expenses, the browser persists nothing, shows the confused-rat error, and preserves the textarea content for correction or retry.
-6. UI totals and chart data are derived from the same stored expense collection; no duplicate aggregate state is persisted.
+1. The browser sends natural-language text, the selected locale, and the current category IDs and names to `/api/classify`.
+2. The route validates a maximum 500-character message and a maximum of ten categories, then requests structured expense output.
+3. The route validates response items independently, converts valid amounts to integer minor units, and normalizes unknown category IDs to permanent `unclassified`.
+4. If at least one usable item remains, the route returns it as success. The browser adds the items to the current session, clears the textarea, and reports **“Extracted X expenses.”**
+5. If no usable item remains or the provider fails, the browser adds nothing and preserves the exact textarea content for correction or retry.
+6. Totals and chart data are always derived from the same in-memory expense collection.
 
-## Data and persistence
+## Session data model
 
-Store categories, expenses, the selected locale, and a small schema version in browser `localStorage` for the initial demo.
+No application data is written to `localStorage`, IndexedDB, cookies, a database, or another persistence service. Refreshing or closing the page discards all categories, expenses, and locale changes.
 
 Minimum category fields:
 
-- Stable ID
+- Stable session ID
 - User-visible name
 - Accessible color token
-- Creation timestamp
+- System-category flag for permanent `unclassified`
 
-On first-run provisioning, create five categories with stable initial IDs: `food`, `home`, `transport`, `fun`, and `unclassified`. Their initial English names are **Food**, **Home**, **Transport**, **Fun**, and **Unclassified**; Spanish-first provisioning uses **Comida**, **Casa**, **Transporte**, **Diversión**, and **Sin clasificar**. Each can be renamed, recolored, or deleted, and switching locale does not overwrite its persisted name. If `unclassified` has been deleted, recreate it with its default localized name and neutral color only when a later classification must normalize an unknown category.
+Every session starts with stable IDs for `food`, `home`, `transport`, and `unclassified`. **Unclassified** cannot be renamed or deleted. Other initial and user-created categories may be deleted. The initial release does not support category renaming or manual recoloring.
+
+Category rules:
+
+- A session contains at most ten categories, including **Unclassified**.
+- Names are trimmed, non-empty, case-insensitively unique, and limited to 24 characters.
+- New categories receive a color from a predefined accessible palette.
+- Deleting a category moves all its expenses to `unclassified` before removing it.
 
 Minimum expense fields:
 
-- Stable ID
-- Description
+- Stable session ID
+- Concise description
 - Currency-neutral amount represented as integer minor units at two-decimal precision
 - Category ID referencing a current category
-- Creation timestamp
-- Original input or batch reference sufficient to support review
 
-Persistence rules:
+The initial release supports reclassification and deletion, but not description or amount editing or manual expense entry.
 
-- Validate and migrate local data before use; invalid records must not crash the app.
-- Deleting a non-empty category requires confirmation and reassignment of its expenses. **Unclassified** is the default destination when it is not the deletion target; deleting a non-empty **Unclassified** category requires another current destination or clearing its expenses first.
-- Renaming or recoloring a category preserves its ID and linked expenses.
-- Storage provisioning creates the five defaults only for a new workspace. Validation and migration must not recreate a deleted default category; only classification-time unknown-category normalization may recreate `unclassified` on demand.
-- Do not store the OpenRouter key, full provider responses, hidden prompts, or unnecessary model metadata in the browser.
-- Clearing browser storage is an accepted limitation of this account-free demo.
+## Classification interface
 
-## Interfaces and integration
+### Request
 
-### Classification endpoint
+- Same-origin `POST /api/classify`; reject other methods.
+- Accept selected locale, current category IDs and names, and a non-empty message of no more than 500 characters.
+- Accept amounts written with or without `$`.
+- Validate the ten-category and 24-character category-name bounds again on the server.
 
-- Use a same-origin Next.js route under `/api/classify`.
-- Accept `POST` only, with a bounded text payload and bounded category list.
-- Return a discriminated success/error response; never return provider credentials or raw internal errors.
-- Set a finite upstream timeout and return a retryable error when OpenRouter is unavailable or rate-limited.
-- Validate response items independently and persist the usable subset when at least one item succeeds. A wholly malformed response or a response with zero usable expenses is an error and persists nothing.
+### Response
+
+- Return a discriminated success or error response.
+- For each valid candidate, return a concise description, positive integer minor-unit amount, and current category ID.
+- Validate candidates independently and return any non-empty usable subset as ordinary success.
+- Normalize unknown category IDs to `unclassified`.
+- Return a recoverable error for zero usable candidates, timeouts, rate limits, malformed provider output, and provider unavailability.
+- Never return credentials, hidden prompts, raw provider output, or internal errors.
 
 ### OpenRouter
 
 - Read `OPENROUTER_API_KEY` from server-only environment configuration.
-- Read `OPENROUTER_MODEL` from configuration, defaulting initially to `google/gemma-4-26b-a4b-it:free`.
-- Request structured JSON output and still validate it locally; model output is untrusted input.
-- Keep the model configurable because free-tier model availability, limits, and latency are external constraints.
-- Provider logging and data-handling terms must be reviewed before using real sensitive financial descriptions. The first release is a demo and should tell users not to enter sensitive account data.
+- Read `OPENROUTER_MODEL` from configuration so model availability can change without a code change.
+- Request structured JSON and treat all model output as untrusted input.
+- Set a finite upstream timeout and apply anonymous rate limiting before provider calls.
+- Do not log raw expense text or unnecessary model data.
+- Tell visitors concisely that submitted text is sent to an external AI provider and should not contain sensitive account information.
 
-### Internationalization
+## Internationalization
 
-- Support exactly two initial interface locales: English (`en`) and Spanish (`es`).
-- Keep UI and rat-dialogue copy in complete, typed message dictionaries; user-visible application strings must not be scattered as hard-coded component text.
-- Provide a compact two-position sliding segmented control with visible `EN` and `ES` choices and accessible names `English` and `Español`. It should update the interface immediately without navigation or reload.
-- Implement the control semantically as two mutually exclusive named choices rather than an ambiguous unlabeled on/off switch. It must support keyboard operation and expose the selected language to assistive technology.
-- Persist the user's language choice locally. On a first visit, provisionally select Spanish when the browser's preferred language begins with `es`; otherwise select English.
-- Localize interface copy, labels, validation, chart text, accessible names, rat dialogue, recovery messages, and the initially provisioned category names. After provisioning, do not automatically translate persisted category names or expense descriptions.
-- Accept natural-language expense input in either English or Spanish. Preserve the user's wording in the saved description unless normalization is required for a valid amount.
-- Treat amounts as currency-neutral `$` units. The product does not store or infer whether `$` means US dollars, Argentine pesos, or another dollar-denominated interpretation, and it performs no conversion.
-- Format the numeric portion through decimal-mode `Intl.NumberFormat` using the selected locale, then prefix exactly `$`. Do not use currency mode because it may render `US$`, `USD`, `ARS`, or another currency-specific marker.
+- Support exactly English (`en`) and Spanish (`es`).
+- Keep all application and rat-dialogue copy in complete typed message dictionaries.
+- Use the two-position `EN`/`ES` control represented by the approved mockup, with accessible names **English** and **Español**.
+- Switch immediately without navigation or reload and without losing the current in-memory session.
+- The locale resets on refresh; do not persist it or infer it from stored state.
+- Accept expense input in either language and produce a concise description in the language of the input or selected interface.
+- Display amounts as exactly `$` plus a locale-aware two-decimal number. Do not infer or store a currency code.
 
-## UI and design constraints
+## UI and Storybook constraints
 
-- Use a single-page dashboard: capture area first, category management and chart summary prominent, categorized expenses below or alongside them depending on viewport width.
-- Display exactly `$` plus a locale-aware two-decimal number; store integer minor units rather than floating-point values.
-- Provide loading, retry, empty, success, and error states for classification.
-- Pair chart slices with a legend or textual category summary, and never communicate category identity by color alone.
-- Give **Unclassified** a neutral default style and show it in lists, totals, and chart summaries like the other categories.
-- Use the confused rat and error semantics when zero usable expenses are extracted; preserve the textarea exactly. Any non-empty usable subset uses the ordinary success dialogue and post-success textarea behavior without a separate partial-warning state.
-- Respect reduced-motion preferences and maintain visible focus states and sufficient contrast.
-- Use `public/assets/rat-mascot.png` as the official initial rat mascot source asset. It is a transparent PNG with minimal geometric styling and rat-specific proportions rather than mouse-like oversized ears and eyes.
-- Treat the mascot artwork as a replaceable presentation asset with reserved placement and useful empty/error-state roles. A future approved human-drawn asset may replace it without an architecture change. Core actions, meaning, and layout must not depend on the artwork being available.
-- Preserve the transparent source PNG. Generate optimized display derivatives during implementation only when required for performance; do not repeatedly recompress the source asset.
-- Give informative mascot images appropriate alternative text; mark purely decorative appearances so assistive technology ignores them.
-- Implement global success, error, warning, progress, and informational feedback through one reusable rat-dialogue component rather than generic banners or unrelated toast styles.
-- Keep dialogue concise and actionable. Pair errors with a recovery action when one exists, and keep field-specific validation next to its field even when the rat also summarizes the problem.
-- Use appropriate live-region semantics: non-urgent updates use status behavior, while blocking or failed actions use alert behavior. Do not auto-dismiss errors before they can be read.
-- Communicate feedback type through wording and an explicit visual cue in addition to color. Responsive placement may move the rat and bubble, but must not cover primary controls or financial data.
+- Treat `docs/ui-mockup.html` as the visual source of truth for the initial React migration.
+- First reproduce the approved layout and states closely; review intentional design changes separately afterward.
+- Decompose the page into reusable, prop-driven components with stories for meaningful variants rather than reproducing one monolithic component.
+- Cover representative English and Spanish, desktop and narrow, empty, loading, success, and error states in Storybook.
+- Use a single-page dashboard with capture, category management, chart summary, and categorized results.
+- Pair chart slices with a legend or textual category summary and never communicate category identity by color alone.
+- Use `public/assets/rat-mascot.png` and approved state variants without making core meaning depend on artwork.
+- Implement global feedback through one reusable rat-dialogue component. Keep field-specific validation beside its field.
+- Respect reduced-motion preferences, visible focus, sufficient contrast, and appropriate live-region semantics.
 
 ## Testing and quality gates
 
-- **Unit tests:** English and Spanish message completeness, locale-aware currency parsing/formatting, totals, grouping, default-category provisioning, deletion of every default including `unclassified`, on-demand `unclassified` recreation, category deletion reassignment, storage validation/migration, and model-response normalization.
-- **Component tests:** language switching and persistence, localized rat dialogue, category management, successful subset persistence, complete-failure input preservation, correction of **Unclassified** expenses, error recovery, and synchronized list/chart summaries.
-- **Route tests:** English and Spanish inputs, request validation, full success, partial usable success, unknown-category normalization to `unclassified`, zero-usable-item failure, timeout/rate-limit failure, and wholly malformed structured output.
-- **End-to-end smoke test:** complete the core flow in one language, switch languages without losing state, submit expenses in the other language using a mocked provider response, correct one category, refresh, and verify locale persistence and totals.
-- **Static gates:** formatting, linting, and strict TypeScript checks.
-- **Accessibility check:** keyboard workflow, focus visibility, semantic labels, and automated accessibility scan of the primary view.
-
-Exact test tools should be chosen during scaffolding from tools compatible with the selected Next.js version; the behaviors above are the durable requirement.
+- **Unit tests:** category limits and names, category deletion reassignment, permanent Unclassified behavior, amount normalization, response normalization, grouping, totals, and chart data.
+- **Component tests:** language switching, category creation/deletion, fixture and live classification success, zero-result input preservation, provider-error retry, reclassification, deletion, and synchronized chart updates.
+- **Route tests:** request validation, English and Spanish input, full and partial success, unknown-category normalization, zero usable items, malformed output, timeout, and rate limiting.
+- **Storybook review:** principal component variants and responsive page states in English and Spanish.
+- **End-to-end smoke test:** create a category, submit multiple expenses through a mocked provider, reclassify and delete results, delete a populated category, switch language, verify chart updates, refresh, and verify a clean reset.
+- **Static gates:** formatting, linting, strict TypeScript, and production build.
+- **Accessibility:** keyboard workflow, focus visibility, semantic labels, live feedback, textual chart equivalents, and automated scan of the primary view.
 
 ## Build, deployment, and operations
 
-- Provide `.env.example` with variable names and safe instructions, never real credentials.
-- Ensure the app can run locally with standard install, development, test, and production-build commands documented in the repository.
-- Deployment must support Next.js server routes and encrypted environment variables; a static-only host is insufficient while OpenRouter is used.
-- Log request outcome, latency, and a generated request ID on the server, but not raw expense text or API keys.
-- Avoid analytics and third-party trackers in the initial demo.
+- Provide `.env.example` with variable names and safe instructions, never credentials.
+- Document install, development, Storybook, test, production-build, and deployment commands.
+- Deploy on Vercel with server-side environment variables and support for the Next.js route.
+- Apply anonymous rate limiting appropriate to a public demo without introducing user accounts.
+- Log generated request ID, outcome, and latency, but not raw input, response content, or secrets.
+- Do not add analytics or third-party trackers to the initial release.
 
 ## Engineering decisions and consequences
 
-- **Local storage instead of a database:** minimizes setup and avoids account design, at the cost of single-browser data and no synchronization.
-- **Server route instead of direct browser-to-OpenRouter calls:** protects credentials and centralizes validation, at the cost of requiring a server-capable deployment.
-- **Configurable initial free model:** keeps the demo inexpensive and matches the chosen model, but the app must handle rate limits, availability changes, and weaker service guarantees.
-- **Demo-friendly partial success:** usable extracted expenses are more valuable than all-or-nothing batch rejection. Invalid items are discarded, unknown categories normalize to **Unclassified**, and only zero-usable-item outcomes preserve the input and show an error.
-- **Integer minor units:** prevents common floating-point errors while supporting standard two-decimal `$` amounts without assigning a currency code. A dataset is expected to use one consistent meaning of `$`; mixed-currency accounting is unsupported.
+- **Memory instead of persistence:** keeps the demo honest and simple; refresh intentionally resets all work.
+- **Storybook before behavior:** makes the approved HTML migration inspectable and separates visual parity from later product logic.
+- **Interactive fixtures before live AI:** validates session behavior, correction, totals, and chart synchronization without provider variability.
+- **Server route instead of browser-to-provider calls:** protects credentials and centralizes validation, at the cost of requiring server-capable deployment.
+- **Configurable model:** accommodates provider availability and pricing changes without coupling the UI to one model.
+- **Partial usable success:** adds all valid candidates and reports their count; only a zero-usable result preserves the input and shows failure.
+- **Integer minor units:** avoids floating-point errors while preserving currency-neutral `$` display.
 
 ## Dependency policy
 
-Prefer browser, React, and Next.js capabilities before adding packages. A new runtime dependency needs a clear responsibility, active maintenance, compatible licensing, and no duplication of an existing dependency. Changes to the framework, persistence model, AI provider, currency model, or deployment boundary are constitution-level decisions and require updating this file and affected roadmap or phase specs.
+Prefer browser, React, and Next.js capabilities before adding packages. A runtime dependency needs a clear responsibility, active maintenance, compatible licensing, and no duplication of an existing dependency. Changes to the framework, session-only data model, AI provider boundary, currency model, or public deployment model require updating this baseline and affected roadmap or phase specifications.
