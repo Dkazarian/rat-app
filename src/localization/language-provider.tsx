@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 
 import { messages } from "./messages";
@@ -8,6 +8,7 @@ import type { Locale, MessageKey } from "./messages";
 
 type LanguageContextValue = Readonly<{
   locale: Locale;
+  setLanguage: (locale: Locale) => void;
   toggleLanguage: () => void;
   t: (key: MessageKey) => string;
 }>;
@@ -25,6 +26,14 @@ export function LanguageProvider({
 }: LanguageProviderProps) {
   const [locale, setLocale] = useState<Locale>(initialLocale);
 
+  useEffect(() => {
+    document.documentElement.lang = locale;
+  }, [locale]);
+
+  const setLanguage = (nextLocale: Locale) => {
+    setLocale(nextLocale);
+  };
+
   const toggleLanguage = () => {
     setLocale((currentLocale) => (currentLocale === "en" ? "es" : "en"));
   };
@@ -32,7 +41,7 @@ export function LanguageProvider({
   const t = (key: MessageKey) => messages[locale][key];
 
   return (
-    <LanguageContext value={{ locale, toggleLanguage, t }}>
+    <LanguageContext value={{ locale, setLanguage, toggleLanguage, t }}>
       {children}
     </LanguageContext>
   );

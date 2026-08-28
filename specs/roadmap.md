@@ -52,7 +52,7 @@ Dependencies: Phase 0.
 
 ## Phase 2 — HTML mockup migration
 
-Status: Not started
+Status: Complete
 
 Outcome: The approved HTML mockup is faithfully reproduced as reusable React components before intentional product or visual changes are introduced.
 
@@ -62,7 +62,7 @@ Scope:
 - Reproduce the complete responsive dashboard in React using fixture data.
 - Preserve the mockup's typography, spacing, hierarchy, colors, assets, and desktop-to-mobile behavior.
 - Move English and Spanish copy into complete typed dictionaries and reproduce the language variants.
-- Add Storybook stories for the components, responsive compositions, and important empty, loading, success, and error states.
+- Add Storybook stories for the components, locales, and important empty, loading, success, and error states; use viewport controls for responsive review.
 - Keep components driven by explicit props so later session and provider logic can be added without rewriting their presentation.
 
 Completion evidence:
