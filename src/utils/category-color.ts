@@ -1,4 +1,4 @@
-import type { CategoryColorToken } from "@/types/presentation";
+import type { CategoryColorToken } from "@/features/categories/types";
 
 export const categoryColorValues = {
   coral: "#ff8b85",

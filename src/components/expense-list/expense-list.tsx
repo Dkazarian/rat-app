@@ -1,7 +1,15 @@
 import { useId } from "react";
 
 import { ExpenseItem } from "./expense-item";
-import type { ExpenseListProps } from "@/types/presentation";
+import type { ExpenseItemData } from "./expense-item";
+import type { Locale } from "@/i18n";
+
+export type ExpenseListProps = Readonly<{
+  locale: Locale;
+  title: string;
+  periodLabel: string;
+  expenses: ReadonlyArray<ExpenseItemData>;
+}>;
 
 export function ExpenseList({
   locale,

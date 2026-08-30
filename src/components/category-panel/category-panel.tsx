@@ -3,7 +3,16 @@
 import { useId } from "react";
 
 import { CategoryItem } from "./category-item";
-import type { CategoryPanelProps } from "@/types/presentation";
+import type { CategoryItemData } from "./category-item";
+import type { Locale } from "@/i18n";
+
+export type CategoryPanelProps = Readonly<{
+  locale: Locale;
+  title: string;
+  addLabel: string;
+  categories: ReadonlyArray<CategoryItemData>;
+  onAdd?: () => void;
+}>;
 
 export function CategoryPanel({
   locale,

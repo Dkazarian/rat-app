@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { dashboardStates } from "@/types/presentation";
-
-import { dashboardFixtures } from "./dashboard-fixtures";
+import { dashboardFixtures, dashboardStates } from "./dashboard-fixtures";
 
 describe("dashboardFixtures", () => {
   it("provides every required deterministic state", () => {

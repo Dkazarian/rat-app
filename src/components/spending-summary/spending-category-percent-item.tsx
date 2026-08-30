@@ -1,5 +1,12 @@
-import type { SpendingCategoryPercentItemData } from "@/types/presentation";
+import type { CategoryColorToken } from "@/features/categories/types";
 import { categoryColorValues } from "@/utils/category-color";
+
+export type SpendingCategoryPercentItemData = Readonly<{
+  categoryId: string;
+  name: string;
+  color: CategoryColorToken;
+  percent: number;
+}>;
 
 export type SpendingCategoryPercentItemProps = Readonly<{
   item: SpendingCategoryPercentItemData;

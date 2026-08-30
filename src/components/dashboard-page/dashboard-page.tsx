@@ -1,13 +1,14 @@
 "use client";
 
 import { CapturePanel } from "@/components/capture-panel/capture-panel";
+import type { RatDialogueState } from "@/components/capture-panel/rat-dialogue";
 import { CategoryPanel } from "@/components/category-panel/category-panel";
 import { ExpenseList } from "@/components/expense-list/expense-list";
 import { Header } from "@/components/header/header";
 import { SpendingSummary } from "@/components/spending-summary/spending-summary";
+import type { DashboardFixture } from "@/fixtures/dashboard-fixtures";
 import { getLocale } from "@/i18n";
 import type { TranslationKey } from "@/i18n";
-import type { DashboardFixture, DashboardState } from "@/types/presentation";
 import { buildSpendingItems } from "@/utils/spending";
 import { useTranslation } from "react-i18next";
 
@@ -44,7 +45,7 @@ const feedbackKeys = {
     "providerErrorMascotAlt",
   ],
 } as const satisfies Record<
-  DashboardState,
+  RatDialogueState,
   readonly [TranslationKey, TranslationKey, TranslationKey]
 >;
 

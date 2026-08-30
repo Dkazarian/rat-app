@@ -1,5 +1,5 @@
 import { LanguageControl } from "./language-control";
-import type { LanguageControlProps } from "@/types/presentation";
+import type { LanguageControlProps } from "./language-control";
 
 export type HeaderProps = Readonly<{
   appName: string;

@@ -1,7 +1,8 @@
 import { ExpenseInput } from "./expense-input";
+import type { ExpenseInputProps } from "./expense-input";
 import { Mascot } from "./mascot";
 import { RatDialogue } from "./rat-dialogue";
-import type { ExpenseInputProps, RatDialogueProps } from "@/types/presentation";
+import type { RatDialogueProps } from "./rat-dialogue";
 
 export type CapturePanelProps = Readonly<{
   dialogue: RatDialogueProps;

@@ -13,18 +13,18 @@ Implementation is complete and ready for review when all of the following pass.
 
 ## Unit coverage
 
-- [ ] The initial-state function returns **Food**, **Home**, **Transport**, and **Unclassified** in the specified order with stable built-in identifiers. (R1, R2)
-- [ ] Built-in names are represented by stable identities while user-created names remain literal values. (R1, R7)
-- [ ] Creating a category trims its name, accepts an injected identifier, assigns a deterministic accessible color, and returns a new immutable category collection. (R4, R5)
-- [ ] Category operations do not mutate their input collection or existing category values. (R1, R4)
-- [ ] Empty and whitespace-only names are rejected with the expected validation code. (R4, R5)
-- [ ] A 24-character trimmed name is accepted and a 25-character trimmed name is rejected. (R4, R5)
-- [ ] Exact-case and mixed-case duplicates are rejected. (R4, R5)
-- [ ] Every built-in English and Spanish name remains reserved regardless of the active locale. (R5, R7)
-- [ ] The tenth category can be created and an eleventh category is rejected. (R4, R5)
-- [ ] Initial and user-created categories can be deleted without mutating the previous collection. (R4, R6)
-- [ ] Attempts to delete **Unclassified** return a rejected result without changing state. (R4, R6)
-- [ ] The muted color is assigned only to **Unclassified**, and custom colors are selected deterministically from the non-muted palette. (R1, R4, R5)
+- [x] The initial-state function returns **Food**, **Home**, **Transport**, and **Unclassified** in the specified order with stable built-in identifiers. (R1, R2)
+- [x] Built-in names are represented by stable identities while user-created names remain literal values. (R1, R7)
+- [x] Creating a category trims its name, accepts an injected identifier, assigns a deterministic accessible color, and returns a new immutable category collection. (R4, R5)
+- [x] Category operations do not mutate their input collection or existing category values. (R1, R4)
+- [x] Empty and whitespace-only names are rejected with the expected validation code. (R4, R5)
+- [x] A 24-character trimmed name is accepted and a 25-character trimmed name is rejected. (R4, R5)
+- [x] Exact-case and mixed-case duplicates are rejected. (R4, R5)
+- [x] Every built-in English and Spanish name remains reserved regardless of the active locale. (R5, R7)
+- [x] The tenth category can be created and an eleventh category is rejected. (R4, R5)
+- [x] Initial and user-created categories can be deleted without mutating the previous collection. (R4, R6)
+- [x] Attempts to delete **Unclassified** return a rejected result without changing state. (R4, R6)
+- [x] The muted color is assigned only to **Unclassified**, and custom colors are selected deterministically from the non-muted palette. (R1, R4, R5)
 
 ## Component and integration coverage
 

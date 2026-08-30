@@ -1,11 +1,11 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { getLocale } from "@/i18n";
-import type { ExpenseItemData } from "@/types/presentation";
 import { useTranslation } from "react-i18next";
 
 import { dashboardFixtures } from "@/fixtures/dashboard-fixtures";
 
 import { ExpenseList } from "./expense-list";
+import type { ExpenseItemData } from "./expense-item";
 
 type StoryProps = Readonly<{
   expenses: ReadonlyArray<ExpenseItemData>;

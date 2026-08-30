@@ -2,8 +2,8 @@
 
 import { Cell, Pie, PieChart } from "recharts";
 
+import type { SpendingCategoryPercentItemData } from "./spending-category-percent-item";
 import type { Locale } from "@/i18n";
-import type { SpendingCategoryPercentItemData } from "@/types/presentation";
 import { categoryColorValues } from "@/utils/category-color";
 import { formatAmount } from "@/utils/format-amount";
 

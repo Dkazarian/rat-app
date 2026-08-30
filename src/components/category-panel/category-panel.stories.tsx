@@ -1,12 +1,12 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { getLocale } from "@/i18n";
 import type { TranslationKey } from "@/i18n";
-import type { CategoryPanelProps } from "@/types/presentation";
 import { useTranslation } from "react-i18next";
 
 import { dashboardFixtures } from "@/fixtures/dashboard-fixtures";
 
 import { CategoryPanel } from "./category-panel";
+import type { CategoryPanelProps } from "./category-panel";
 
 const categoryKeys: Readonly<Record<string, TranslationKey>> = {
   food: "food",

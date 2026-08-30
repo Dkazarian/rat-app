@@ -1,7 +1,5 @@
-import type {
-  CategoryItemData,
-  SpendingCategoryPercentItemData,
-} from "@/types/presentation";
+import type { CategoryItemData } from "@/components/category-panel/category-item";
+import type { SpendingCategoryPercentItemData } from "@/components/spending-summary/spending-category-percent-item";
 
 export function sumCategoryTotals(
   categories: ReadonlyArray<CategoryItemData>,

@@ -1,11 +1,11 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { getLocale } from "@/i18n";
-import type { SpendingCategoryPercentItemData } from "@/types/presentation";
 import { useTranslation } from "react-i18next";
 
 import { dashboardFixtures } from "@/fixtures/dashboard-fixtures";
 
 import { SpendingSummary } from "./spending-summary";
+import type { SpendingCategoryPercentItemData } from "./spending-category-percent-item";
 
 const fixture = dashboardFixtures.success;
 

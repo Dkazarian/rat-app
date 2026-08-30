@@ -1,7 +1,16 @@
 import type { Locale } from "@/i18n";
-import type { ExpenseItemData } from "@/types/presentation";
+import type { CategoryColorToken } from "@/features/categories/types";
 import { categoryColorValues } from "@/utils/category-color";
 import { formatAmount } from "@/utils/format-amount";
+
+export type ExpenseItemData = Readonly<{
+  id: string;
+  description: string;
+  categoryId: string;
+  categoryName: string;
+  color: CategoryColorToken;
+  amountMinor: number;
+}>;
 
 export type ExpenseItemProps = Readonly<{
   expense: ExpenseItemData;

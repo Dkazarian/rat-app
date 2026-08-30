@@ -1,11 +1,28 @@
+import type { CategoryItemData } from "@/components/category-panel/category-item";
 import type {
-  CategoryItemData,
-  DashboardFixture,
-  DashboardState,
-  ExpenseItemData,
   RatDialogueData,
-} from "@/types/presentation";
+  RatDialogueState,
+} from "@/components/capture-panel/rat-dialogue";
+import { ratDialogueStates } from "@/components/capture-panel/rat-dialogue";
+import type { ExpenseItemData } from "@/components/expense-list/expense-item";
+import type { SpendingCategoryPercentItemData } from "@/components/spending-summary/spending-category-percent-item";
+import type { Locale } from "@/i18n";
 import { buildSpendingItems, sumCategoryTotals } from "@/utils/spending";
+
+export const dashboardStates = ratDialogueStates;
+
+export type DashboardFixture = Readonly<{
+  id: RatDialogueState;
+  locale: Locale;
+  inputValue: string;
+  feedback: RatDialogueData;
+  categories: ReadonlyArray<CategoryItemData>;
+  spending: Readonly<{
+    totalMinor: number;
+    items: ReadonlyArray<SpendingCategoryPercentItemData>;
+  }>;
+  expenses: ReadonlyArray<ExpenseItemData>;
+}>;
 
 const categories = [
   { id: "food", name: "Food", color: "coral", totalMinor: 51_820 },
@@ -77,12 +94,12 @@ const feedbackByState = {
     announcement: "assertive",
     mascotSrc: "/assets/rat-mascot-error.png",
   },
-} as const satisfies Record<DashboardState, RatDialogueData>;
+} as const satisfies Record<RatDialogueState, RatDialogueData>;
 
 const submittedInput = "Lunch $18, coffee $4.50 and taxi $12";
 
 function createFixture(
-  state: DashboardState,
+  state: RatDialogueState,
   options: Readonly<{
     inputValue: string;
     populated: boolean;
@@ -122,4 +139,4 @@ export const dashboardFixtures = {
     inputValue: submittedInput,
     populated: false,
   }),
-} as const satisfies Record<DashboardState, DashboardFixture>;
+} as const satisfies Record<RatDialogueState, DashboardFixture>;

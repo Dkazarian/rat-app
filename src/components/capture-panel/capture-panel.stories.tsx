@@ -1,16 +1,16 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import type { DashboardState } from "@/types/presentation";
 import { useTranslation } from "react-i18next";
 
 import { CapturePanel } from "./capture-panel";
+import type { RatDialogueState } from "./rat-dialogue";
 
 type StoryProps = Readonly<{
-  state: DashboardState;
+  state: RatDialogueState;
   inputValue?: string;
   disabled?: boolean;
 }>;
 
-const mascotByState: Record<DashboardState, string> = {
+const mascotByState: Record<RatDialogueState, string> = {
   empty: "/assets/rat-mascot-awaiting.png",
   loading: "/assets/rat-mascot-sniffing.png",
   success: "/assets/rat-mascot.png",

@@ -2,18 +2,18 @@
 
 ## Group 1 — Establish the category feature model
 
-- [ ] Define immutable category, built-in identity, custom-name, identifier, color, and validation-result types. (R1, R4)
-- [ ] Define the four-category initial-state factory with stable built-in identifiers and the required order. (R1, R2)
-- [ ] Separate stable built-in identity from localized display names so custom names remain literal. (R1, R7)
-- [ ] Move category-specific presentation contracts out of the general dashboard presentation types where ownership is unambiguous. (R10)
+- [x] Define immutable category, built-in identity, custom-name, identifier, color, and validation-result types. (R1, R4)
+- [x] Define the four-category initial-state factory with stable built-in identifiers and the required order. (R1, R2)
+- [x] Separate stable built-in identity from localized display names so custom names remain literal. (R1, R7)
+- [x] Move category-specific presentation contracts out of the general dashboard presentation types where ownership is unambiguous. (R10)
 
 ## Group 2 — Implement and test pure category behavior
 
-- [ ] Implement pure name normalization and validation for empty, length, duplicate, reserved-name, and category-limit rules. (R4, R5)
-- [ ] Implement deterministic color selection from the non-muted palette, reserving muted for **Unclassified**. (R4, R5)
-- [ ] Implement pure category creation using an identifier supplied by the caller. (R4, R5)
-- [ ] Implement pure category deletion with permanent **Unclassified** protection. (R4, R6)
-- [ ] Add focused unit tests for every rule, boundary, stable result code, deterministic color, and immutability guarantee listed in `validation.md`. (R1, R2, R4–R7)
+- [x] Implement pure name normalization and validation for empty, length, duplicate, reserved-name, and category-limit rules. (R4, R5)
+- [x] Implement deterministic color selection from the non-muted palette, reserving muted for **Unclassified**. (R4, R5)
+- [x] Implement pure category creation using an identifier supplied by the caller. (R4, R5)
+- [x] Implement pure category deletion with permanent **Unclassified** protection. (R4, R6)
+- [x] Add focused unit tests for every rule, boundary, stable result code, deterministic color, and immutability guarantee listed in `validation.md`. (R1, R2, R4–R7)
 
 ## Group 3 — Add React-owned session coordination
 

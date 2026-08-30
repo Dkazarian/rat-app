@@ -1,7 +1,14 @@
 "use client";
 
 import type { Locale } from "@/i18n";
-import type { LanguageControlProps } from "@/types/presentation";
+
+export type LanguageControlProps = Readonly<{
+  label: string;
+  locale: Locale;
+  englishLabel: string;
+  spanishLabel: string;
+  onLocaleChange?: (locale: Locale) => void;
+}>;
 
 const options = [
   { locale: "en", shortLabel: "EN", labelKey: "englishLabel" },

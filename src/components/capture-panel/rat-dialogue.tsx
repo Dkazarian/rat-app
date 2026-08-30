@@ -1,4 +1,26 @@
-import type { RatDialogueProps } from "@/types/presentation";
+export const ratDialogueStates = [
+  "empty",
+  "loading",
+  "success",
+  "extraction-failure",
+  "provider-error",
+] as const;
+
+export type RatDialogueState = (typeof ratDialogueStates)[number];
+export type AnnouncementMode = "polite" | "assertive";
+
+export type RatDialogueData = Readonly<{
+  state: RatDialogueState;
+  announcement: AnnouncementMode;
+  mascotSrc: string;
+}>;
+
+export type RatDialogueProps = RatDialogueData &
+  Readonly<{
+    title: string;
+    detail: string;
+    mascotAlt: string;
+  }>;
 
 type DialogueProps = Pick<
   RatDialogueProps,

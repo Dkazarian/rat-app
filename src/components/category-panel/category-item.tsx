@@ -1,7 +1,14 @@
 import type { Locale } from "@/i18n";
-import type { CategoryItemData } from "@/types/presentation";
+import type { CategoryColorToken } from "@/features/categories/types";
 import { categoryColorValues } from "@/utils/category-color";
 import { formatAmount } from "@/utils/format-amount";
+
+export type CategoryItemData = Readonly<{
+  id: string;
+  name: string;
+  color: CategoryColorToken;
+  totalMinor: number;
+}>;
 
 export type CategoryItemProps = Readonly<{
   category: CategoryItemData;

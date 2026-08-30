@@ -1,6 +1,17 @@
 import { SpendingCategoryPercentItem } from "./spending-category-percent-item";
+import type { SpendingCategoryPercentItemData } from "./spending-category-percent-item";
 import { SpendingChart } from "./spending-chart";
-import type { SpendingSummaryProps } from "@/types/presentation";
+import type { Locale } from "@/i18n";
+
+export type SpendingSummaryProps = Readonly<{
+  locale: Locale;
+  title: string;
+  periodLabel: string;
+  totalLabel: string;
+  totalMinor: number;
+  chartLabel: string;
+  items: ReadonlyArray<SpendingCategoryPercentItemData>;
+}>;
 
 export function SpendingSummary({
   locale,

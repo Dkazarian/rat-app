@@ -3,7 +3,16 @@
 import { useId } from "react";
 import type { FormEvent } from "react";
 
-import type { ExpenseInputProps } from "@/types/presentation";
+export type ExpenseInputProps = Readonly<{
+  label: string;
+  placeholder: string;
+  actionLabel: string;
+  value: string;
+  disabled?: boolean;
+  validationMessage?: string;
+  onValueChange?: (value: string) => void;
+  onSubmit?: () => void;
+}>;
 
 export function ExpenseInput({
   label,
