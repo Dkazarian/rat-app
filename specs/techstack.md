@@ -36,6 +36,8 @@ Use platform `fetch` for OpenRouter initially. Do not add an AI SDK unless direc
 
 ## Architecture
 
+Ratapp uses a ports-and-adapters architecture. React components depend on application services for category, expense, classification, and spending behavior; application services depend on repository and classifier ports rather than concrete storage or processing implementations. Infrastructure adapters provide browser-memory, HTTP, database, mock-classifier, or provider-backed implementations as needed. Composition roots select and inject those adapters so the application and presentation layers do not need to know where data is stored or where classification is processed.
+
 The application has three runtime boundaries:
 
 1. **Browser UI:** owns the current categories, expenses, selected locale, rat feedback, grouped lists, totals, and chart data in React memory.
