@@ -36,13 +36,40 @@ Use platform `fetch` for OpenRouter initially. Do not add an AI SDK unless direc
 
 ## Architecture
 
-Ratapp uses a ports-and-adapters architecture. React components depend on application services for category, expense, classification, and spending behavior; application services depend on repository and classifier ports rather than concrete storage or processing implementations. Infrastructure adapters provide browser-memory, HTTP, database, mock-classifier, or provider-backed implementations as needed. Composition roots select and inject those adapters so the application and presentation layers do not need to know where data is stored or where classification is processed.
+Ratapp uses an idiomatic React and Next.js feature-oriented architecture. Code is grouped by product capability, with components, hooks, types, and pure behavior kept close to the feature that owns them. Shared modules are introduced only when more than one feature genuinely uses them.
+
+Use function components and Hooks rather than class components, controller classes, or view-model classes. Keep synchronous business rules—such as category validation, color assignment, amount normalization, grouping, and totals—in pure TypeScript functions. Use discriminated unions for expected outcomes and validation failures instead of exception-based control flow.
+
+Interactive browser state belongs in React. A feature Hook or reducer coordinates category and expense state and exposes intention-revealing operations to presentation components. Components receive data and callbacks through props and do not import storage implementations. Context is reserved for state that must be shared across a broad subtree; do not introduce a third-party state library until React state, reducers, and context are demonstrably insufficient.
+
+Use interfaces at real external boundaries, such as the browser classification client and the server-side AI provider client. Do not create service and repository class hierarchies for in-memory React state. A small factory or plain object may implement an interface when dependency substitution materially improves tests. Dependency injection is ordinary function arguments, props, or provider values rather than a container or framework.
+
+The Next.js App Router is the framework boundary. Pages and layouts remain Server Components by default. Add `"use client"` at the narrowest practical interactive boundary. Server-only classification code stays outside the client module graph, and route handlers translate HTTP input and output without containing reusable classification rules.
 
 The application has three runtime boundaries:
 
-1. **Browser UI:** owns the current categories, expenses, selected locale, rat feedback, grouped lists, totals, and chart data in React memory.
-2. **Next.js classification route:** validates the submitted text and category choices, constructs the provider request, calls OpenRouter, validates and normalizes the response, and returns expense candidates. It is stateless.
+1. **Browser UI:** a Client Component feature boundary owns the current categories, expenses, selected locale, and rat feedback in React memory. Pure selectors derive grouped lists, totals, and chart data from that state.
+2. **Next.js classification route:** a thin route handler validates the HTTP request, delegates to server-only classification functions, and maps the result to a safe HTTP response. It is stateless.
 3. **OpenRouter:** performs extraction and category selection using the configured model.
+
+Recommended source organization:
+
+```text
+src/
+  app/                    Next.js routes, layouts, and composition
+  features/
+    categories/           Category types, rules, Hook, and components
+    expenses/             Expense types, rules, Hook integration, and components
+    classification/       Browser client and shared request/response contracts
+    spending/             Pure selectors and visual presentation
+  server/
+    classification/       Server-only orchestration and provider client
+  i18n/                   Typed dictionaries and locale setup
+  components/             Truly shared presentation primitives
+  test/                   Shared test setup and helpers
+```
+
+This layout is a direction, not a requirement to create empty folders or split small cohesive files prematurely. Features may begin in the existing component structure and move when behavior makes the ownership boundary useful.
 
 Storybook renders the browser components outside the live application using deterministic fixtures. It does not require OpenRouter.
 
@@ -58,6 +85,8 @@ Classification flow:
 ## Session data model
 
 No application data is written to `localStorage`, IndexedDB, cookies, a database, or another persistence service. Refreshing or closing the page discards all categories, expenses, and locale changes.
+
+Represent the session with immutable TypeScript values updated through React state or a reducer. Event handlers call feature operations; they do not duplicate domain validation. Derive totals, grouped results, and chart data instead of storing synchronized copies of those values.
 
 Minimum category fields:
 
@@ -135,8 +164,8 @@ The initial release supports reclassification and deletion, but not description 
 
 ## Testing and quality gates
 
-- **Unit tests:** category limits and names, category deletion reassignment, permanent Unclassified behavior, amount normalization, response normalization, grouping, totals, and chart data.
-- **Component tests:** language switching, category creation/deletion, fixture and live classification success, zero-result input preservation, provider-error retry, reclassification, deletion, and synchronized chart updates.
+- **Unit tests:** pure category and expense rules, reducer transitions, amount normalization, response normalization, grouping, totals, and chart selectors.
+- **Component tests:** user-visible behavior through rendered components, including language switching, category creation/deletion, fixture and live classification success, zero-result input preservation, provider-error retry, reclassification, deletion, and synchronized chart updates. Avoid asserting Hook or component implementation details.
 - **Route tests:** request validation, English and Spanish input, full and partial success, unknown-category normalization, zero usable items, malformed output, timeout, and rate limiting.
 - **Storybook review:** principal component variants and responsive page states in English and Spanish.
 - **End-to-end smoke test:** create a category, submit multiple expenses through a mocked provider, reclassify and delete results, delete a populated category, switch language, verify chart updates, refresh, and verify a clean reset.
@@ -165,3 +194,5 @@ The initial release supports reclassification and deletion, but not description 
 ## Dependency policy
 
 Prefer browser, React, and Next.js capabilities before adding packages. A runtime dependency needs a clear responsibility, active maintenance, compatible licensing, and no duplication of an existing dependency. Changes to the framework, session-only data model, AI provider boundary, currency model, or public deployment model require updating this baseline and affected roadmap or phase specifications.
+
+Prefer plain TypeScript modules over architectural framework packages. Do not add dependency-injection containers, repository frameworks, global-state libraries, or form libraries solely to reproduce patterns familiar from server-side object-oriented applications.
