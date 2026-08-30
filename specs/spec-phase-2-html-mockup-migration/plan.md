@@ -25,8 +25,10 @@
 
 ## Group 4 — Complete localization and accessibility
 
-- [x] Move all visible and accessible copy into synchronized English and Spanish dictionaries. (R6)
-- [x] Connect immediate, session-only `EN`/`ES` switching. (R6)
+- [x] Configure `i18next` and `react-i18next` with supported English and Spanish locales, an English fallback, React integration, and unescaped React interpolation. (R6)
+- [x] Store synchronized copy in `src/i18n/locales/en/translation.json` and `src/i18n/locales/es/translation.json`, retaining typed keys through i18next TypeScript augmentation. Keep the conventional single `translation` namespace until the resource set is large enough to justify feature namespaces such as `common`, `dashboard`, or `validation`. (R6)
+- [x] Replace the custom localization Context, provider hook, and direct dictionary access with `I18nextProvider` and `useTranslation`. (R6)
+- [x] Connect immediate, session-only `EN`/`ES` switching through `i18n.changeLanguage(locale)`, update the document language, and omit browser detection and locale persistence. (R6)
 - [x] Add semantic regions, labels, keyboard focus, and feedback announcements. (R8)
 - [x] Add reduced-motion behavior and non-color category identification. (R8)
 

@@ -5,24 +5,25 @@ import { CategoryPanel } from "@/components/category-panel/category-panel";
 import { ExpenseList } from "@/components/expense-list/expense-list";
 import { Header } from "@/components/header/header";
 import { SpendingSummary } from "@/components/spending-summary/spending-summary";
-import { useLanguage } from "@/localization/language-provider";
-import type { MessageKey } from "@/localization/messages";
+import { getLocale } from "@/i18n";
+import type { TranslationKey } from "@/i18n";
 import type { DashboardFixture, DashboardState } from "@/types/presentation";
 import { buildSpendingItems } from "@/utils/spending";
+import { useTranslation } from "react-i18next";
 
 import { AppShell } from "./app-shell";
 import { DashboardLayout } from "./dashboard-layout";
 import { Footer } from "./footer";
 import { ResultsPanel } from "./results-panel";
 
-const categoryKeys: Readonly<Record<string, MessageKey>> = {
+const categoryKeys: Readonly<Record<string, TranslationKey>> = {
   food: "food",
   transport: "transport",
   home: "home",
   fun: "fun",
 };
 
-const expenseKeys: Readonly<Record<string, MessageKey>> = {
+const expenseKeys: Readonly<Record<string, TranslationKey>> = {
   "expense-lunch": "lunch",
   "expense-coffee": "coffee",
   "expense-taxi": "taxi",
@@ -44,7 +45,7 @@ const feedbackKeys = {
   ],
 } as const satisfies Record<
   DashboardState,
-  readonly [MessageKey, MessageKey, MessageKey]
+  readonly [TranslationKey, TranslationKey, TranslationKey]
 >;
 
 export type DashboardPageProps = Readonly<{
@@ -52,7 +53,8 @@ export type DashboardPageProps = Readonly<{
 }>;
 
 export function DashboardPage({ fixture }: DashboardPageProps) {
-  const { locale, setLanguage, t } = useLanguage();
+  const { i18n, t } = useTranslation();
+  const locale = getLocale(i18n.resolvedLanguage ?? i18n.language);
   const [titleKey, detailKey, mascotAltKey] = feedbackKeys[fixture.id];
   const localizedCategories = fixture.categories.map((category) => ({
     ...category,
@@ -76,7 +78,9 @@ export function DashboardPage({ fixture }: DashboardPageProps) {
               locale,
               englishLabel: t("english"),
               spanishLabel: t("spanish"),
-              onLocaleChange: setLanguage,
+              onLocaleChange: (nextLocale) => {
+                void i18n.changeLanguage(nextLocale);
+              },
             }}
           />
           <main className="p-[22px] max-[680px]:p-[15px]">

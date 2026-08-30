@@ -2,7 +2,7 @@ import { screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { dashboardFixtures } from "@/fixtures/dashboard-fixtures";
-import { LanguageProvider } from "@/localization/language-provider";
+import { I18nProvider } from "@/i18n/i18n-provider";
 import { renderWithProviders } from "@/test/render";
 
 import { DashboardPage } from "./dashboard-page";
@@ -10,9 +10,9 @@ import { DashboardPage } from "./dashboard-page";
 describe("DashboardPage", () => {
   it("renders matching chart and textual fixture data", () => {
     renderWithProviders(
-      <LanguageProvider>
+      <I18nProvider>
         <DashboardPage fixture={dashboardFixtures.success} />
-      </LanguageProvider>,
+      </I18nProvider>,
     );
 
     expect(
@@ -26,9 +26,9 @@ describe("DashboardPage", () => {
 
   it("switches all interface copy to Spanish", async () => {
     const { user } = renderWithProviders(
-      <LanguageProvider>
+      <I18nProvider>
         <DashboardPage fixture={dashboardFixtures.success} />
-      </LanguageProvider>,
+      </I18nProvider>,
     );
 
     await user.tab();

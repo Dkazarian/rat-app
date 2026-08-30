@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
-import { LanguageProvider } from "@/localization/language-provider";
+import { I18nProvider } from "@/i18n/i18n-provider";
 
 import "./globals.css";
 
@@ -16,7 +16,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="en">
       <body>
-        <LanguageProvider>{children}</LanguageProvider>
+        <I18nProvider>{children}</I18nProvider>
       </body>
     </html>
   );

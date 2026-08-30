@@ -1,4 +1,4 @@
-import type { Locale } from "@/localization/messages";
+import type { Locale } from "@/i18n";
 
 const numberLocales = {
   en: "en-US",

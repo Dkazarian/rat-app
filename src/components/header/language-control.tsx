@@ -1,6 +1,6 @@
 "use client";
 
-import type { Locale } from "@/localization/messages";
+import type { Locale } from "@/i18n";
 import type { LanguageControlProps } from "@/types/presentation";
 
 const options = [

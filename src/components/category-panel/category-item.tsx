@@ -1,4 +1,4 @@
-import type { Locale } from "@/localization/messages";
+import type { Locale } from "@/i18n";
 import type { CategoryItemData } from "@/types/presentation";
 import { categoryColorValues } from "@/utils/category-color";
 import { formatAmount } from "@/utils/format-amount";
