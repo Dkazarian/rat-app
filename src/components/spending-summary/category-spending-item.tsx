@@ -1,20 +1,18 @@
 import type { CategoryColorToken } from "@/features/categories/types";
 import { categoryColorValues } from "@/utils/category-color";
 
-export type SpendingCategoryPercentItemData = Readonly<{
+export type CategorySpendingItemData = Readonly<{
   categoryId: string;
   name: string;
   color: CategoryColorToken;
   percent: number;
 }>;
 
-export type SpendingCategoryPercentItemProps = Readonly<{
-  item: SpendingCategoryPercentItemData;
+export type CategorySpendingItemProps = Readonly<{
+  item: CategorySpendingItemData;
 }>;
 
-export function SpendingCategoryPercentItem({
-  item,
-}: SpendingCategoryPercentItemProps) {
+export function CategorySpendingItem({ item }: CategorySpendingItemProps) {
   return (
     <li className="grid grid-cols-[10px_minmax(0,1fr)] items-center gap-2">
       <span

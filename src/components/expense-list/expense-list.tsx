@@ -1,14 +1,14 @@
 import { useId } from "react";
 
-import { ExpenseItem } from "./expense-item";
-import type { ExpenseItemData } from "./expense-item";
+import { ExpenseListItem } from "./expense-list-item";
+import type { ExpenseListItemData } from "./expense-list-item";
 import type { Locale } from "@/i18n";
 
 export type ExpenseListProps = Readonly<{
   locale: Locale;
   title: string;
   periodLabel: string;
-  expenses: ReadonlyArray<ExpenseItemData>;
+  expenses: ReadonlyArray<ExpenseListItemData>;
 }>;
 
 export function ExpenseList({
@@ -29,7 +29,7 @@ export function ExpenseList({
       </div>
       <ul className="grid list-none gap-2 p-0">
         {expenses.map((expense) => (
-          <ExpenseItem key={expense.id} expense={expense} locale={locale} />
+          <ExpenseListItem key={expense.id} expense={expense} locale={locale} />
         ))}
       </ul>
     </section>

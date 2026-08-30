@@ -5,10 +5,10 @@ import { useTranslation } from "react-i18next";
 import { dashboardFixtures } from "@/fixtures/dashboard-fixtures";
 
 import { ExpenseList } from "./expense-list";
-import type { ExpenseItemData } from "./expense-item";
+import type { ExpenseListItemData } from "./expense-list-item";
 
 type StoryProps = Readonly<{
-  expenses: ReadonlyArray<ExpenseItemData>;
+  expenses: ReadonlyArray<ExpenseListItemData>;
 }>;
 
 function LocalizedExpenseList({ expenses }: StoryProps) {

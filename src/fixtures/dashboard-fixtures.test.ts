@@ -10,10 +10,10 @@ describe("dashboardFixtures", () => {
   it("derives the success total and chart percentages from categories", () => {
     const fixture = dashboardFixtures.success;
 
-    expect(fixture.spending.totalMinor).toBe(128_450);
-    expect(fixture.spending.items.map(({ percent }) => percent)).toEqual([
-      40, 26, 20, 14,
-    ]);
+    expect(fixture.categorySpending.totalMinor).toBe(128_450);
+    expect(
+      fixture.categorySpending.items.map(({ percent }) => percent),
+    ).toEqual([40, 26, 20, 14]);
   });
 
   it("uses a distinct awaiting mascot before any input is submitted", () => {

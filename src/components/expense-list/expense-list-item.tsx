@@ -1,9 +1,9 @@
-import type { Locale } from "@/i18n";
 import type { CategoryColorToken } from "@/features/categories/types";
+import type { Locale } from "@/i18n";
 import { categoryColorValues } from "@/utils/category-color";
 import { formatAmount } from "@/utils/format-amount";
 
-export type ExpenseItemData = Readonly<{
+export type ExpenseListItemData = Readonly<{
   id: string;
   description: string;
   categoryId: string;
@@ -12,12 +12,12 @@ export type ExpenseItemData = Readonly<{
   amountMinor: number;
 }>;
 
-export type ExpenseItemProps = Readonly<{
-  expense: ExpenseItemData;
+export type ExpenseListItemProps = Readonly<{
+  expense: ExpenseListItemData;
   locale: Locale;
 }>;
 
-export function ExpenseItem({ expense, locale }: ExpenseItemProps) {
+export function ExpenseListItem({ expense, locale }: ExpenseListItemProps) {
   return (
     <li className="grid grid-cols-[12px_minmax(0,1fr)_auto] items-center gap-[10px] border-b border-[#49404f] py-[11px] last:border-b-0">
       <span

@@ -2,7 +2,7 @@
 
 import { Cell, Pie, PieChart } from "recharts";
 
-import type { SpendingCategoryPercentItemData } from "./spending-category-percent-item";
+import type { CategorySpendingItemData } from "./category-spending-item";
 import type { Locale } from "@/i18n";
 import { categoryColorValues } from "@/utils/category-color";
 import { formatAmount } from "@/utils/format-amount";
@@ -12,7 +12,7 @@ export type SpendingChartProps = Readonly<{
   totalLabel: string;
   totalMinor: number;
   locale: Locale;
-  items: ReadonlyArray<SpendingCategoryPercentItemData>;
+  items: ReadonlyArray<CategorySpendingItemData>;
 }>;
 
 export function SpendingChart({

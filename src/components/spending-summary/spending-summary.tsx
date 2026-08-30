@@ -1,5 +1,5 @@
-import { SpendingCategoryPercentItem } from "./spending-category-percent-item";
-import type { SpendingCategoryPercentItemData } from "./spending-category-percent-item";
+import { CategorySpendingItem } from "./category-spending-item";
+import type { CategorySpendingItemData } from "./category-spending-item";
 import { SpendingChart } from "./spending-chart";
 import type { Locale } from "@/i18n";
 
@@ -10,7 +10,7 @@ export type SpendingSummaryProps = Readonly<{
   totalLabel: string;
   totalMinor: number;
   chartLabel: string;
-  items: ReadonlyArray<SpendingCategoryPercentItemData>;
+  items: ReadonlyArray<CategorySpendingItemData>;
 }>;
 
 export function SpendingSummary({
@@ -38,7 +38,7 @@ export function SpendingSummary({
         </div>
         <ul className="grid list-none grid-cols-2 gap-x-4 gap-y-[10px] p-0 max-[680px]:grid-cols-1">
           {items.map((item) => (
-            <SpendingCategoryPercentItem key={item.categoryId} item={item} />
+            <CategorySpendingItem key={item.categoryId} item={item} />
           ))}
         </ul>
       </div>

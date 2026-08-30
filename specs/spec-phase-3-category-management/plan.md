@@ -17,20 +17,20 @@
 
 ## Group 3 — Add React-owned session coordination
 
-- [ ] Create a category feature Hook that lazily initializes the fresh-session categories and owns them with React `useState`. (R2, R3)
-- [ ] Generate custom category identifiers at the feature boundary and pass them into the pure creation function. (R4, R5)
-- [ ] Expose intention-revealing create and delete operations plus stable validation results to the presentation layer. (R3–R6)
-- [ ] Keep category state independent of the selected locale so language changes cannot reset the session. (R3, R7)
-- [ ] Compose the Hook at the dashboard's interactive client boundary without adding context or a global-state dependency. (R3, R10)
+- [x] Create a category feature Hook that lazily initializes the fresh-session categories and owns them with React `useState`. (R2, R3)
+- [x] Generate custom category identifiers at the feature boundary and pass them into the pure creation function. (R4, R5)
+- [x] Expose intention-revealing create and delete operations plus stable validation results to the presentation layer. (R3–R6)
+- [x] Keep category state independent of the selected locale so language changes cannot reset the session. (R3, R7)
+- [x] Compose the Hook at the dashboard's interactive client boundary without adding context or a global-state dependency. (R3, R10)
 
 ## Group 4 — Extend the category interface
 
-- [ ] Relocate the category panel, item, tests, and stories under a cohesive category feature boundary; add the form there and update imports without redesigning the dashboard. (R8, R10)
-- [ ] Add the inline creation form with localized label, add action, cancel action, and field-level validation. (R7–R9)
-- [ ] Preserve invalid drafts, clear successful drafts, and discard canceled drafts. (R8)
-- [ ] Add delete actions for eligible categories and omit the action for **Unclassified**. (R6, R9)
-- [ ] Keep all displayed category totals at zero and leave expense-derived presentation fixture-only until Phase 4. (R2)
-- [ ] Route any global category success or informational feedback through the existing rat-dialogue presentation. (R9)
+- [x] Relocate the category panel, item, tests, and stories under a cohesive category feature boundary; add the form there and update imports without redesigning the dashboard. (R8, R10)
+- [x] Add the inline creation form with localized label, add action, cancel action, and field-level validation. (R7–R9)
+- [x] Preserve invalid drafts, clear successful drafts, and discard canceled drafts. (R8)
+- [x] Add delete actions for eligible categories and omit the action for **Unclassified**. (R6, R9)
+- [x] Keep all displayed category totals at zero and leave expense-derived presentation fixture-only until Phase 4. (R2)
+- [x] Route any global category success or informational feedback through the existing rat-dialogue presentation. (R9)
 
 ## Group 5 — Complete localization, focus, and responsive behavior
 

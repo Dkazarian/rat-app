@@ -1,9 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { useTranslation } from "react-i18next";
 
-import { CategoryItem as CategoryItemComponent } from "@/components/category-panel/category-item";
-import { ExpenseItem as ExpenseItemComponent } from "@/components/expense-list/expense-item";
-import { SpendingCategoryPercentItem as SpendingCategoryPercentItemComponent } from "@/components/spending-summary/spending-category-percent-item";
+import { ExpenseListItem as ExpenseListItemComponent } from "@/components/expense-list/expense-list-item";
+import { CategorySpendingItem as CategorySpendingItemComponent } from "@/components/spending-summary/category-spending-item";
 import { SpendingChart as SpendingChartComponent } from "@/components/spending-summary/spending-chart";
 import { getLocale } from "@/i18n";
 import { dashboardFixtures } from "@/fixtures/dashboard-fixtures";
@@ -23,19 +22,6 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const CategoryItem: Story = {
-  render: function LocalizedCategoryItem() {
-    const { t } = useTranslation();
-    return (
-      <ul className="w-64 list-none p-0">
-        <CategoryItemComponent
-          category={{ ...fixture.categories[0], name: t("food") }}
-          locale={getLocale("en")}
-        />
-      </ul>
-    );
-  },
-};
 export const SpendingChart: Story = {
   render: function LocalizedSpendingChart() {
     const { i18n, t } = useTranslation();
@@ -50,9 +36,9 @@ export const SpendingChart: Story = {
       <SpendingChartComponent
         label={t("chartLabel")}
         totalLabel={t("total")}
-        totalMinor={fixture.spending.totalMinor}
+        totalMinor={fixture.categorySpending.totalMinor}
         locale={locale}
-        items={fixture.spending.items.map((item) => ({
+        items={fixture.categorySpending.items.map((item) => ({
           ...item,
           name: names[item.categoryId as keyof typeof names] ?? t("categories"),
         }))}
@@ -60,24 +46,24 @@ export const SpendingChart: Story = {
     );
   },
 };
-export const SpendingCategoryPercentItem: Story = {
-  render: function LocalizedSpendingCategoryPercentItem() {
+export const CategorySpendingItem: Story = {
+  render: function LocalizedCategorySpendingItem() {
     const { t } = useTranslation();
     return (
       <ul className="w-64 list-none p-0">
-        <SpendingCategoryPercentItemComponent
-          item={{ ...fixture.spending.items[0], name: t("food") }}
+        <CategorySpendingItemComponent
+          item={{ ...fixture.categorySpending.items[0], name: t("food") }}
         />
       </ul>
     );
   },
 };
-export const ExpenseItem: Story = {
-  render: function LocalizedExpenseItem() {
+export const ExpenseListItem: Story = {
+  render: function LocalizedExpenseListItem() {
     const { i18n, t } = useTranslation();
     return (
       <ul className="w-64 list-none p-0">
-        <ExpenseItemComponent
+        <ExpenseListItemComponent
           expense={{
             ...fixture.expenses[0],
             description: t("lunch"),

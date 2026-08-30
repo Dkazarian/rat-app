@@ -1,4 +1,4 @@
-import { screen } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { dashboardFixtures } from "@/fixtures/dashboard-fixtures";
@@ -11,7 +11,7 @@ describe("DashboardPage", () => {
   it("renders matching chart and textual fixture data", () => {
     renderWithProviders(
       <I18nProvider>
-        <DashboardPage fixture={dashboardFixtures.success} />
+        <DashboardPage initialSession={dashboardFixtures.success} />
       </I18nProvider>,
     );
 
@@ -27,7 +27,7 @@ describe("DashboardPage", () => {
   it("switches all interface copy to Spanish", async () => {
     const { user } = renderWithProviders(
       <I18nProvider>
-        <DashboardPage fixture={dashboardFixtures.success} />
+        <DashboardPage initialSession={dashboardFixtures.success} />
       </I18nProvider>,
     );
 
@@ -42,5 +42,43 @@ describe("DashboardPage", () => {
     expect(screen.getByDisplayValue(/Almuerzo/)).toBeVisible();
     expect(screen.getByText("$1.284,50")).toBeVisible();
     expect(document.documentElement).toHaveAttribute("lang", "es");
+  });
+
+  it("coordinates category creation and deletion across language changes", async () => {
+    const { user } = renderWithProviders(
+      <I18nProvider>
+        <DashboardPage initialSession={dashboardFixtures.empty} />
+      </I18nProvider>,
+    );
+    const categories = within(
+      screen.getByRole("complementary", { name: "Categories" }),
+    );
+
+    expect(categories.getAllByRole("listitem")).toHaveLength(4);
+    expect(categories.getAllByText("$0.00")).toHaveLength(4);
+    expect(
+      categories.queryByRole("button", { name: "Delete Unclassified" }),
+    ).not.toBeInTheDocument();
+
+    await user.click(categories.getByRole("button", { name: "New" }));
+    await user.type(
+      categories.getByRole("textbox", { name: "Category name" }),
+      "  Health  ",
+    );
+    await user.click(categories.getByRole("button", { name: "Add" }));
+
+    expect(categories.getByText("Health")).toBeVisible();
+    expect(categories.queryByRole("textbox")).not.toBeInTheDocument();
+
+    await user.click(categories.getByRole("button", { name: "Delete Food" }));
+    expect(categories.queryByText("Food")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Español" }));
+    const translatedCategories = within(
+      screen.getByRole("complementary", { name: "Categorías" }),
+    );
+    expect(translatedCategories.queryByText("Comida")).not.toBeInTheDocument();
+    expect(translatedCategories.getByText("Sin clasificar")).toBeVisible();
+    expect(translatedCategories.getByText("Health")).toBeVisible();
   });
 });

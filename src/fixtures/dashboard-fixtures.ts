@@ -1,13 +1,16 @@
-import type { CategoryItemData } from "@/components/category-panel/category-item";
+import type { CategoryItemData } from "@/features/categories/components/category-item";
 import type {
   RatDialogueData,
   RatDialogueState,
 } from "@/components/capture-panel/rat-dialogue";
 import { ratDialogueStates } from "@/components/capture-panel/rat-dialogue";
-import type { ExpenseItemData } from "@/components/expense-list/expense-item";
-import type { SpendingCategoryPercentItemData } from "@/components/spending-summary/spending-category-percent-item";
+import type { ExpenseListItemData } from "@/components/expense-list/expense-list-item";
+import type { CategorySpendingItemData } from "@/components/spending-summary/category-spending-item";
 import type { Locale } from "@/i18n";
-import { buildSpendingItems, sumCategoryTotals } from "@/utils/spending";
+import {
+  buildCategorySpendingItems,
+  sumCategorySpending,
+} from "@/utils/category-spending";
 
 export const dashboardStates = ratDialogueStates;
 
@@ -17,11 +20,11 @@ export type DashboardFixture = Readonly<{
   inputValue: string;
   feedback: RatDialogueData;
   categories: ReadonlyArray<CategoryItemData>;
-  spending: Readonly<{
+  categorySpending: Readonly<{
     totalMinor: number;
-    items: ReadonlyArray<SpendingCategoryPercentItemData>;
+    items: ReadonlyArray<CategorySpendingItemData>;
   }>;
-  expenses: ReadonlyArray<ExpenseItemData>;
+  expenses: ReadonlyArray<ExpenseListItemData>;
 }>;
 
 const categories = [
@@ -66,7 +69,7 @@ const expenses = [
     color: "purple",
     amountMinor: 1_200,
   },
-] as const satisfies ReadonlyArray<ExpenseItemData>;
+] as const satisfies ReadonlyArray<ExpenseListItemData>;
 
 const feedbackByState = {
   empty: {
@@ -113,9 +116,9 @@ function createFixture(
     inputValue: options.inputValue,
     feedback: feedbackByState[state],
     categories: fixtureCategories,
-    spending: {
-      totalMinor: sumCategoryTotals(fixtureCategories),
-      items: buildSpendingItems(fixtureCategories),
+    categorySpending: {
+      totalMinor: sumCategorySpending(fixtureCategories),
+      items: buildCategorySpendingItems(fixtureCategories),
     },
     expenses: options.populated ? expenses : [],
   };

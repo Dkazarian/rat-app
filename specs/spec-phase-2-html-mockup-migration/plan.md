@@ -13,8 +13,8 @@
 - [x] Implement `AppShell`, `Header`, `LanguageControl`, and `Footer`. (R3)
 - [x] Implement `CapturePanel`, `Mascot`, `RatDialogue`, and `ExpenseInput`. (R3, R8)
 - [x] Implement `DashboardLayout`, `CategoryPanel`, and reusable `CategoryItem` rows. (R3)
-- [x] Implement `ResultsPanel`, `SpendingSummary`, `SpendingChart`, and reusable `SpendingCategoryPercentItem` rows. (R3, R7, R8)
-- [x] Implement `ExpenseList` and reusable `ExpenseItem` rows. (R3, R7, R8)
+- [x] Implement `ResultsPanel`, `SpendingSummary`, `SpendingChart`, and reusable `CategorySpendingItem` rows. (R3, R7, R8)
+- [x] Implement `ExpenseList` and reusable `ExpenseListItem` rows. (R3, R7, R8)
 
 ## Group 3 — Compose the responsive page
 

@@ -2,33 +2,25 @@
 
 import { CapturePanel } from "@/components/capture-panel/capture-panel";
 import type { RatDialogueState } from "@/components/capture-panel/rat-dialogue";
-import { CategoryPanel } from "@/components/category-panel/category-panel";
 import { ExpenseList } from "@/components/expense-list/expense-list";
 import { Header } from "@/components/header/header";
 import { SpendingSummary } from "@/components/spending-summary/spending-summary";
-import type { DashboardFixture } from "@/fixtures/dashboard-fixtures";
+import { mapCategoriesToItems } from "@/features/categories/category-display";
+import { CategoryPanel } from "@/features/categories/components/category-panel";
+import {
+  mapCategorySpendingToItems,
+  mapExpensesToListItems,
+} from "@/features/expenses/expense-display";
+import { useExpenseSession } from "@/features/expenses/use-expense-session";
+import type { ExpenseSessionSeed } from "@/features/expenses/use-expense-session";
 import { getLocale } from "@/i18n";
 import type { TranslationKey } from "@/i18n";
-import { buildSpendingItems } from "@/utils/spending";
 import { useTranslation } from "react-i18next";
 
 import { AppShell } from "./app-shell";
 import { DashboardLayout } from "./dashboard-layout";
 import { Footer } from "./footer";
 import { ResultsPanel } from "./results-panel";
-
-const categoryKeys: Readonly<Record<string, TranslationKey>> = {
-  food: "food",
-  transport: "transport",
-  home: "home",
-  fun: "fun",
-};
-
-const expenseKeys: Readonly<Record<string, TranslationKey>> = {
-  "expense-lunch": "lunch",
-  "expense-coffee": "coffee",
-  "expense-taxi": "taxi",
-};
 
 const feedbackKeys = {
   empty: ["emptyTitle", "emptyDetail", "emptyMascotAlt"],
@@ -50,23 +42,21 @@ const feedbackKeys = {
 >;
 
 export type DashboardPageProps = Readonly<{
-  fixture: DashboardFixture;
+  initialSession?: ExpenseSessionSeed;
 }>;
 
-export function DashboardPage({ fixture }: DashboardPageProps) {
+export function DashboardPage({ initialSession }: DashboardPageProps) {
   const { i18n, t } = useTranslation();
+  const session = useExpenseSession(initialSession);
   const locale = getLocale(i18n.resolvedLanguage ?? i18n.language);
-  const [titleKey, detailKey, mascotAltKey] = feedbackKeys[fixture.id];
-  const localizedCategories = fixture.categories.map((category) => ({
-    ...category,
-    name: t(categoryKeys[category.id] ?? "categories"),
-  }));
-  const localizedExpenses = fixture.expenses.map((expense) => ({
-    ...expense,
-    description: t(expenseKeys[expense.id] ?? "recentExpenses"),
-    categoryName: t(categoryKeys[expense.categoryId] ?? "categories"),
-  }));
-  const spendingItems = buildSpendingItems(localizedCategories);
+  const [titleKey, detailKey, mascotAltKey] =
+    feedbackKeys[session.feedbackState];
+  const categoryItems = mapCategoriesToItems(session.categories, t);
+  const expenseListItems = mapExpensesToListItems(session.expenses, t);
+  const categorySpendingItems = mapCategorySpendingToItems(
+    session.categorySpending.items,
+    t,
+  );
 
   return (
     <div className="min-h-screen bg-[#151515] px-3 py-3 text-sm max-[680px]:px-0 max-[680px]:py-0">
@@ -88,7 +78,7 @@ export function DashboardPage({ fixture }: DashboardPageProps) {
             <div className="mb-[22px]">
               <CapturePanel
                 dialogue={{
-                  ...fixture.feedback,
+                  ...session.feedback,
                   title: t(titleKey),
                   detail: t(detailKey),
                   mascotAlt: t(mascotAltKey),
@@ -97,8 +87,8 @@ export function DashboardPage({ fixture }: DashboardPageProps) {
                   label: t("inputLabel"),
                   placeholder: t("inputPlaceholder"),
                   actionLabel: t("sortAction"),
-                  value: fixture.inputValue ? t("sampleInput") : "",
-                  disabled: fixture.id === "loading",
+                  value: session.inputValue ? t("sampleInput") : "",
+                  disabled: session.feedbackState === "loading",
                 }}
               />
             </div>
@@ -106,9 +96,11 @@ export function DashboardPage({ fixture }: DashboardPageProps) {
               categoryPanel={
                 <CategoryPanel
                   locale={locale}
-                  title={t("categories")}
-                  addLabel={t("newCategory")}
-                  categories={localizedCategories}
+                  categories={categoryItems}
+                  onCreateCategory={session.createCategory}
+                  onDeleteCategory={(categoryId) => {
+                    session.deleteCategory(categoryId);
+                  }}
                 />
               }
               resultsPanel={
@@ -119,9 +111,9 @@ export function DashboardPage({ fixture }: DashboardPageProps) {
                       title={t("spending")}
                       periodLabel={t("thisMonth")}
                       totalLabel={t("total")}
-                      totalMinor={fixture.spending.totalMinor}
+                      totalMinor={session.categorySpending.totalMinor}
                       chartLabel={t("chartLabel")}
-                      items={spendingItems}
+                      items={categorySpendingItems}
                     />
                   }
                   expenseList={
@@ -129,7 +121,7 @@ export function DashboardPage({ fixture }: DashboardPageProps) {
                       locale={locale}
                       title={t("recentExpenses")}
                       periodLabel={t("today")}
-                      expenses={localizedExpenses}
+                      expenses={expenseListItems}
                     />
                   }
                 />

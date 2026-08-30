@@ -8,7 +8,7 @@ const meta = {
   title: "Pages/Dashboard",
   component: DashboardPage,
   parameters: { layout: "fullscreen" },
-  args: { fixture: dashboardFixtures.success },
+  args: { initialSession: dashboardFixtures.success },
 } satisfies Meta<typeof DashboardPage>;
 
 export default meta;
@@ -18,11 +18,15 @@ export const DesktopSuccess: Story = {
   parameters: { viewport: { defaultViewport: "desktop" } },
 };
 
-export const Empty: Story = { args: { fixture: dashboardFixtures.empty } };
-export const Loading: Story = { args: { fixture: dashboardFixtures.loading } };
+export const Empty: Story = {
+  args: { initialSession: dashboardFixtures.empty },
+};
+export const Loading: Story = {
+  args: { initialSession: dashboardFixtures.loading },
+};
 export const ExtractionFailure: Story = {
-  args: { fixture: dashboardFixtures["extraction-failure"] },
+  args: { initialSession: dashboardFixtures["extraction-failure"] },
 };
 export const ProviderError: Story = {
-  args: { fixture: dashboardFixtures["provider-error"] },
+  args: { initialSession: dashboardFixtures["provider-error"] },
 };

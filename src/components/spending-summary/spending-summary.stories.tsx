@@ -5,13 +5,13 @@ import { useTranslation } from "react-i18next";
 import { dashboardFixtures } from "@/fixtures/dashboard-fixtures";
 
 import { SpendingSummary } from "./spending-summary";
-import type { SpendingCategoryPercentItemData } from "./spending-category-percent-item";
+import type { CategorySpendingItemData } from "./category-spending-item";
 
 const fixture = dashboardFixtures.success;
 
 type StoryProps = Readonly<{
   totalMinor: number;
-  items: ReadonlyArray<SpendingCategoryPercentItemData>;
+  items: ReadonlyArray<CategorySpendingItemData>;
   empty?: boolean;
 }>;
 
@@ -45,8 +45,8 @@ const meta = {
   title: "Components/SpendingSummary",
   component: LocalizedSpendingSummary,
   args: {
-    totalMinor: fixture.spending.totalMinor,
-    items: fixture.spending.items,
+    totalMinor: fixture.categorySpending.totalMinor,
+    items: fixture.categorySpending.items,
   },
   decorators: [
     (Story) => (
@@ -64,7 +64,7 @@ export const Populated: Story = {};
 export const Empty: Story = {
   args: {
     totalMinor: 0,
-    items: dashboardFixtures.empty.spending.items,
+    items: dashboardFixtures.empty.categorySpending.items,
     empty: true,
   },
 };

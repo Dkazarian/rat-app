@@ -25,9 +25,9 @@ AppShell
 │  └─ ResultsPanel
 │     ├─ SpendingSummary
 │     │  ├─ SpendingChart
-│     │  └─ SpendingCategoryPercentItem × n
+│     │  └─ CategorySpendingItem × n
 │     └─ ExpenseList
-│        └─ ExpenseItem × n
+│        └─ ExpenseListItem × n
 └─ Footer
 ```
 
