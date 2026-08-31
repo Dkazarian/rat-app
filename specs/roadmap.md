@@ -30,9 +30,9 @@ The roadmap remains outcome-oriented. Implementation details and decisions are d
 - Storybook coverage for principal components and interface states
 - Accessible, deterministic presentation without persistence or live AI integration
 
-## Phase 3 — Category management
+## Phase 3 — Category management ✅
 
-- Category interface, service, and repository capabilities
+- Category feature model, pure rules, and React-owned session coordination
 - Initial **Food**, **Home**, **Transport**, and permanent **Unclassified** categories
 - Create and delete categories within the product rules
 - Bilingual validation and keyboard-accessible controls

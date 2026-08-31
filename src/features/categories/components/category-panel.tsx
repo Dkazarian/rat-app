@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import type {
@@ -29,6 +29,9 @@ export function CategoryPanel({
 }: CategoryPanelProps) {
   const { t } = useTranslation();
   const titleId = useId();
+  const createButtonRef = useRef<HTMLButtonElement>(null);
+  const nameInputRef = useRef<HTMLInputElement>(null);
+  const hasOpenedFormRef = useRef(false);
   const [isCreating, setIsCreating] = useState(false);
   const [draft, setDraft] = useState("");
   const [validationCode, setValidationCode] =
@@ -43,6 +46,14 @@ export function CategoryPanel({
     "limit-reached": t("categoryValidationLimit"),
   };
 
+  useEffect(() => {
+    if (isCreating) {
+      nameInputRef.current?.focus();
+    } else if (hasOpenedFormRef.current) {
+      createButtonRef.current?.focus();
+    }
+  }, [isCreating]);
+
   const closeForm = () => {
     setDraft("");
     setValidationCode(undefined);
@@ -54,6 +65,7 @@ export function CategoryPanel({
 
     if (!result.ok) {
       setValidationCode(result.code);
+      nameInputRef.current?.focus();
       return;
     }
 
@@ -71,8 +83,12 @@ export function CategoryPanel({
         </h2>
         {!isCreating ? (
           <button
+            ref={createButtonRef}
             type="button"
-            onClick={() => setIsCreating(true)}
+            onClick={() => {
+              hasOpenedFormRef.current = true;
+              setIsCreating(true);
+            }}
             className="cursor-pointer rounded-[10px] border border-[#49404f] bg-[#302a37] px-[9px] py-[7px] text-[#f7f2fa] outline-offset-2 focus-visible:outline-2 focus-visible:outline-[#86afe0]"
           >
             <span aria-hidden="true">+ </span>
@@ -89,6 +105,7 @@ export function CategoryPanel({
           cancelLabel={t("cancelCategory")}
           validationCode={validationCode}
           validationMessages={validationMessages}
+          inputRef={nameInputRef}
           onDraftChange={(nextDraft) => {
             setDraft(nextDraft);
             setValidationCode(undefined);

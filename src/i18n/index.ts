@@ -9,9 +9,15 @@ export const fallbackLocale = "en" as const;
 
 export type Locale = (typeof supportedLocales)[number];
 
+type TranslationDictionary = Readonly<
+  Record<keyof typeof translationEn, string>
+>;
+
+const synchronizedSpanishTranslation: TranslationDictionary = translationEs;
+
 export const resources = {
   en: { translation: translationEn },
-  es: { translation: translationEs },
+  es: { translation: synchronizedSpanishTranslation },
 } as const;
 
 export type TranslationKey =

@@ -34,27 +34,27 @@
 
 ## Group 5 — Complete localization, focus, and responsive behavior
 
-- [ ] Add synchronized typed English and Spanish copy for creation, cancellation, deletion actions, validation, and accessible labels. (R7, R9)
-- [ ] Translate built-in names from stable identities at render time while rendering custom names verbatim. (R1, R7)
-- [ ] Move focus into the creation field when opened and restore it predictably after cancel or successful creation. (R8, R9)
-- [ ] Associate validation with the input, announce it appropriately, and retain visible focus for the complete keyboard workflow. (R9)
-- [ ] Verify the extended category panel at representative desktop and 390 px widths without overlap or horizontal scrolling. (R8, R9)
+- [x] Add synchronized typed English and Spanish copy for creation, cancellation, deletion actions, validation, and accessible labels. (R7, R9)
+- [x] Translate built-in names from stable identities at render time while rendering custom names verbatim. (R1, R7)
+- [x] Move focus into the creation field when opened and restore it predictably after cancel or successful creation. (R8, R9)
+- [x] Associate validation with the input, announce it appropriately, and retain visible focus for the complete keyboard workflow. (R9)
+- [x] Verify the extended category panel at representative desktop and 390 px widths without overlap or horizontal scrolling. (R8, R9)
 
 ## Group 6 — Add component tests and Storybook states
 
-- [ ] Add user-focused component tests for fresh state, creation, validation retention, cancellation, deletion, and protected **Unclassified** behavior. (R2–R6, R8, R9)
-- [ ] Add a language-switching test that preserves created and deleted categories while translating built-ins only. (R3, R7)
-- [ ] Add deterministic stories for the default, open-form, validation, and category-limit states. (R11)
-- [ ] Add representative English and Spanish story compositions with both built-in and custom names. (R7, R11)
-- [ ] Confirm tests and stories do not rely on storage, network access, uncontrolled randomness, or an API key. (R3, R11)
+- [x] Add user-focused component tests for fresh state, creation, validation retention, cancellation, deletion, and protected **Unclassified** behavior. (R2–R6, R8, R9)
+- [x] Add a language-switching test that preserves created and deleted categories while translating built-ins only. (R3, R7)
+- [x] Add deterministic stories for the default, open-form, validation, and category-limit states. (R11)
+- [x] Add representative English and Spanish story compositions with both built-in and custom names. (R7, R11)
+- [x] Confirm tests and stories do not rely on storage, network access, uncontrolled randomness, or an API key. (R3, R11)
 
 ## Group 7 — Validate and hand off
 
-- [ ] Run every automated quality gate listed in `validation.md`.
-- [ ] Complete the manual keyboard, localization, refresh-reset, responsive, and no-persistence checks.
-- [ ] Complete the architecture and scope audit against `requirements.md` and `specs/techstack.md`.
-- [ ] Record the validation date, environment, and any accepted differences in `validation.md`.
-- [ ] Mark Phase 3 complete in `specs/roadmap.md` only after all required checks pass.
+- [x] Run every automated quality gate listed in `validation.md`.
+- [x] Complete the manual keyboard, localization, refresh-reset, responsive, and no-persistence checks.
+- [x] Complete the architecture and scope audit against `requirements.md` and `specs/techstack.md`.
+- [x] Record the validation date, environment, and any accepted differences in `validation.md`.
+- [x] Mark Phase 3 complete in `specs/roadmap.md` only after all required checks pass.
 
 ## Completion handoff
 

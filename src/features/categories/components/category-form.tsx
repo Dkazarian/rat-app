@@ -1,6 +1,7 @@
 "use client";
 
 import { useId } from "react";
+import type { Ref } from "react";
 
 import type { CategoryNameValidationCode } from "../types";
 
@@ -12,6 +13,7 @@ export type CategoryFormProps = Readonly<{
   cancelLabel: string;
   validationCode?: CategoryNameValidationCode;
   validationMessages: Readonly<Record<CategoryNameValidationCode, string>>;
+  inputRef?: Ref<HTMLInputElement>;
   onDraftChange: (draft: string) => void;
   onSubmit: () => void;
   onCancel: () => void;
@@ -25,6 +27,7 @@ export function CategoryForm({
   cancelLabel,
   validationCode,
   validationMessages,
+  inputRef,
   onDraftChange,
   onSubmit,
   onCancel,
@@ -45,6 +48,7 @@ export function CategoryForm({
         {label}
       </label>
       <input
+        ref={inputRef}
         id={inputId}
         value={draft}
         placeholder={placeholder}
