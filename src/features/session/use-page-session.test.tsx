@@ -1,5 +1,5 @@
 import { act, renderHook } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { getCategoryDisplayName } from "@/features/categories/category-display";
 import { createInitialCategories } from "@/features/categories/category-rules";
@@ -26,6 +26,39 @@ const translations = {
 } as const;
 
 describe("usePageSession", () => {
+  it("creates distinct category and expense IDs when HTTP has no randomUUID", () => {
+    vi.stubGlobal("crypto", {
+      getRandomValues: crypto.getRandomValues.bind(crypto),
+    });
+    try {
+      const { result } = renderHook(() => usePageSession());
+      act(() => {
+        expect(result.current.createCategory("Health").ok).toBe(true);
+        expect(result.current.createCategory("Books").ok).toBe(true);
+      });
+      const healthId = result.current.categories[4].id;
+      act(() => {
+        expect(
+          result.current.captureExpenses([
+            { description: "Vitamins", amountMinor: 500, categoryId: healthId },
+            { description: "Novel", amountMinor: 900 },
+          ]).ok,
+        ).toBe(true);
+      });
+      const ids = [
+        ...result.current.categories.slice(4),
+        ...result.current.expenses,
+      ].map(({ id }) => id);
+      expect(ids.every((id) => id.length > 0)).toBe(true);
+      expect(new Set(ids).size).toBe(4);
+      expect(result.current.expenses[0].categoryId).toBe(healthId);
+      act(() => void result.current.deleteCategory(healthId));
+      expect(result.current.expenses[0].categoryId).toBe("unclassified");
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("composes multiple intentions in one event without losing expenses or restoring deleted references", () => {
     const { result } = renderHook(() => usePageSession());
     act(() => {

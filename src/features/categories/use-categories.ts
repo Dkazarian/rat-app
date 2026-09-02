@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { createBrowserId } from "@/utils/create-browser-id";
 
 import {
   createCategory as createCategoryValue,
@@ -22,12 +23,8 @@ export type CategoriesSession = Readonly<{
   deleteCategory: (categoryId: CategoryId) => CategoryDeletionResult;
 }>;
 
-function createBrowserCategoryId(): CategoryId {
-  return crypto.randomUUID();
-}
-
 export function useCategories(
-  createId: CategoryIdFactory = createBrowserCategoryId,
+  createId: CategoryIdFactory = createBrowserId,
 ): CategoriesSession {
   const [categories, setCategories] = useState<ReadonlyArray<Category>>(
     createInitialCategories,

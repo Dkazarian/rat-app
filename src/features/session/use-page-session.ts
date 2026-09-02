@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useReducer, useRef } from "react";
+import { createBrowserId } from "@/utils/create-browser-id";
 
 import {
   createCategory as createCategoryValue,
@@ -96,10 +97,6 @@ export function createInitialPageSessionSeed(): PageSessionSeed {
     inputValue: "",
     feedback: { state: "empty" },
   };
-}
-
-function createBrowserId(): string {
-  return crypto.randomUUID();
 }
 
 function pageSessionReducer(
