@@ -1336,7 +1336,7 @@ html&gt;body{padding:0}&lt;/style&gt;
             &lt;div class=&quot;eb-chart-wrap&quot;&gt;
               &lt;div class=&quot;eb-chart&quot; role=&quot;img&quot; data-chart-label aria-label=&quot;Spending: Food 40%, Transport 26%, Home 20%, Fun 14%&quot;&gt;
                 &lt;div class=&quot;eb-chart-center&quot;&gt;
-                  &lt;span class=&quot;eb-chart-total&quot; data-amount=&quot;128450&quot;&gt;$1,284.50&lt;/span&gt;
+                  &lt;span class=&quot;eb-chart-total&quot; data-amount=&quot;128450&quot;&gt;$1284.50&lt;/span&gt;
                   &lt;span class=&quot;eb-chart-caption&quot; data-i18n=&quot;total&quot;&gt;total&lt;/span&gt;
                 &lt;/div&gt;
               &lt;/div&gt;
@@ -1422,7 +1422,7 @@ html&gt;body{padding:0}&lt;/style&gt;
         },
         es: {
           inputLabel: &quot;¿En qué gastaste?&quot;,
-          placeholder: &quot;Almuerzo $18, café $4,50 y taxi $12&quot;,
+          placeholder: &quot;Almuerzo $18, café $4.50 y taxi $12&quot;,
           add: &quot;Ordenar&quot;,
           done: &quot;Listo&quot;,
           doneCopy: &quot;3 gastos ordenados.&quot;,
@@ -1484,9 +1484,10 @@ html&gt;body{padding:0}&lt;/style&gt;
         });
         root.querySelectorAll(&quot;[data-amount]&quot;).forEach(function (node) {
           const value = Number(node.dataset.amount) / 100;
-          node.textContent = &quot;$&quot; + new Intl.NumberFormat(locale, {
+          node.textContent = &quot;$&quot; + new Intl.NumberFormat(&quot;en-US&quot;, {
             minimumFractionDigits: 2,
-            maximumFractionDigits: 2
+            maximumFractionDigits: 2,
+            useGrouping: false
           }).format(value);
         });
         root.querySelector(&quot;[data-chart-label]&quot;).setAttribute(&quot;aria-label&quot;, copy[locale].chartLabel);

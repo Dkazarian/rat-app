@@ -70,6 +70,18 @@ export const ExpenseListItem: Story = {
             categoryName: t("food"),
           }}
           locale={getLocale(i18n.resolvedLanguage ?? i18n.language)}
+          categoryOptions={[
+            { id: "food", name: t("food") },
+            { id: "unclassified", name: t("unclassified") },
+          ]}
+          categorySelectLabel={t("reclassifyExpense", {
+            description: fixture.expenses[0].description,
+          })}
+          deleteLabel={t("deleteExpense", {
+            description: fixture.expenses[0].description,
+          })}
+          onCategoryChange={() => undefined}
+          onDelete={() => undefined}
         />
       </ul>
     );

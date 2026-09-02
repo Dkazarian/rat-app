@@ -2,7 +2,7 @@ import type { Locale } from "@/i18n";
 
 const numberLocales = {
   en: "en-US",
-  es: "es-AR",
+  es: "en-US",
 } as const satisfies Record<Locale, string>;
 
 export function formatAmount(minorUnits: number, locale: Locale): string {
@@ -13,6 +13,7 @@ export function formatAmount(minorUnits: number, locale: Locale): string {
   const amount = new Intl.NumberFormat(numberLocales[locale], {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
+    useGrouping: false,
   }).format(minorUnits / 100);
 
   return `$${amount}`;

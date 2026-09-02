@@ -1,33 +1,107 @@
 import { describe, expect, it } from "vitest";
 
-import { dashboardFixtures } from "@/fixtures/dashboard-fixtures";
+import {
+  createCategory,
+  createInitialCategories,
+} from "@/features/categories/category-rules";
 import type { TranslationKey } from "@/i18n";
 
 import {
-  mapCategorySpendingToItems,
-  mapExpensesToListItems,
+  buildSpendingChartLabel,
+  mapExpenseSummaryToSpendingItems,
+  mapExpenseValuesToListItems,
 } from "./expense-display";
+import { selectExpenseSummary } from "./expense-selectors";
+import type { Expense } from "./types";
 
 const translations: Readonly<Partial<Record<TranslationKey, string>>> = {
-  lunch: "Almuerzo",
   food: "Comida",
+  home: "Casa",
+  transport: "Transporte",
+  unclassified: "Sin clasificar",
+  spending: "Gastos",
+  total: "total",
 };
 
 const translate = (key: TranslationKey) => translations[key] ?? key;
+const categoriesResult = createCategory(createInitialCategories(), {
+  id: "health",
+  name: "Salud & Wellness",
+});
+
+if (!categoriesResult.ok) throw new Error("Expected category fixture creation");
+
+const categories = categoriesResult.categories;
+const expenses: ReadonlyArray<Expense> = [
+  {
+    id: "expense-lunch",
+    description: "Almuerzo with Alex",
+    amountMinor: 1_800,
+    categoryId: "food",
+  },
+  {
+    id: "expense-vitamins",
+    description: "Vitaminas",
+    amountMinor: 450,
+    categoryId: "health",
+  },
+];
 
 describe("expense presentation mapping", () => {
-  it("localizes expense descriptions and their category names", () => {
+  it("localizes built-in names but preserves descriptions and custom names", () => {
     expect(
-      mapExpensesToListItems(dashboardFixtures.success.expenses, translate)[0],
-    ).toMatchObject({ description: "Almuerzo", categoryName: "Comida" });
+      mapExpenseValuesToListItems(expenses, categories, translate),
+    ).toEqual([
+      {
+        id: "expense-lunch",
+        description: "Almuerzo with Alex",
+        amountMinor: 1_800,
+        categoryId: "food",
+        categoryName: "Comida",
+        color: "coral",
+      },
+      {
+        id: "expense-vitamins",
+        description: "Vitaminas",
+        amountMinor: 450,
+        categoryId: "health",
+        categoryName: "Salud & Wellness",
+        color: "yellow",
+      },
+    ]);
   });
 
-  it("localizes spending category names", () => {
-    expect(
-      mapCategorySpendingToItems(
-        dashboardFixtures.success.categorySpending.items,
-        translate,
-      )[0],
-    ).toMatchObject({ name: "Comida" });
+  it("maps derived spending while preserving custom category names", () => {
+    const summary = selectExpenseSummary(categories, expenses);
+
+    expect(mapExpenseSummaryToSpendingItems(summary, translate)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ categoryId: "food", name: "Comida" }),
+        expect.objectContaining({
+          categoryId: "health",
+          name: "Salud & Wellness",
+        }),
+      ]),
+    );
+  });
+
+  it("derives chart accessibility text from current values", () => {
+    const before = buildSpendingChartLabel(
+      selectExpenseSummary(categories, expenses),
+      "es",
+      translate,
+    );
+    const after = buildSpendingChartLabel(
+      selectExpenseSummary(categories, expenses.slice(1)),
+      "es",
+      translate,
+    );
+
+    expect(before).toContain("Comida 80%");
+    expect(before).toContain("Salud & Wellness 20%");
+    expect(before).toContain("$22.50");
+    expect(after).not.toContain("Comida 80%");
+    expect(after).toContain("Salud & Wellness 100%");
+    expect(after).toContain("$4.50");
   });
 });

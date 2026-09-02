@@ -10,8 +10,6 @@ const categoryTranslationKeys: Readonly<
   home: "home",
   transport: "transport",
   unclassified: "unclassified",
-  // Retained for the Phase 2 spending fixture until Phase 4 replaces it.
-  fun: "fun",
 };
 
 export type CategoryNameSource = Readonly<{

@@ -45,7 +45,7 @@ The initial release is anonymous, has no accounts or roles, and does not persist
 - Four initial categories: **Food**, **Home**, **Transport**, and permanent **Unclassified**.
 - Session-only category creation and deletion, with automatic accessible colors and a maximum of ten categories.
 - Natural-language capture of one or multiple expenses per message in English or Spanish.
-- Currency-neutral amounts displayed with exactly the `$` symbol and two decimal places.
+- Currency-neutral amounts displayed as `$` followed by an ungrouped number with a `.` decimal separator and exactly two fractional digits in both languages (for example, `$1285.50`).
 - Server-side AI classification through OpenRouter, with the provider model kept configurable.
 - Reclassification and deletion of extracted expenses.
 - Cumulative categorized lists, totals, and an accessible donut or pie chart for the current session.

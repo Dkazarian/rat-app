@@ -14,11 +14,6 @@ type StoryProps = Readonly<{
 function LocalizedExpenseList({ expenses }: StoryProps) {
   const { i18n, t } = useTranslation();
   const locale = getLocale(i18n.resolvedLanguage ?? i18n.language);
-  const descriptions: Record<string, string> = {
-    "expense-lunch": t("lunch"),
-    "expense-coffee": t("coffee"),
-    "expense-taxi": t("taxi"),
-  };
   const categories: Record<string, string> = {
     food: t("food"),
     transport: t("transport"),
@@ -33,9 +28,23 @@ function LocalizedExpenseList({ expenses }: StoryProps) {
       periodLabel={t("today")}
       expenses={expenses.map((expense) => ({
         ...expense,
-        description: descriptions[expense.id] ?? expense.description,
         categoryName: categories[expense.categoryId] ?? t("categories"),
       }))}
+      categoryOptions={[
+        { id: "food", name: t("food") },
+        { id: "home", name: t("home") },
+        { id: "transport", name: t("transport") },
+        { id: "unclassified", name: t("unclassified") },
+      ]}
+      emptyMessage={t("noExpenses")}
+      getCategorySelectLabel={(expense) =>
+        t("reclassifyExpense", { description: expense.description })
+      }
+      getDeleteLabel={(expense) =>
+        t("deleteExpense", { description: expense.description })
+      }
+      onCategoryChange={() => undefined}
+      onDeleteExpense={() => undefined}
     />
   );
 }

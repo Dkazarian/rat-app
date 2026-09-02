@@ -148,7 +148,7 @@ The initial release supports reclassification and deletion, but not description 
 - Switch immediately without navigation or reload and without losing the current in-memory session.
 - The locale resets on refresh; do not persist it or infer it from stored state.
 - Accept expense input in either language and produce a concise description in the language of the input or selected interface.
-- Display amounts as exactly `$` plus a locale-aware two-decimal number. Do not infer or store a currency code.
+- Display amounts as `$` followed by an ungrouped number with a `.` decimal separator and exactly two fractional digits in both English and Spanish (for example, `$1285.50`). Do not infer or store a currency code.
 
 ## UI and Storybook constraints
 

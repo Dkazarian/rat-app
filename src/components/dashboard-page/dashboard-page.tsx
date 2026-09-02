@@ -5,14 +5,19 @@ import type { RatDialogueState } from "@/components/capture-panel/rat-dialogue";
 import { ExpenseList } from "@/components/expense-list/expense-list";
 import { Header } from "@/components/header/header";
 import { SpendingSummary } from "@/components/spending-summary/spending-summary";
-import { mapCategoriesToItems } from "@/features/categories/category-display";
 import { CategoryPanel } from "@/features/categories/components/category-panel";
 import {
-  mapCategorySpendingToItems,
-  mapExpensesToListItems,
+  buildSpendingChartLabel,
+  mapExpenseSummaryToCategoryItems,
+  mapExpenseSummaryToSpendingItems,
+  mapExpenseValuesToListItems,
 } from "@/features/expenses/expense-display";
-import { useExpenseSession } from "@/features/expenses/use-expense-session";
-import type { ExpenseSessionSeed } from "@/features/expenses/use-expense-session";
+import type { CapturedExpenseCandidate } from "@/features/session/use-page-session";
+import {
+  usePageSession,
+  type PageSessionDependencies,
+  type PageSessionSeed,
+} from "@/features/session/use-page-session";
 import { getLocale } from "@/i18n";
 import type { TranslationKey } from "@/i18n";
 import { useTranslation } from "react-i18next";
@@ -42,21 +47,69 @@ const feedbackKeys = {
 >;
 
 export type DashboardPageProps = Readonly<{
-  initialSession?: ExpenseSessionSeed;
+  initialSession?: PageSessionSeed;
+  sessionDependencies?: PageSessionDependencies;
+  produceExpenseBatch?: (
+    inputValue: string,
+  ) => ReadonlyArray<CapturedExpenseCandidate>;
 }>;
 
-export function DashboardPage({ initialSession }: DashboardPageProps) {
+const feedbackData = {
+  empty: {
+    announcement: "polite",
+    mascotSrc: "/assets/rat-mascot-awaiting.png",
+  },
+  loading: {
+    announcement: "polite",
+    mascotSrc: "/assets/rat-mascot-sniffing.png",
+  },
+  success: {
+    announcement: "polite",
+    mascotSrc: "/assets/rat-mascot.png",
+  },
+  "extraction-failure": {
+    announcement: "assertive",
+    mascotSrc: "/assets/rat-mascot-confused.png",
+  },
+  "provider-error": {
+    announcement: "assertive",
+    mascotSrc: "/assets/rat-mascot-error.png",
+  },
+} as const;
+
+const rejectCapture = () => [];
+
+export function DashboardPage({
+  initialSession,
+  sessionDependencies,
+  produceExpenseBatch = rejectCapture,
+}: DashboardPageProps) {
   const { i18n, t } = useTranslation();
-  const session = useExpenseSession(initialSession);
+  const session = usePageSession(initialSession, sessionDependencies);
   const locale = getLocale(i18n.resolvedLanguage ?? i18n.language);
   const [titleKey, detailKey, mascotAltKey] =
-    feedbackKeys[session.feedbackState];
-  const categoryItems = mapCategoriesToItems(session.categories, t);
-  const expenseListItems = mapExpensesToListItems(session.expenses, t);
-  const categorySpendingItems = mapCategorySpendingToItems(
-    session.categorySpending.items,
+    feedbackKeys[session.feedback.state];
+  const dialogueData = feedbackData[session.feedback.state];
+  const categoryItems = mapExpenseSummaryToCategoryItems(session.summary, t);
+  const categoryOptions = categoryItems.map(({ id, name }) => ({ id, name }));
+  const expenseListItems = mapExpenseValuesToListItems(
+    session.expenses,
+    session.categories,
     t,
   );
+  const categorySpendingItems = mapExpenseSummaryToSpendingItems(
+    session.summary,
+    t,
+  );
+  const detail =
+    session.feedback.state === "success"
+      ? t(
+          session.feedback.extractedCount === 1
+            ? "successDetailOne"
+            : "successDetailMany",
+          { count: session.feedback.extractedCount },
+        )
+      : t(detailKey);
 
   return (
     <div className="min-h-screen bg-[#151515] px-3 py-3 text-sm max-[680px]:px-0 max-[680px]:py-0">
@@ -78,17 +131,24 @@ export function DashboardPage({ initialSession }: DashboardPageProps) {
             <div className="mb-[22px]">
               <CapturePanel
                 dialogue={{
-                  ...session.feedback,
+                  state: session.feedback.state,
+                  ...dialogueData,
                   title: t(titleKey),
-                  detail: t(detailKey),
+                  detail,
                   mascotAlt: t(mascotAltKey),
                 }}
                 input={{
                   label: t("inputLabel"),
                   placeholder: t("inputPlaceholder"),
                   actionLabel: t("sortAction"),
-                  value: session.inputValue ? t("sampleInput") : "",
-                  disabled: session.feedbackState === "loading",
+                  value: session.inputValue,
+                  disabled: session.feedback.state === "loading",
+                  onValueChange: session.changeInput,
+                  onSubmit: () => {
+                    session.captureExpenses(
+                      produceExpenseBatch(session.inputValue),
+                    );
+                  },
                 }}
               />
             </div>
@@ -111,8 +171,12 @@ export function DashboardPage({ initialSession }: DashboardPageProps) {
                       title={t("spending")}
                       periodLabel={t("thisMonth")}
                       totalLabel={t("total")}
-                      totalMinor={session.categorySpending.totalMinor}
-                      chartLabel={t("chartLabel")}
+                      totalMinor={session.summary.totalMinor}
+                      chartLabel={buildSpendingChartLabel(
+                        session.summary,
+                        locale,
+                        t,
+                      )}
                       items={categorySpendingItems}
                     />
                   }
@@ -122,6 +186,20 @@ export function DashboardPage({ initialSession }: DashboardPageProps) {
                       title={t("recentExpenses")}
                       periodLabel={t("today")}
                       expenses={expenseListItems}
+                      categoryOptions={categoryOptions}
+                      emptyMessage={t("noExpenses")}
+                      getCategorySelectLabel={(expense) =>
+                        t("reclassifyExpense", {
+                          description: expense.description,
+                        })
+                      }
+                      getDeleteLabel={(expense) =>
+                        t("deleteExpense", {
+                          description: expense.description,
+                        })
+                      }
+                      onCategoryChange={session.reclassifyExpense}
+                      onDeleteExpense={session.deleteExpense}
                     />
                   }
                 />

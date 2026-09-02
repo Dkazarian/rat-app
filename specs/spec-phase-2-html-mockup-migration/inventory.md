@@ -46,7 +46,7 @@ The mockup defines paired light/dark values for canvas, surface, soft surface, t
 ## Content and states
 
 - English and Spanish cover the brand tagline, capture labels, feedback, categories, spending summary, expense list, chart description, controls, and mascot alternatives.
-- Amounts are stored as integer minor units and shown as `$` plus two locale-aware decimal places.
+- Amounts are stored as integer minor units and shown as `$` followed by an ungrouped number with a `.` decimal separator and exactly two fractional digits in both languages (for example, `$1285.50`).
 - Required fixture states are empty, loading, populated success, extraction failure, and provider error. Recoverable failures preserve the submitted input.
 - Loading and success feedback are polite announcements. Error feedback is urgent.
 - The chart requires a textual category breakdown and cannot rely on color alone.

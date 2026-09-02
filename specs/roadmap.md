@@ -38,13 +38,15 @@ The roadmap remains outcome-oriented. Implementation details and decisions are d
 - Bilingual validation and keyboard-accessible controls
 - Session categories survive language changes and reset on refresh
 
-## Phase 4 — Expense management
+## Phase 4 — Expense management (implemented; process sign-off pending)
 
-- Expense interface, service, and repository capabilities
+- Immutable expense model, pure rules, derived selectors, and shared React session coordination
 - Cumulative expense capture within the current session
 - Reclassify and delete expenses
 - Move expenses to **Unclassified** when their category is deleted
 - Synchronized categorized results, totals, and spending chart
+
+Functional validation passed on 2026-09-02. Final sign-off awaits acceptance of the historical test-first process deviation documented in [Phase 4 evidence](spec-phase-4-expense-management/evidence.md).
 
 ## Phase 5 — AI classification API
 
