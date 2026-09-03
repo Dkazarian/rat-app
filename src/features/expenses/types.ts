@@ -3,6 +3,7 @@ import type {
   CategoryColorToken,
   CategoryId,
 } from "@/features/categories/types";
+import type { ExpenseValidationError } from "./expense-errors";
 
 export type ExpenseId = string;
 export type ExpenseDescription = string;
@@ -23,57 +24,25 @@ export type ExpenseCandidate = Readonly<{
 }>;
 
 export const expenseBatchRejectionCodes = [
-  "empty-batch",
   "invalid-description",
   "invalid-amount",
+  "duplicate-id",
 ] as const;
 
 export type ExpenseBatchRejectionCode =
   (typeof expenseBatchRejectionCodes)[number];
 
-export type ExpenseBatchAdditionResult =
-  | Readonly<{
-      ok: true;
-      addedExpenses: ReadonlyArray<Expense>;
-      expenses: ReadonlyArray<Expense>;
-    }>
-  | Readonly<{
-      ok: false;
-      code: ExpenseBatchRejectionCode;
-      expenses: ReadonlyArray<Expense>;
-    }>;
+export type ExpenseBatchError = Readonly<{
+  candidate: ExpenseCandidate;
+  error: ExpenseValidationError;
+}>;
 
-export const expenseReclassificationRejectionCodes = [
-  "expense-not-found",
-  "category-not-found",
-] as const;
+export type ExpenseBatchAdditionResult = Readonly<{
+  added: ReadonlyArray<Expense>;
+  errors: ReadonlyArray<ExpenseBatchError>;
+}>;
 
-export type ExpenseReclassificationRejectionCode =
-  (typeof expenseReclassificationRejectionCodes)[number];
-
-export type ExpenseReclassificationResult =
-  | Readonly<{
-      ok: true;
-      expense: Expense;
-      expenses: ReadonlyArray<Expense>;
-    }>
-  | Readonly<{
-      ok: false;
-      code: ExpenseReclassificationRejectionCode;
-      expenses: ReadonlyArray<Expense>;
-    }>;
-
-export type ExpenseDeletionResult =
-  | Readonly<{
-      ok: true;
-      deletedExpense: Expense;
-      expenses: ReadonlyArray<Expense>;
-    }>
-  | Readonly<{
-      ok: false;
-      code: "expense-not-found";
-      expenses: ReadonlyArray<Expense>;
-    }>;
+export type ExpenseReclassificationResult = Expense;
 
 export type CategorizedExpenseGroup = Readonly<{
   category: Category;

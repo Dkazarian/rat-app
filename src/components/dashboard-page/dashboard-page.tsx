@@ -134,7 +134,15 @@ export function DashboardPage({
                   state: session.feedback.state,
                   ...dialogueData,
                   title: t(titleKey),
-                  detail,
+                  detail:
+                    session.feedback.state === "success" &&
+                    session.feedback.rejectedCount
+                      ? detail +
+                        " " +
+                        t("skippedExpenses", {
+                          count: session.feedback.rejectedCount,
+                        })
+                      : detail,
                   mascotAlt: t(mascotAltKey),
                 }}
                 input={{
@@ -158,9 +166,7 @@ export function DashboardPage({
                   locale={locale}
                   categories={categoryItems}
                   onCreateCategory={session.createCategory}
-                  onDeleteCategory={(categoryId) => {
-                    session.deleteCategory(categoryId);
-                  }}
+                  onDeleteCategory={session.deleteCategory}
                 />
               }
               resultsPanel={

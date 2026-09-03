@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { TranslationKey } from "@/i18n";
 
-import { createInitialCategories } from "./category-rules";
+import { createInitialCategories } from "./category-service";
 import {
   getCategoryDisplayName,
   mapCategoriesToItems,

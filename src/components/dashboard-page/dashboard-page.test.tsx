@@ -8,6 +8,23 @@ import { renderWithProviders } from "@/test/render";
 import { DashboardPage } from "./dashboard-page";
 
 describe("DashboardPage", () => {
+  it("shows accepted expenses and reports skipped candidates", async () => {
+    const { user } = renderWithProviders(
+      <I18nProvider>
+        <DashboardPage
+          produceExpenseBatch={() => [
+            { id: "valid", description: "Accepted coffee", amountMinor: 450 },
+            { id: "invalid", description: "Rejected expense", amountMinor: 0 },
+          ]}
+        />
+      </I18nProvider>,
+    );
+    await user.click(screen.getByRole("button", { name: "Sort it" }));
+    expect(screen.getByText("Accepted coffee")).toBeVisible();
+    expect(screen.queryByText("Rejected expense")).not.toBeInTheDocument();
+    expect(screen.getByText("1 expense sorted. 1 skipped.")).toBeVisible();
+  });
+
   it("uses injected identifiers for deterministic category and capture interactions", async () => {
     const randomId = vi.spyOn(crypto, "randomUUID");
     const createExpenseId = vi.fn(() => "deterministic-expense");

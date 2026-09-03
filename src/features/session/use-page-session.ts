@@ -1,42 +1,38 @@
 "use client";
 
-import { useCallback, useMemo, useReducer, useRef } from "react";
+import { useCallback, useMemo, useReducer, useState } from "react";
 import { createBrowserId } from "@/utils/create-browser-id";
 
 import {
-  createCategory as createCategoryValue,
+  CategoryService,
   createInitialCategories,
-} from "@/features/categories/category-rules";
+} from "@/features/categories/category-service";
 import type {
   Category,
   CategoryCreationResult,
+  CategoryDeletionResult,
   CategoryId,
 } from "@/features/categories/types";
-import {
-  addExpenseBatch,
-  deleteExpense as deleteExpenseValue,
-  reclassifyExpense as reclassifyExpenseValue,
-} from "@/features/expenses/expense-rules";
+import { useCategories } from "@/features/categories/use-categories";
+import { ExpenseService } from "@/features/expenses/expense-service";
 import { selectExpenseSummary } from "@/features/expenses/expense-selectors";
 import type {
   Expense,
   ExpenseBatchAdditionResult,
   ExpenseCandidate,
-  ExpenseDeletionResult,
   ExpenseId,
   ExpenseReclassificationResult,
   ExpenseSummary,
 } from "@/features/expenses/types";
 
-import {
-  deleteCategoryAndReassignExpenses,
-  type CoordinatedCategoryDeletionResult,
-} from "./session-rules";
-
 export type PageFeedbackState =
   | Readonly<{ state: "empty" }>
   | Readonly<{ state: "loading" }>
-  | Readonly<{ state: "success"; extractedCount: number }>
+  | Readonly<{
+      state: "success";
+      extractedCount: number;
+      rejectedCount?: number;
+    }>
   | Readonly<{ state: "extraction-failure" }>
   | Readonly<{ state: "provider-error" }>;
 
@@ -55,7 +51,7 @@ export type PageSessionDependencies = Readonly<{
   createExpenseId?: () => ExpenseId;
 }>;
 
-type PageSessionState = PageSessionSeed;
+type PageSessionState = Omit<PageSessionSeed, "categories">;
 
 type PageSessionAction =
   | Readonly<{ type: "input-changed"; value: string }>
@@ -64,12 +60,8 @@ type PageSessionAction =
       type: "expense-reclassified";
       result: ExpenseReclassificationResult;
     }>
-  | Readonly<{ type: "expense-deleted"; result: ExpenseDeletionResult }>
-  | Readonly<{ type: "category-created"; result: CategoryCreationResult }>
-  | Readonly<{
-      type: "category-deleted";
-      result: CoordinatedCategoryDeletionResult;
-    }>;
+  | Readonly<{ type: "expense-deleted"; expenseId: ExpenseId }>
+  | Readonly<{ type: "expenses-reassigned"; expenses: ReadonlyArray<Expense> }>;
 
 export type PageSession = Readonly<{
   categories: ReadonlyArray<Category>;
@@ -85,9 +77,12 @@ export type PageSession = Readonly<{
     expenseId: ExpenseId,
     categoryId: CategoryId,
   ) => ExpenseReclassificationResult;
-  deleteExpense: (expenseId: ExpenseId) => ExpenseDeletionResult;
+  deleteExpense: (expenseId: ExpenseId) => void;
   createCategory: (name: string) => CategoryCreationResult;
-  deleteCategory: (categoryId: CategoryId) => CoordinatedCategoryDeletionResult;
+  reassignExpensesFromCategory: (
+    categoryId: CategoryId,
+  ) => ReadonlyArray<Expense>;
+  deleteCategory: (categoryId: CategoryId) => CategoryDeletionResult;
 }>;
 
 export function createInitialPageSessionSeed(): PageSessionSeed {
@@ -107,34 +102,45 @@ function pageSessionReducer(
     case "input-changed":
       return { ...state, inputValue: action.value };
     case "capture-applied":
-      return action.result.ok
-        ? {
-            ...state,
-            expenses: action.result.expenses,
-            inputValue: "",
-            feedback: {
-              state: "success",
-              extractedCount: action.result.addedExpenses.length,
-            },
-          }
-        : { ...state, feedback: { state: "extraction-failure" } };
+      if (action.result.added.length === 0) {
+        return { ...state, feedback: { state: "extraction-failure" } };
+      }
+      return {
+        ...state,
+        expenses: [...state.expenses, ...action.result.added],
+        inputValue: "",
+        feedback: {
+          state: "success",
+          extractedCount: action.result.added.length,
+          ...(action.result.errors.length > 0
+            ? { rejectedCount: action.result.errors.length }
+            : {}),
+        },
+      };
     case "expense-reclassified":
+      return {
+        ...state,
+        expenses: state.expenses.map((expense) =>
+          expense.id === action.result.id ? action.result : expense,
+        ),
+      };
     case "expense-deleted":
-      return action.result.ok
-        ? { ...state, expenses: action.result.expenses }
-        : state;
-    case "category-created":
-      return action.result.ok
-        ? { ...state, categories: action.result.categories }
-        : state;
-    case "category-deleted":
-      return action.result.ok
-        ? {
-            ...state,
-            categories: action.result.categories,
-            expenses: action.result.expenses,
-          }
-        : state;
+      return {
+        ...state,
+        expenses: state.expenses.filter(({ id }) => id !== action.expenseId),
+      };
+    case "expenses-reassigned": {
+      if (action.expenses.length === 0) return state;
+      const reclassified = new Map(
+        action.expenses.map((expense) => [expense.id, expense]),
+      );
+      return {
+        ...state,
+        expenses: state.expenses.map(
+          (expense) => reclassified.get(expense.id) ?? expense,
+        ),
+      };
+    }
   }
 }
 
@@ -142,31 +148,43 @@ export function usePageSession(
   seed?: PageSessionSeed,
   dependencies: PageSessionDependencies = {},
 ): PageSession {
+  const [categoriesService] = useState(
+    () =>
+      new CategoryService({
+        initialCategories: seed?.categories,
+        createId: dependencies.createCategoryId,
+      }),
+  );
+  const [expenseService] = useState(
+    () =>
+      new ExpenseService({
+        initialExpenses: seed?.expenses,
+        categories: categoriesService,
+      }),
+  );
+  const {
+    categories,
+    createCategory: createSessionCategory,
+    deleteCategory: deleteSessionCategory,
+  } = useCategories(categoriesService);
   const [state, dispatch] = useReducer(
     pageSessionReducer,
     seed,
-    (initialSeed) => initialSeed ?? createInitialPageSessionSeed(),
+    (initialSeed): PageSessionState => ({
+      expenses: initialSeed?.expenses ?? [],
+      inputValue: initialSeed?.inputValue ?? "",
+      feedback: initialSeed?.feedback ?? { state: "empty" },
+    }),
   );
-  // Intention callbacks return results synchronously. Track the latest queued
-  // transition so multiple calls in one event cannot read a stale render.
-  const pendingState = useRef(state);
-  const commit = useCallback((action: PageSessionAction) => {
-    pendingState.current = pageSessionReducer(pendingState.current, action);
-    dispatch(action);
-  }, []);
-  const createCategoryId = dependencies.createCategoryId ?? createBrowserId;
   const createExpenseId = dependencies.createExpenseId ?? createBrowserId;
   const summary = useMemo(
-    () => selectExpenseSummary(state.categories, state.expenses),
-    [state.categories, state.expenses],
+    () => selectExpenseSummary(categories, state.expenses),
+    [categories, state.expenses],
   );
 
-  const changeInput = useCallback(
-    (value: string) => {
-      commit({ type: "input-changed", value });
-    },
-    [commit],
-  );
+  const changeInput = useCallback((value: string) => {
+    dispatch({ type: "input-changed", value });
+  }, []);
 
   const captureExpenses = useCallback(
     (candidates: ReadonlyArray<CapturedExpenseCandidate>) => {
@@ -174,78 +192,76 @@ export function usePageSession(
         ...candidate,
         id: candidate.id ?? createExpenseId(),
       }));
-      const result = addExpenseBatch(
-        pendingState.current.expenses,
-        pendingState.current.categories,
-        identifiedCandidates,
-      );
-      commit({ type: "capture-applied", result });
+      const result = expenseService.addExpenseBatch(identifiedCandidates);
+      dispatch({ type: "capture-applied", result });
       return result;
     },
-    [createExpenseId, commit],
+    [createExpenseId, expenseService],
   );
 
   const reclassifyExpense = useCallback(
     (expenseId: ExpenseId, categoryId: CategoryId) => {
-      const result = reclassifyExpenseValue(
-        pendingState.current.expenses,
-        pendingState.current.categories,
-        {
-          expenseId,
-          categoryId,
-        },
-      );
-      commit({ type: "expense-reclassified", result });
+      const result = expenseService.reclassifyExpense(expenseId, categoryId);
+      dispatch({ type: "expense-reclassified", result });
       return result;
     },
-    [commit],
+    [expenseService],
   );
 
   const deleteExpense = useCallback(
     (expenseId: ExpenseId) => {
-      const result = deleteExpenseValue(
-        pendingState.current.expenses,
-        expenseId,
-      );
-      commit({ type: "expense-deleted", result });
-      return result;
+      expenseService.deleteExpense(expenseId);
+      dispatch({ type: "expense-deleted", expenseId });
     },
-    [commit],
+    [expenseService],
   );
 
   const createCategory = useCallback(
     (name: string) => {
-      const result = createCategoryValue(pendingState.current.categories, {
-        id: createCategoryId(),
-        name,
-      });
-      commit({ type: "category-created", result });
+      const category = createSessionCategory(name);
+      const result: CategoryCreationResult = {
+        ok: true,
+        category,
+        categories: categoriesService.list(),
+      };
       return result;
     },
-    [createCategoryId, commit],
+    [categoriesService, createSessionCategory],
+  );
+
+  const reassignExpensesFromCategory = useCallback(
+    (categoryId: CategoryId) => {
+      const expenses = expenseService.reassignExpensesFromCategory(categoryId);
+      dispatch({ type: "expenses-reassigned", expenses });
+      return expenses;
+    },
+    [expenseService],
   );
 
   const deleteCategory = useCallback(
-    (categoryId: CategoryId) => {
-      const result = deleteCategoryAndReassignExpenses(
-        pendingState.current.categories,
-        pendingState.current.expenses,
-        categoryId,
-      );
-      commit({ type: "category-deleted", result });
+    (categoryId: CategoryId): CategoryDeletionResult => {
+      reassignExpensesFromCategory(categoryId);
+      const deletedCategory = deleteSessionCategory(categoryId);
+      const result: CategoryDeletionResult = {
+        ok: true,
+        deletedCategory,
+        categories: categoriesService.list(),
+      };
       return result;
     },
-    [commit],
+    [categoriesService, deleteSessionCategory, reassignExpensesFromCategory],
   );
 
   return {
     ...state,
+    categories,
     summary,
     changeInput,
     captureExpenses,
     reclassifyExpense,
     deleteExpense,
     createCategory,
+    reassignExpensesFromCategory,
     deleteCategory,
   };
 }

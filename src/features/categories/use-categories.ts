@@ -1,59 +1,25 @@
 "use client";
-
 import { useCallback, useState } from "react";
-import { createBrowserId } from "@/utils/create-browser-id";
+import { categoryService, type CategoryService } from "./category-service";
+import type { Category, CategoryId, CustomCategory } from "./types";
 
-import {
-  createCategory as createCategoryValue,
-  createInitialCategories,
-  deleteCategory as deleteCategoryValue,
-} from "./category-rules";
-import type {
-  Category,
-  CategoryCreationResult,
-  CategoryDeletionResult,
-  CategoryId,
-} from "./types";
-
-export type CategoryIdFactory = () => CategoryId;
-
-export type CategoriesSession = Readonly<{
-  categories: ReadonlyArray<Category>;
-  createCategory: (name: string) => CategoryCreationResult;
-  deleteCategory: (categoryId: CategoryId) => CategoryDeletionResult;
-}>;
-
-export function useCategories(
-  createId: CategoryIdFactory = createBrowserId,
-): CategoriesSession {
-  const [categories, setCategories] = useState<ReadonlyArray<Category>>(
-    createInitialCategories,
-  );
-
+export function useCategories(service: CategoryService = categoryService) {
+  const [categories, setCategories] = useState(() => service.list());
   const createCategory = useCallback(
-    (name: string) => {
-      const result = createCategoryValue(categories, {
-        id: createId(),
-        name,
-      });
-
-      if (result.ok) setCategories(result.categories);
-
-      return result;
+    (name: string): CustomCategory => {
+      const category = service.create(name);
+      setCategories(service.list());
+      return category;
     },
-    [categories, createId],
+    [service],
   );
-
   const deleteCategory = useCallback(
-    (categoryId: CategoryId) => {
-      const result = deleteCategoryValue(categories, categoryId);
-
-      if (result.ok) setCategories(result.categories);
-
-      return result;
+    (id: CategoryId): Category => {
+      const deletedCategory = service.delete(id);
+      setCategories(service.list());
+      return deletedCategory;
     },
-    [categories],
+    [service],
   );
-
   return { categories, createCategory, deleteCategory };
 }

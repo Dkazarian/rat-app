@@ -48,6 +48,18 @@ The roadmap remains outcome-oriented. Implementation details and decisions are d
 
 Functional validation passed on 2026-09-02. Final sign-off awaits acceptance of the historical test-first process deviation documented in [Phase 4 evidence](spec-phase-4-expense-management/evidence.md).
 
+## Phase 4.5 — Category and expense service refactor ✅
+
+- Category and expense services with typed domain errors and session-scoped instances
+- Independent expense-candidate validation with partial batch acceptance and bilingual skipped-item feedback
+- Explicit expense reassignment before guarded category deletion
+- React snapshots synchronized from service results, with totals and chart data still derived
+- Regression coverage for session isolation, sequential operations, and existing category and expense workflows
+
+This intermediate phase records the refactor between expense management and AI integration. Its [requirements](spec-phase-4-5-service-refactor/requirements.md) describe the changes to the earlier architecture and operation contracts; its [validation checklist](spec-phase-4-5-service-refactor/validation.md) tracks acceptance separately from the historical Phase 4 evidence.
+
+Validated on 2026-09-03: all six automated gates, 106 tests, and bilingual desktop/narrow browser workflows pass.
+
 ## Phase 5 — AI classification API
 
 - Same-origin classification API connected to the configured AI provider
@@ -76,7 +88,7 @@ Category renaming, manual category colors, AI-facing category descriptions, expe
 | --- | --- |
 | Faithful React and Storybook migration | Phases 1–2 |
 | Session-only category controls | Phase 3 |
-| Cumulative results, correction, totals, and chart | Phase 4 |
+| Cumulative results, correction, totals, and chart | Phases 4 and 4.5 |
 | Multi-expense bilingual AI classification | Phase 5 |
 | Clear success and recoverable failure behavior | Phase 5 |
 | Accessible English and Spanish experience | Phases 2–6 |

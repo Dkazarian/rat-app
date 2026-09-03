@@ -4,18 +4,9 @@ export const categoryColorTokens = [
   "teal",
   "yellow",
   "blue",
-  "muted",
 ] as const;
 
-export type CategoryColorToken = (typeof categoryColorTokens)[number];
-
-export const nonMutedCategoryColorTokens = [
-  "coral",
-  "purple",
-  "teal",
-  "yellow",
-  "blue",
-] as const satisfies ReadonlyArray<CategoryColorToken>;
+export type CategoryColorToken = (typeof categoryColorTokens)[number] | "muted";
 
 export const builtInCategoryIdentities = [
   "food",
@@ -65,38 +56,13 @@ export const categoryNameValidationCodes = [
 export type CategoryNameValidationCode =
   (typeof categoryNameValidationCodes)[number];
 
-export type CategoryNameValidationResult =
-  | Readonly<{ ok: true; name: CustomCategoryName }>
-  | Readonly<{ ok: false; code: CategoryNameValidationCode }>;
-
-export type CategoryCreationResult =
-  | Readonly<{
-      ok: true;
-      category: CustomCategory;
-      categories: ReadonlyArray<Category>;
-    }>
-  | Readonly<{
-      ok: false;
-      code: CategoryNameValidationCode;
-      categories: ReadonlyArray<Category>;
-    }>;
-
-export const categoryDeletionRejectionCodes = [
-  "not-found",
-  "protected",
-] as const;
-
-export type CategoryDeletionRejectionCode =
-  (typeof categoryDeletionRejectionCodes)[number];
-
-export type CategoryDeletionResult =
-  | Readonly<{
-      ok: true;
-      deletedCategory: Category;
-      categories: ReadonlyArray<Category>;
-    }>
-  | Readonly<{
-      ok: false;
-      code: CategoryDeletionRejectionCode;
-      categories: ReadonlyArray<Category>;
-    }>;
+export type CategoryCreationResult = Readonly<{
+  ok: true;
+  category: CustomCategory;
+  categories: ReadonlyArray<Category>;
+}>;
+export type CategoryDeletionResult = Readonly<{
+  ok: true;
+  deletedCategory: Category;
+  categories: ReadonlyArray<Category>;
+}>;

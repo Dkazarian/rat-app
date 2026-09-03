@@ -51,6 +51,7 @@
   "successTitle": "Listo",
   "successDetail": "3 gastos ordenados.",
   "successDetailOne": "{{count}} gasto ordenado.",
+  "skippedExpenses": "Se omitieron {{count}}.",
   "successDetailMany": "{{count}} gastos ordenados.",
   "successMascotAlt": "Mascota rata feliz",
   "extractionFailureTitle": "No entendí :(",

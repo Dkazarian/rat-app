@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  createCategory,
-  createInitialCategories,
-} from "@/features/categories/category-rules";
+import { createInitialCategories } from "@/features/categories/category-service";
 
 import { selectExpenseSummary } from "./expense-selectors";
 import type { Expense } from "./types";
@@ -133,14 +130,17 @@ describe("selectExpenseSummary", () => {
   });
 
   it("supports current custom categories in their collection order", () => {
-    const result = createCategory(categories, {
-      id: "health",
-      name: "Health",
-    });
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
-
-    const summary = selectExpenseSummary(result.categories, [
+    const customCategories = [
+      ...categories,
+      {
+        id: "health",
+        kind: "custom" as const,
+        name: "Health",
+        color: "yellow" as const,
+        system: false as const,
+      },
+    ];
+    const summary = selectExpenseSummary(customCategories, [
       { ...expenses[0], categoryId: "health" },
     ]);
 

@@ -1,31 +1,25 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { expect, userEvent, within } from "storybook/test";
-import { useCallback, useRef } from "react";
+import { useState } from "react";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import { getLocale } from "@/i18n";
 
 import { mapCategoriesToItems } from "../category-display";
-import { createCategory, createInitialCategories } from "../category-rules";
+import { CategoryService } from "../category-service";
 import type { Category } from "../types";
 import { useCategories } from "../use-categories";
 
 import { CategoryPanel } from "./category-panel";
 
 function createStoryCategories(customNames: ReadonlyArray<string>) {
-  let categories: ReadonlyArray<Category> = createInitialCategories();
-
-  customNames.forEach((name, index) => {
-    const result = createCategory(categories, {
-      id: `story-category-${index + 1}`,
-      name,
-    });
-
-    if (result.ok) categories = result.categories;
+  let nextId = 1;
+  const service = new CategoryService({
+    createId: () => "story-category-" + nextId++,
   });
-
-  return categories;
+  customNames.forEach((name) => service.create(name));
+  return service.list();
 }
 
 function StoryFrame({ children }: Readonly<{ children: ReactNode }>) {
@@ -34,9 +28,8 @@ function StoryFrame({ children }: Readonly<{ children: ReactNode }>) {
 
 function InteractiveCategoryPanelStory() {
   const { i18n, t } = useTranslation();
-  const nextId = useRef(1);
-  const createId = useCallback(() => `story-created-${nextId.current++}`, []);
-  const session = useCategories(createId);
+  const [service] = useState(() => new CategoryService());
+  const session = useCategories(service);
 
   return (
     <StoryFrame>
@@ -44,9 +37,7 @@ function InteractiveCategoryPanelStory() {
         locale={getLocale(i18n.resolvedLanguage ?? i18n.language)}
         categories={mapCategoriesToItems(session.categories, t)}
         onCreateCategory={session.createCategory}
-        onDeleteCategory={(categoryId) => {
-          session.deleteCategory(categoryId);
-        }}
+        onDeleteCategory={session.deleteCategory}
       />
     </StoryFrame>
   );
@@ -56,16 +47,18 @@ function FixedCategoryPanelStory({
   categories,
 }: Readonly<{ categories: ReadonlyArray<Category> }>) {
   const { i18n, t } = useTranslation();
+  const [service] = useState(
+    () => new CategoryService({ initialCategories: categories }),
+  );
+  const session = useCategories(service);
 
   return (
     <StoryFrame>
       <CategoryPanel
         locale={getLocale(i18n.resolvedLanguage ?? i18n.language)}
-        categories={mapCategoriesToItems(categories, t)}
-        onCreateCategory={(name) =>
-          createCategory(categories, { id: "story-attempt", name })
-        }
-        onDeleteCategory={() => undefined}
+        categories={mapCategoriesToItems(session.categories, t)}
+        onCreateCategory={session.createCategory}
+        onDeleteCategory={session.deleteCategory}
       />
     </StoryFrame>
   );

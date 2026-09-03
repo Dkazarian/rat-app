@@ -42,6 +42,26 @@ export const Empty: Story = {
 export const Loading: Story = {
   args: { initialSession: pageSessionFixtures.loading },
 };
+
+export const PartialBatch: Story = {
+  args: {
+    initialSession: pageSessionFixtures.empty,
+    produceExpenseBatch: () => [
+      { description: "Accepted coffee", amountMinor: 450, categoryId: "food" },
+      { description: "Rejected expense", amountMinor: 0, categoryId: "food" },
+    ],
+  },
+};
+
+export const AllInvalidBatch: Story = {
+  args: {
+    initialSession: pageSessionFixtures.empty,
+    produceExpenseBatch: () => [
+      { description: "Rejected expense", amountMinor: 0, categoryId: "food" },
+      { description: " ", amountMinor: 100, categoryId: "food" },
+    ],
+  },
+};
 export const ExtractionFailure: Story = {
   args: {
     initialSession: pageSessionFixtures["extraction-failure"],

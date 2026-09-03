@@ -2,7 +2,7 @@ import type { ExpenseListItemData } from "@/components/expense-list/expense-list
 import type { CategorySpendingItemData } from "@/components/spending-summary/category-spending-item";
 import type { CategoryItemData } from "@/features/categories/components/category-item";
 import { getCategoryDisplayName } from "@/features/categories/category-display";
-import { UNCLASSIFIED_CATEGORY_ID } from "@/features/categories/category-rules";
+import { UNCLASSIFIED_CATEGORY_ID } from "@/features/categories/category-service";
 import type { Category } from "@/features/categories/types";
 import type { TranslationKey } from "@/i18n";
 import type { Locale } from "@/i18n";

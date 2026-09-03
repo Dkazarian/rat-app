@@ -3,12 +3,10 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import type {
-  CategoryCreationResult,
-  CategoryId,
-  CategoryNameValidationCode,
-} from "../types";
+import type { CategoryId, CategoryNameValidationCode } from "../types";
 import type { Locale } from "@/i18n";
+
+import { CategoryValidationError } from "../category-errors";
 
 import { CategoryForm } from "./category-form";
 import { CategoryItem } from "./category-item";
@@ -17,7 +15,7 @@ import type { CategoryItemData } from "./category-item";
 export type CategoryPanelProps = Readonly<{
   locale: Locale;
   categories: ReadonlyArray<CategoryItemData>;
-  onCreateCategory: (name: string) => CategoryCreationResult;
+  onCreateCategory: (name: string) => void;
   onDeleteCategory: (categoryId: CategoryId) => void;
 }>;
 
@@ -61,15 +59,14 @@ export function CategoryPanel({
   };
 
   const submitDraft = () => {
-    const result = onCreateCategory(draft);
-
-    if (!result.ok) {
-      setValidationCode(result.code);
+    try {
+      onCreateCategory(draft);
+      closeForm();
+    } catch (error) {
+      if (!(error instanceof CategoryValidationError)) throw error;
+      setValidationCode(error.code);
       nameInputRef.current?.focus();
-      return;
     }
-
-    closeForm();
   };
 
   return (

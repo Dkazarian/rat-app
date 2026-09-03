@@ -51,6 +51,7 @@
   "successTitle": "Done",
   "successDetail": "3 expenses sorted.",
   "successDetailOne": "{{count}} expense sorted.",
+  "skippedExpenses": "{{count}} skipped.",
   "successDetailMany": "{{count}} expenses sorted.",
   "successMascotAlt": "Happy rat mascot",
   "extractionFailureTitle": "I didn't understand :(",

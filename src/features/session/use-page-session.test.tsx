@@ -2,7 +2,12 @@ import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { getCategoryDisplayName } from "@/features/categories/category-display";
-import { createInitialCategories } from "@/features/categories/category-rules";
+import {
+  CategoryNotFoundError,
+  ProtectedCategoryError,
+} from "@/features/categories/category-errors";
+import { ExpenseValidationError } from "@/features/expenses/expense-errors";
+import { createInitialCategories } from "@/features/categories/category-service";
 import type { TranslationKey } from "@/i18n";
 
 import {
@@ -26,6 +31,130 @@ const translations = {
 } as const;
 
 describe("usePageSession", () => {
+  it("isolates simultaneous page sessions including category deletion and reassignment", () => {
+    const first = renderHook(() => usePageSession());
+    const second = renderHook(() => usePageSession());
+    act(() => {
+      first.result.current.createCategory("Health");
+      first.result.current.captureExpenses([
+        {
+          id: "first",
+          description: "Lunch",
+          amountMinor: 100,
+          categoryId: "food",
+        },
+      ]);
+      second.result.current.deleteCategory("food");
+    });
+    expect(first.result.current.categories).toHaveLength(5);
+    expect(
+      first.result.current.categories.some(({ id }) => id === "food"),
+    ).toBe(true);
+    expect(second.result.current.categories).toHaveLength(3);
+    expect(second.result.current.expenses).toEqual([]);
+    act(() => {
+      second.result.current.captureExpenses([
+        {
+          id: "second",
+          description: "Taxi",
+          amountMinor: 200,
+          categoryId: "food",
+        },
+      ]);
+    });
+    expect(first.result.current.expenses).toHaveLength(1);
+    expect(first.result.current.expenses[0].categoryId).toBe("food");
+    expect(second.result.current.expenses[0].categoryId).toBe("unclassified");
+    expect(first.result.current.summary.totalMinor).toBe(100);
+    expect(second.result.current.summary.totalMinor).toBe(200);
+    const secondExpenses = second.result.current.expenses;
+    const secondCategories = second.result.current.categories;
+    act(() => {
+      first.result.current.deleteCategory("food");
+    });
+    expect(first.result.current.expenses[0].categoryId).toBe("unclassified");
+    expect(
+      first.result.current.categories.some(({ id }) => id === "food"),
+    ).toBe(false);
+    expect(second.result.current.expenses).toBe(secondExpenses);
+    expect(second.result.current.categories).toBe(secondCategories);
+  });
+
+  it("applies mutation results without dropping unrelated expenses", () => {
+    const first = {
+      id: "first",
+      description: "Lunch",
+      amountMinor: 100,
+      categoryId: "food",
+    };
+    const second = {
+      id: "second",
+      description: "Taxi",
+      amountMinor: 200,
+      categoryId: "transport",
+    };
+    const { result } = renderHook(() =>
+      usePageSession({
+        ...createInitialPageSessionSeed(),
+        expenses: [first, second],
+      }),
+    );
+    act(() => {
+      expect(result.current.reclassifyExpense("first", "home")).toEqual({
+        ...first,
+        categoryId: "home",
+      });
+    });
+    expect(result.current.expenses[1]).toBe(second);
+    act(() => {
+      expect(result.current.reassignExpensesFromCategory("home")).toEqual([
+        { ...first, categoryId: "unclassified" },
+      ]);
+    });
+    expect(result.current.expenses).toEqual([
+      { ...first, categoryId: "unclassified" },
+      second,
+    ]);
+    expect(result.current.expenses[1]).toBe(second);
+    const previous = result.current.expenses;
+    act(() => {
+      expect(result.current.reassignExpensesFromCategory("home")).toEqual([]);
+    });
+    expect(result.current.expenses).toBe(previous);
+    act(() => {
+      expect(result.current.deleteExpense("first")).toBeUndefined();
+    });
+    expect(result.current.expenses).toEqual([second]);
+    expect(result.current.summary.totalMinor).toBe(200);
+  });
+
+  it("appends only accepted candidates to existing expenses and reports partial success", () => {
+    const { result } = renderHook(() => usePageSession());
+    act(() => {
+      result.current.captureExpenses([
+        { id: "existing", description: "Existing", amountMinor: 100 },
+      ]);
+      result.current.changeInput("Coffee plus invalid expense");
+      const outcome = result.current.captureExpenses([
+        { id: "valid", description: "Coffee", amountMinor: 450 },
+        { id: "invalid", description: "Bad", amountMinor: 0 },
+      ]);
+      expect(outcome.added.map(({ id }) => id)).toEqual(["valid"]);
+      expect(outcome.errors).toHaveLength(1);
+    });
+    expect(result.current.expenses.map(({ id }) => id)).toEqual([
+      "existing",
+      "valid",
+    ]);
+    expect(result.current.summary.totalMinor).toBe(550);
+    expect(result.current.inputValue).toBe("");
+    expect(result.current.feedback).toEqual({
+      state: "success",
+      extractedCount: 1,
+      rejectedCount: 1,
+    });
+  });
+
   it("creates distinct category and expense IDs when HTTP has no randomUUID", () => {
     vi.stubGlobal("crypto", {
       getRandomValues: crypto.getRandomValues.bind(crypto),
@@ -42,8 +171,8 @@ describe("usePageSession", () => {
           result.current.captureExpenses([
             { description: "Vitamins", amountMinor: 500, categoryId: healthId },
             { description: "Novel", amountMinor: 900 },
-          ]).ok,
-        ).toBe(true);
+          ]).added,
+        ).toHaveLength(2);
       });
       const ids = [
         ...result.current.categories.slice(4),
@@ -52,7 +181,9 @@ describe("usePageSession", () => {
       expect(ids.every((id) => id.length > 0)).toBe(true);
       expect(new Set(ids).size).toBe(4);
       expect(result.current.expenses[0].categoryId).toBe(healthId);
-      act(() => void result.current.deleteCategory(healthId));
+      act(() => {
+        result.current.deleteCategory(healthId);
+      });
       expect(result.current.expenses[0].categoryId).toBe("unclassified");
     } finally {
       vi.unstubAllGlobals();
@@ -198,16 +329,23 @@ describe("usePageSession", () => {
     const exactInput = "  coffee???\n$4.50  ";
 
     act(() => result.current.changeInput(exactInput));
-    act(() => void result.current.captureExpenses([]));
+    act(() => {
+      expect(result.current.captureExpenses([])).toEqual({
+        added: [],
+        errors: [],
+      });
+    });
 
     expect(result.current.expenses).toBe(seed.expenses);
     expect(result.current.inputValue).toBe(exactInput);
     expect(result.current.feedback).toEqual({ state: "extraction-failure" });
 
     act(() => {
-      result.current.captureExpenses([
+      const outcome = result.current.captureExpenses([
         { id: "bad", description: " ", amountMinor: 100 },
       ]);
+      expect(outcome.added).toEqual([]);
+      expect(outcome.errors[0].error).toBeInstanceOf(ExpenseValidationError);
     });
     expect(result.current.expenses).toBe(seed.expenses);
     expect(result.current.inputValue).toBe(exactInput);
@@ -236,7 +374,7 @@ describe("usePageSession", () => {
     expect(result.current.summary.totalMinor).toBe(0);
   });
 
-  it("deletes a populated category and reassigns its expenses atomically", () => {
+  it("reassigns expenses when deleting a populated category through the session", () => {
     const seed = {
       ...createInitialPageSessionSeed(),
       expenses: [
@@ -250,7 +388,11 @@ describe("usePageSession", () => {
     };
     const { result } = renderHook(() => usePageSession(seed));
 
-    act(() => void result.current.deleteCategory("food"));
+    act(() => {
+      const outcome = result.current.deleteCategory("food");
+      expect(outcome.deletedCategory.id).toBe("food");
+      expect(outcome.categories.some(({ id }) => id === "food")).toBe(false);
+    });
 
     expect(result.current.categories.some(({ id }) => id === "food")).toBe(
       false,
@@ -261,6 +403,66 @@ describe("usePageSession", () => {
         result.current.categories.some(({ id }) => id === expense.categoryId),
       ),
     ).toBe(true);
+    expect(result.current.summary.totalMinor).toBe(1_800);
+    expect(
+      result.current.summary.groups.find(
+        ({ category }) => category.id === "unclassified",
+      )?.totalMinor,
+    ).toBe(1_800);
+  });
+
+  it("creates, captures, and deletes a custom category in one event", () => {
+    const { result } = renderHook(() =>
+      usePageSession(undefined, { createCategoryId: () => "health" }),
+    );
+    act(() => {
+      const created = result.current.createCategory("Health");
+      expect(
+        created.categories.some(({ id }) => id === created.category.id),
+      ).toBe(true);
+      const captured = result.current.captureExpenses([
+        {
+          id: "vitamins",
+          description: "Vitamins",
+          amountMinor: 500,
+          categoryId: created.category.id,
+        },
+      ]);
+      expect(captured.added[0].categoryId).toBe("health");
+      result.current.deleteCategory(created.category.id);
+    });
+    expect(result.current.categories).toEqual(createInitialCategories());
+    expect(result.current.expenses[0].categoryId).toBe("unclassified");
+    expect(result.current.summary.totalMinor).toBe(500);
+  });
+
+  it("preserves snapshots when category deletion targets are missing or protected", () => {
+    const { result } = renderHook(() =>
+      usePageSession({
+        ...createInitialPageSessionSeed(),
+        expenses: [
+          {
+            id: "existing",
+            description: "Existing",
+            amountMinor: 100,
+            categoryId: "unclassified",
+          },
+        ],
+      }),
+    );
+    const categories = result.current.categories;
+    const expenses = result.current.expenses;
+    act(() => {
+      expect(() => result.current.deleteCategory("missing")).toThrow(
+        CategoryNotFoundError,
+      );
+      expect(() => result.current.deleteCategory("unclassified")).toThrow(
+        ProtectedCategoryError,
+      );
+    });
+    expect(result.current.categories).toBe(categories);
+    expect(result.current.expenses).toBe(expenses);
+    expect(result.current.summary.totalMinor).toBe(100);
   });
 
   it("preserves domain state while localized presentation changes", () => {

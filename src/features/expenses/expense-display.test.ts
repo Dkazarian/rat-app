@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  createCategory,
-  createInitialCategories,
-} from "@/features/categories/category-rules";
+import { createInitialCategories } from "@/features/categories/category-service";
 import type { TranslationKey } from "@/i18n";
 
 import {
@@ -24,14 +21,16 @@ const translations: Readonly<Partial<Record<TranslationKey, string>>> = {
 };
 
 const translate = (key: TranslationKey) => translations[key] ?? key;
-const categoriesResult = createCategory(createInitialCategories(), {
-  id: "health",
-  name: "Salud & Wellness",
-});
-
-if (!categoriesResult.ok) throw new Error("Expected category fixture creation");
-
-const categories = categoriesResult.categories;
+const categories = [
+  ...createInitialCategories(),
+  {
+    id: "health",
+    kind: "custom" as const,
+    name: "Salud & Wellness",
+    color: "yellow" as const,
+    system: false as const,
+  },
+];
 const expenses: ReadonlyArray<Expense> = [
   {
     id: "expense-lunch",

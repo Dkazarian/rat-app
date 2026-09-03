@@ -1,4 +1,4 @@
-import { UNCLASSIFIED_CATEGORY_ID } from "@/features/categories/category-rules";
+import { UNCLASSIFIED_CATEGORY_ID } from "@/features/categories/category-service";
 import type { Category } from "@/features/categories/types";
 
 import type { Expense, ExpenseSummary } from "./types";

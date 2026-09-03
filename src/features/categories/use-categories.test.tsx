@@ -1,55 +1,51 @@
 import { act, renderHook } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
-
+import { describe, expect, it, vi } from "vitest";
+import { CategoryService } from "./category-service";
+import { CategoryValidationError } from "./category-errors";
 import { useCategories } from "./use-categories";
 
 describe("useCategories", () => {
-  it("owns a lazily initialized category session and applies pure operations", () => {
-    let nextId = 0;
-    const { result, rerender } = renderHook(() =>
-      useCategories(() => `custom-${nextId++}`),
-    );
-
-    expect(result.current.categories.map(({ id }) => id)).toEqual([
-      "food",
-      "home",
-      "transport",
-      "unclassified",
-    ]);
-
+  it("delegates list, create and delete to the service without passing collections", () => {
+    const service = new CategoryService({ createId: () => "health" });
+    const create = vi.spyOn(service, "create");
+    const remove = vi.spyOn(service, "delete");
+    const { result } = renderHook(() => useCategories(service));
     act(() => {
-      expect(result.current.createCategory("  Health  ")).toMatchObject({
-        ok: true,
-        category: { id: "custom-0", name: "Health" },
+      expect(result.current.createCategory("Health")).toMatchObject({
+        id: "health",
+        name: "Health",
       });
     });
-    rerender();
-
-    expect(result.current.categories.at(-1)).toMatchObject({
-      id: "custom-0",
-      name: "Health",
-    });
-
+    expect(create).toHaveBeenCalledWith("Health");
+    expect(result.current.categories).toEqual(service.list());
     act(() => {
-      expect(result.current.deleteCategory("food")).toMatchObject({ ok: true });
+      result.current.deleteCategory("food");
     });
-
-    expect(result.current.categories.some(({ id }) => id === "food")).toBe(
-      false,
-    );
+    expect(remove).toHaveBeenCalledWith("food");
+    expect(
+      result.current.categories.some((category) => category.id === "food"),
+    ).toBe(false);
   });
-
-  it("returns stable validation results without changing its categories", () => {
-    const { result } = renderHook(() => useCategories(() => "unused"));
-    const initial = result.current.categories;
-
+  it("keeps sequential operations in one event without stale data", () => {
+    const service = new CategoryService();
+    const { result } = renderHook(() => useCategories(service));
     act(() => {
-      expect(result.current.createCategory("   ")).toMatchObject({
-        ok: false,
-        code: "empty",
-      });
+      result.current.createCategory("Health");
+      result.current.createCategory("Books");
+      result.current.deleteCategory("food");
     });
-
-    expect(result.current.categories).toBe(initial);
+    expect(result.current.categories).toEqual(service.list());
+    expect(result.current.categories).toHaveLength(5);
+  });
+  it("propagates custom exceptions and preserves the displayed list", () => {
+    const service = new CategoryService();
+    const { result } = renderHook(() => useCategories(service));
+    const previous = result.current.categories;
+    act(() => {
+      expect(() => result.current.createCategory(" ")).toThrow(
+        CategoryValidationError,
+      );
+    });
+    expect(result.current.categories).toBe(previous);
   });
 });

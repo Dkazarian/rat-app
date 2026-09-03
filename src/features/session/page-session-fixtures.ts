@@ -1,4 +1,4 @@
-import { createInitialCategories } from "@/features/categories/category-rules";
+import { createInitialCategories } from "@/features/categories/category-service";
 import type { Category } from "@/features/categories/types";
 import type { Expense } from "@/features/expenses/types";
 
