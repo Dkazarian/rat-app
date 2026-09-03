@@ -1,10 +1,8 @@
 import { CategorySpendingItem } from "./category-spending-item";
 import type { CategorySpendingItemData } from "@/features/expenses/view-types";
 import { SpendingChart } from "./spending-chart";
-import type { Locale } from "@/i18n";
 
 export type SpendingSummaryProps = Readonly<{
-  locale: Locale;
   title: string;
   periodLabel: string;
   totalLabel: string;
@@ -14,7 +12,6 @@ export type SpendingSummaryProps = Readonly<{
 }>;
 
 export function SpendingSummary({
-  locale,
   title,
   periodLabel,
   totalLabel,
@@ -28,7 +25,6 @@ export function SpendingSummary({
         label={chartLabel}
         totalLabel={totalLabel}
         totalMinor={totalMinor}
-        locale={locale}
         items={items}
       />
       <div className="min-w-0">

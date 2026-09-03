@@ -4,7 +4,6 @@ import {
   CategoryNotFoundError,
   ProtectedCategoryError,
   DuplicateCategoryIdError,
-  CategoryHasExpensesError,
 } from "./category-errors";
 import type {
   Category,
@@ -13,7 +12,6 @@ import type {
   BuiltInCategoryIdentity,
 } from "./types";
 import { categoryColorTokens } from "./types";
-import type { ExpenseService } from "@/services/expenses/expense-service";
 
 export const CATEGORY_NAME_MAX_LENGTH = 24;
 export const CATEGORY_LIMIT = 10;
@@ -38,7 +36,6 @@ const reservedCategoryNames = new Set(
 export class CategoryService {
   private readonly categories: Map<CategoryId, Category>;
   private readonly createId: () => CategoryId;
-  private expenses?: ExpenseService;
 
   constructor(
     options: {
@@ -66,10 +63,6 @@ export class CategoryService {
     return [...this.categories.values()];
   }
 
-  setExpenseService(expenses: ExpenseService): void {
-    this.expenses = expenses;
-  }
-
   find(categoryId: CategoryId): Category {
     const category = this.categories.get(categoryId);
     if (!category) throw new CategoryNotFoundError(categoryId);
@@ -91,12 +84,16 @@ export class CategoryService {
     return category;
   }
 
-  delete(categoryId: CategoryId): Category {
+  assertCanDelete(categoryId: CategoryId): Category {
     const category = this.find(categoryId);
     if (category.id === UNCLASSIFIED_CATEGORY_ID || category.system)
       throw new ProtectedCategoryError(categoryId);
-    if (this.expenses?.hasExpensesForCategory(categoryId))
-      throw new CategoryHasExpensesError(categoryId);
+    return category;
+  }
+
+  // Sessions must coordinate expense reassignment through SessionService.
+  delete(categoryId: CategoryId): Category {
+    const category = this.assertCanDelete(categoryId);
     this.categories.delete(categoryId);
     return category;
   }

@@ -15,7 +15,7 @@ export function useCategories(service: CategoryService = categoryService) {
   const createCategory = useCallback(
     (name: string): CustomCategory => {
       const category = service.create(name);
-      setCategories(categories => [...categories, category]);
+      setCategories((categories) => [...categories, category]);
       return category;
     },
     [service],
@@ -23,7 +23,7 @@ export function useCategories(service: CategoryService = categoryService) {
   const deleteCategory = useCallback(
     (id: CategoryId): Category => {
       const deletedCategory = service.delete(id);
-      setCategories(categories => categories.filter((c) => c.id !== id));
+      setCategories((categories) => categories.filter((c) => c.id !== id));
       return deletedCategory;
     },
     [service],

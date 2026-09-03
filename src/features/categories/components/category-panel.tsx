@@ -7,7 +7,6 @@ import type {
   CategoryId,
   CategoryNameValidationCode,
 } from "@/services/categories/types";
-import type { Locale } from "@/i18n";
 
 import { CategoryValidationError } from "@/services/categories/category-errors";
 
@@ -16,14 +15,12 @@ import { CategoryItem } from "./category-item";
 import type { CategoryItemData } from "@/features/categories/view-types";
 
 export type CategoryPanelProps = Readonly<{
-  locale: Locale;
   categories: ReadonlyArray<CategoryItemData>;
   onCreateCategory: (name: string) => void;
   onDeleteCategory: (categoryId: CategoryId) => void;
 }>;
 
 export function CategoryPanel({
-  locale,
   categories,
   onCreateCategory,
   onDeleteCategory,
@@ -119,7 +116,6 @@ export function CategoryPanel({
           <CategoryItem
             key={category.id}
             category={category}
-            locale={locale}
             deleteLabel={t("deleteCategory", { name: category.name })}
             onDelete={onDeleteCategory}
           />

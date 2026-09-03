@@ -21,13 +21,6 @@ export class ProtectedCategoryError extends Error {
   }
 }
 
-export class CategoryHasExpensesError extends Error {
-  constructor(public readonly categoryId: CategoryId) {
-    super(`Category still has expenses: ${categoryId}`);
-    this.name = "CategoryHasExpensesError";
-  }
-}
-
 export class DuplicateCategoryIdError extends Error {
   constructor(public readonly categoryId: CategoryId) {
     super("Category ID already exists: " + categoryId);

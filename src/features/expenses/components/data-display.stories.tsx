@@ -4,7 +4,6 @@ import { useTranslation } from "react-i18next";
 import { ExpenseListItem as ExpenseListItemComponent } from "@/features/expenses/components/expense-list/expense-list-item";
 import { CategorySpendingItem as CategorySpendingItemComponent } from "@/features/expenses/components/spending-summary/category-spending-item";
 import { SpendingChart as SpendingChartComponent } from "@/features/expenses/components/spending-summary/spending-chart";
-import { getLocale } from "@/i18n";
 import { dashboardFixtures } from "@/features/dashboard/fixtures/dashboard-view-fixtures";
 
 const fixture = dashboardFixtures.success;
@@ -24,8 +23,8 @@ type Story = StoryObj<typeof meta>;
 
 export const SpendingChart: Story = {
   render: function LocalizedSpendingChart() {
-    const { i18n, t } = useTranslation();
-    const locale = getLocale(i18n.resolvedLanguage ?? i18n.language);
+    const { t } = useTranslation();
+
     const names = {
       food: t("food"),
       transport: t("transport"),
@@ -37,7 +36,6 @@ export const SpendingChart: Story = {
         label={t("chartLabel")}
         totalLabel={t("total")}
         totalMinor={fixture.categorySpending.totalMinor}
-        locale={locale}
         items={fixture.categorySpending.items.map((item) => ({
           ...item,
           name: names[item.categoryId as keyof typeof names] ?? t("categories"),
@@ -60,7 +58,7 @@ export const CategorySpendingItem: Story = {
 };
 export const ExpenseListItem: Story = {
   render: function LocalizedExpenseListItem() {
-    const { i18n, t } = useTranslation();
+    const { t } = useTranslation();
     return (
       <ul className="w-64 list-none p-0">
         <ExpenseListItemComponent
@@ -69,7 +67,6 @@ export const ExpenseListItem: Story = {
             description: t("lunch"),
             categoryName: t("food"),
           }}
-          locale={getLocale(i18n.resolvedLanguage ?? i18n.language)}
           categoryOptions={[
             { id: "food", name: t("food") },
             { id: "unclassified", name: t("unclassified") },

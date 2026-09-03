@@ -6,6 +6,7 @@ import { I18nextProvider } from "react-i18next";
 
 import { createI18n, fallbackLocale } from ".";
 import type { Locale } from ".";
+import { LocaleProvider } from "./locale-context";
 
 type I18nProviderProps = Readonly<{
   children: ReactNode;
@@ -31,5 +32,9 @@ export function I18nProvider({
     };
   }, [i18n]);
 
-  return <I18nextProvider i18n={i18n}>{children}</I18nextProvider>;
+  return (
+    <I18nextProvider i18n={i18n}>
+      <LocaleProvider>{children}</LocaleProvider>
+    </I18nextProvider>
+  );
 }

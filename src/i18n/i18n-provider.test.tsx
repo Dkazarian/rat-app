@@ -6,9 +6,11 @@ import { renderWithProviders } from "@/test/render";
 
 import { createI18n } from ".";
 import { I18nProvider } from "./i18n-provider";
+import { useLocale } from "./locale-context";
 
 function TranslationConsumer() {
   const { i18n, t } = useTranslation();
+  const locale = useLocale();
 
   return (
     <div>
@@ -19,7 +21,7 @@ function TranslationConsumer() {
           void i18n.changeLanguage(i18n.language === "en" ? "es" : "en")
         }
       >
-        {i18n.language}
+        {locale}
       </button>
     </div>
   );
@@ -43,6 +45,14 @@ describe("i18n", () => {
       screen.getByText("Ratapp está listo para su interfaz."),
     ).toBeVisible();
     expect(document.documentElement).toHaveAttribute("lang", "es");
+
+    await user.click(screen.getByRole("button", { name: "es" }));
+
+    expect(screen.getByRole("button", { name: "en" })).toBeVisible();
+    expect(
+      screen.getByText("Ratapp is ready for its interface."),
+    ).toBeVisible();
+    expect(document.documentElement).toHaveAttribute("lang", "en");
   });
 
   it("falls back to English for an unsupported language", () => {

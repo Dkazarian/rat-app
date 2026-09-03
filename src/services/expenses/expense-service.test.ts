@@ -2,11 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import { sampleCategories } from "@/features/dashboard/fixtures/dashboard-session-fixtures";
 import { CategoryService } from "@/services/categories/category-service";
-import {
-  CategoryNotFoundError,
-  ProtectedCategoryError,
-  CategoryHasExpensesError,
-} from "@/services/categories/category-errors";
+import { CategoryNotFoundError } from "@/services/categories/category-errors";
 
 import { ExpenseNotFoundError, ExpenseValidationError } from "./expense-errors";
 
@@ -290,72 +286,4 @@ describe("reassignExpensesFromCategory", () => {
     expect(service.reassignExpensesFromCategory("unclassified")).toEqual([]);
     expect(service.list()[0]).toBe(changed[0]);
   });
-});
-
-describe("category deletion", () => {
-  it("blocks deletion while expenses reference the category and allows it after reassignment", () => {
-    const categories = new CategoryService({
-      initialCategories: sampleCategories,
-    });
-    const expenses = new ExpenseService({
-      initialExpenses: [lunch, coffee],
-      categories,
-    });
-    expect(() => categories.delete("food")).toThrow(
-      new CategoryHasExpensesError("food"),
-    );
-    expect(categories.find("food").id).toBe("food");
-    expect(expenses.list()).toEqual([lunch, coffee]);
-    expenses.reassignExpensesFromCategory("food");
-    categories.delete("food");
-    expect(expenses.list()).toEqual([
-      { ...lunch, categoryId: "unclassified" },
-      { ...coffee, categoryId: "unclassified" },
-    ]);
-    expect(() => categories.find("food")).toThrow(CategoryNotFoundError);
-  });
-
-  it("checks newly added expenses and releases the category after they are deleted", () => {
-    const categories = new CategoryService({
-      initialCategories: sampleCategories,
-    });
-    const expenses = new ExpenseService({ categories });
-    expenses.addExpenseBatch([lunch]);
-    expect(() => categories.delete("food")).toThrow(CategoryHasExpensesError);
-    expenses.deleteExpense(lunch.id);
-    expect(categories.delete("food").id).toBe("food");
-  });
-
-  it("checks current references after reclassification", () => {
-    const categories = new CategoryService({
-      initialCategories: sampleCategories,
-    });
-    const expenses = new ExpenseService({
-      initialExpenses: [lunch],
-      categories,
-    });
-    expenses.reclassifyExpense(lunch.id, "home");
-    expect(categories.delete("food").id).toBe("food");
-    expect(() => categories.delete("home")).toThrow(CategoryHasExpensesError);
-  });
-
-  it.each([
-    ["unclassified", ProtectedCategoryError],
-    ["missing", CategoryNotFoundError],
-  ] as const)(
-    "rejects %s without changing either collection",
-    (id, ErrorType) => {
-      const categories = new CategoryService({
-        initialCategories: sampleCategories,
-      });
-      const expenses = new ExpenseService({
-        initialExpenses: [lunch],
-        categories,
-      });
-      const before = categories.list();
-      expect(() => categories.delete(id)).toThrow(ErrorType);
-      expect(categories.list()).toEqual(before);
-      expect(expenses.list()).toEqual([lunch]);
-    },
-  );
 });

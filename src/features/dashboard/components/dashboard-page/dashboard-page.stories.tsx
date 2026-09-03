@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { useState } from "react";
 
 import { pageSessionFixtures } from "@/features/dashboard/fixtures/dashboard-session-fixtures";
-import { producePhaseFourDemoBatch } from "@/features/dashboard/deterministic-capture";
+import { produceMockExpenseBatch } from "@/features/dashboard/mock-expense-capture";
 
 import { DashboardPage, type DashboardPageProps } from "./dashboard-page";
 
@@ -36,7 +36,7 @@ export const DesktopSuccess: Story = {
 export const Empty: Story = {
   args: {
     initialSession: pageSessionFixtures.empty,
-    produceExpenseBatch: producePhaseFourDemoBatch,
+    produceExpenseBatch: produceMockExpenseBatch,
   },
 };
 export const Loading: Story = {

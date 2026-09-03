@@ -7,16 +7,11 @@ import type {
 } from "@/features/dashboard/types";
 
 import { useCallback, useMemo, useReducer, useState } from "react";
-import { createBrowserId } from "@/utils/create-browser-id";
-
-import { CategoryService } from "@/services/categories/category-service";
+import { SessionService } from "@/services/session/session-service";
 import type {
-  CategoryCreationResult,
   CategoryDeletionResult,
   CategoryId,
 } from "@/services/categories/types";
-import { useCategories } from "@/features/categories/hooks/use-categories";
-import { ExpenseService } from "@/services/expenses/expense-service";
 import { selectExpenseSummary } from "@/features/expenses/expense-selectors";
 import type {
   Expense,
@@ -100,25 +95,18 @@ export function usePageSession(
   seed?: PageSessionSeed,
   dependencies: PageSessionDependencies = {},
 ): PageSession {
-  const [categoriesService] = useState(
+  const [sessionService] = useState(
     () =>
-      new CategoryService({
+      new SessionService({
         initialCategories: seed?.categories,
-        createId: dependencies.createCategoryId,
-      }),
-  );
-  const [expenseService] = useState(
-    () =>
-      new ExpenseService({
         initialExpenses: seed?.expenses,
-        categories: categoriesService,
+        createCategoryId: dependencies.createCategoryId,
+        createExpenseId: dependencies.createExpenseId,
       }),
   );
-  const {
-    categories,
-    createCategory: createSessionCategory,
-    deleteCategory: deleteSessionCategory,
-  } = useCategories(categoriesService);
+  const [categories, setCategories] = useState(() =>
+    sessionService.listCategories(),
+  );
   const [state, dispatch] = useReducer(
     pageSessionReducer,
     seed,
@@ -128,7 +116,6 @@ export function usePageSession(
       feedback: initialSeed?.feedback ?? { state: "empty" },
     }),
   );
-  const createExpenseId = dependencies.createExpenseId ?? createBrowserId;
   const summary = useMemo(
     () => selectExpenseSummary(categories, state.expenses),
     [categories, state.expenses],
@@ -140,68 +127,59 @@ export function usePageSession(
 
   const captureExpenses = useCallback(
     (candidates: ReadonlyArray<CapturedExpenseCandidate>) => {
-      const identifiedCandidates = candidates.map((candidate) => ({
-        ...candidate,
-        id: candidate.id ?? createExpenseId(),
-      }));
-      const result = expenseService.addExpenseBatch(identifiedCandidates);
+      const result = sessionService.captureExpenses(candidates);
       dispatch({ type: "capture-applied", result });
       return result;
     },
-    [createExpenseId, expenseService],
+    [sessionService],
   );
 
   const reclassifyExpense = useCallback(
     (expenseId: ExpenseId, categoryId: CategoryId) => {
-      const result = expenseService.reclassifyExpense(expenseId, categoryId);
+      const result = sessionService.reclassifyExpense(expenseId, categoryId);
       dispatch({ type: "expense-reclassified", result });
       return result;
     },
-    [expenseService],
+    [sessionService],
   );
 
   const deleteExpense = useCallback(
     (expenseId: ExpenseId) => {
-      expenseService.deleteExpense(expenseId);
+      sessionService.deleteExpense(expenseId);
       dispatch({ type: "expense-deleted", expenseId });
     },
-    [expenseService],
+    [sessionService],
   );
 
   const createCategory = useCallback(
     (name: string) => {
-      const category = createSessionCategory(name);
-      const result: CategoryCreationResult = {
-        ok: true,
-        category,
-        categories: categoriesService.list(),
-      };
+      const result = sessionService.createCategory(name);
+      setCategories(result.categories);
       return result;
     },
-    [categoriesService, createSessionCategory],
+    [sessionService],
   );
 
   const reassignExpensesFromCategory = useCallback(
     (categoryId: CategoryId) => {
-      const expenses = expenseService.reassignExpensesFromCategory(categoryId);
+      const expenses = sessionService.reassignExpensesFromCategory(categoryId);
       dispatch({ type: "expenses-reassigned", expenses });
       return expenses;
     },
-    [expenseService],
+    [sessionService],
   );
 
   const deleteCategory = useCallback(
     (categoryId: CategoryId): CategoryDeletionResult => {
-      reassignExpensesFromCategory(categoryId);
-      const deletedCategory = deleteSessionCategory(categoryId);
-      const result: CategoryDeletionResult = {
-        ok: true,
-        deletedCategory,
-        categories: categoriesService.list(),
-      };
+      const result = sessionService.deleteCategory(categoryId);
+      setCategories(result.categories);
+      dispatch({
+        type: "expenses-reassigned",
+        expenses: result.reassignedExpenses,
+      });
       return result;
     },
-    [categoriesService, deleteSessionCategory, reassignExpensesFromCategory],
+    [sessionService],
   );
 
   return {

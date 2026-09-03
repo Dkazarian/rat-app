@@ -28,15 +28,10 @@ export class ExpenseService {
       (options.initialExpenses ?? []).map((expense) => [expense.id, expense]),
     );
     this.categories = options.categories ?? categoryService;
-    this.categories.setExpenseService(this);
   }
 
   list(): ReadonlyArray<Expense> {
     return [...this.expenses.values()];
-  }
-
-  hasExpensesForCategory(categoryId: CategoryId): boolean {
-    return this.list().some((expense) => expense.categoryId === categoryId);
   }
 
   addExpenseBatch(

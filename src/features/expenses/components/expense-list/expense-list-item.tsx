@@ -1,16 +1,17 @@
+"use client";
+
 import type {
   ExpenseListItemData,
   ExpenseCategoryOption,
 } from "@/features/expenses/view-types";
 import type { CategoryId } from "@/services/categories/types";
 import type { ExpenseId } from "@/services/expenses/types";
-import type { Locale } from "@/i18n";
+import { useLocale } from "@/i18n/locale-context";
 import { categoryColorValues } from "@/features/categories/category-color";
 import { formatAmount } from "@/utils/format-amount";
 
 export type ExpenseListItemProps = Readonly<{
   expense: ExpenseListItemData;
-  locale: Locale;
   categoryOptions: ReadonlyArray<ExpenseCategoryOption>;
   categorySelectLabel: string;
   deleteLabel: string;
@@ -20,13 +21,14 @@ export type ExpenseListItemProps = Readonly<{
 
 export function ExpenseListItem({
   expense,
-  locale,
   categoryOptions,
   categorySelectLabel,
   deleteLabel,
   onCategoryChange,
   onDelete,
 }: ExpenseListItemProps) {
+  const locale = useLocale();
+
   return (
     <li className="grid grid-cols-[12px_minmax(0,1fr)_auto] items-center gap-x-[10px] gap-y-2 border-b border-[#49404f] py-[11px] last:border-b-0 max-[520px]:grid-cols-[12px_minmax(0,1fr)]">
       <span

@@ -1,12 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { ExpenseInput as ExpenseInputComponent } from "@/features/dashboard/components/capture-panel/expense-input";
 import { Mascot as MascotComponent } from "@/features/dashboard/components/capture-panel/mascot";
 import { RatDialogue as RatDialogueComponent } from "@/features/dashboard/components/capture-panel/rat-dialogue";
 import { LanguageControl as LanguageControlComponent } from "@/components/layout/header/language-control";
-import { getLocale } from "@/i18n";
 
 const meta = {
   title: "Components/Foundations",
@@ -23,24 +21,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const LanguageControl: Story = {
-  render: function LocalizedLanguageControl() {
-    const { i18n, t } = useTranslation();
-    const [locale, setLocale] = useState(
-      getLocale(i18n.resolvedLanguage ?? i18n.language),
-    );
-    return (
-      <LanguageControlComponent
-        label={t("languageLabel")}
-        locale={locale}
-        englishLabel={t("english")}
-        spanishLabel={t("spanish")}
-        onLocaleChange={(next) => {
-          setLocale(next);
-          void i18n.changeLanguage(next);
-        }}
-      />
-    );
-  },
+  render: () => <LanguageControlComponent />,
 };
 export const Mascot: Story = {
   render: function LocalizedMascot() {

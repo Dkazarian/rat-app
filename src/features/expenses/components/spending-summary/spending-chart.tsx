@@ -3,7 +3,7 @@
 import { Cell, Pie, PieChart } from "recharts";
 
 import type { CategorySpendingItemData } from "@/features/expenses/view-types";
-import type { Locale } from "@/i18n";
+import { useLocale } from "@/i18n/locale-context";
 import { categoryColorValues } from "@/features/categories/category-color";
 import { formatAmount } from "@/utils/format-amount";
 
@@ -11,7 +11,6 @@ export type SpendingChartProps = Readonly<{
   label: string;
   totalLabel: string;
   totalMinor: number;
-  locale: Locale;
   items: ReadonlyArray<CategorySpendingItemData>;
 }>;
 
@@ -19,9 +18,9 @@ export function SpendingChart({
   label,
   totalLabel,
   totalMinor,
-  locale,
   items,
 }: SpendingChartProps) {
+  const locale = useLocale();
   const chartItems =
     items.length < 2 ? items : [items[0], ...items.slice(1).reverse()];
 

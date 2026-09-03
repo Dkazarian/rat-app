@@ -1,27 +1,12 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import { getLocale } from "@/i18n";
 import { useTranslation } from "react-i18next";
 
 import { Header } from "./header";
 
 function LocalizedHeader() {
-  const { i18n, t } = useTranslation();
-  const locale = getLocale(i18n.resolvedLanguage ?? i18n.language);
+  const { t } = useTranslation();
 
-  return (
-    <Header
-      appName={t("appName")}
-      languageControl={{
-        label: t("languageLabel"),
-        locale,
-        englishLabel: t("english"),
-        spanishLabel: t("spanish"),
-        onLocaleChange: (nextLocale) => {
-          void i18n.changeLanguage(nextLocale);
-        },
-      }}
-    />
-  );
+  return <Header appName={t("appName")} />;
 }
 
 const meta = {

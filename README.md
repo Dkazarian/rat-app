@@ -8,7 +8,7 @@ The current implementation includes the Phase 4.5 category and expense services.
 
 - [`src/app`](src/app) — Next.js route entry points and root layout.
 - [`src/features`](src/features) — category and expense UI, feature Hooks, and dashboard coordination.
-- [`src/services`](src/services) — framework-independent category and expense services, domain types, errors, and service tests.
+- [`src/services`](src/services) — framework-independent category, expense, and session services, domain types, errors, and service tests. `SessionService` coordinates capture and category deletion; React Hooks apply its results to rendering snapshots.
 - [`src/components`](src/components) — common UI and application layout components.
 - [`src/i18n`](src/i18n), [`src/styles`](src/styles), and [`src/utils`](src/utils) — translations, global styles, and shared helpers.
 - [`public/assets`](public/assets) — mascot images served by the application.

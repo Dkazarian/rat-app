@@ -7,10 +7,8 @@ import type {
 } from "@/features/expenses/view-types";
 import type { CategoryId } from "@/services/categories/types";
 import type { ExpenseId } from "@/services/expenses/types";
-import type { Locale } from "@/i18n";
 
 export type ExpenseListProps = Readonly<{
-  locale: Locale;
   title: string;
   periodLabel: string;
   expenses: ReadonlyArray<ExpenseListItemData>;
@@ -23,7 +21,6 @@ export type ExpenseListProps = Readonly<{
 }>;
 
 export function ExpenseList({
-  locale,
   title,
   periodLabel,
   expenses,
@@ -52,7 +49,6 @@ export function ExpenseList({
           <ExpenseListItem
             key={expense.id}
             expense={expense}
-            locale={locale}
             categoryOptions={categoryOptions}
             categorySelectLabel={getCategorySelectLabel(expense)}
             deleteLabel={getDeleteLabel(expense)}

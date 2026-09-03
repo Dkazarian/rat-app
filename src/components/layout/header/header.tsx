@@ -1,12 +1,10 @@
 import { LanguageControl } from "./language-control";
-import type { LanguageControlProps } from "./language-control";
 
 export type HeaderProps = Readonly<{
   appName: string;
-  languageControl: LanguageControlProps;
 }>;
 
-export function Header({ appName, languageControl }: HeaderProps) {
+export function Header({ appName }: HeaderProps) {
   const brandPrefix = appName.slice(0, 3);
   const brandSuffix = appName.slice(3);
 
@@ -21,7 +19,7 @@ export function Header({ appName, languageControl }: HeaderProps) {
           <span className="text-[#ef9fa4]">{brandSuffix}</span>
         </span>
       </h1>
-      <LanguageControl {...languageControl} />
+      <LanguageControl />
     </header>
   );
 }

@@ -5,7 +5,6 @@ import { describe, expect, it } from "vitest";
 import { useTranslation } from "react-i18next";
 
 import { I18nProvider } from "@/i18n/i18n-provider";
-import { getLocale } from "@/i18n";
 import { renderWithProviders } from "@/test/render";
 
 import { mapCategoriesToItems } from "../category-display";
@@ -14,7 +13,7 @@ import { useCategories } from "@/features/categories/hooks/use-categories";
 import { CategoryPanel } from "./category-panel";
 
 function CategoryPanelHarness() {
-  const { i18n, t } = useTranslation();
+  const { t } = useTranslation();
   const [service] = useState(
     () => new CategoryService({ createId: () => "custom-health" }),
   );
@@ -22,7 +21,6 @@ function CategoryPanelHarness() {
 
   return (
     <CategoryPanel
-      locale={getLocale(i18n.resolvedLanguage ?? i18n.language)}
       categories={mapCategoriesToItems(session.categories, t)}
       onCreateCategory={session.createCategory}
       onDeleteCategory={session.deleteCategory}

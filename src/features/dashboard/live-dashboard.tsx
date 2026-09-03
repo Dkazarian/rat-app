@@ -1,8 +1,8 @@
 "use client";
 
 import { DashboardPage } from "@/features/dashboard/components/dashboard-page/dashboard-page";
-import { producePhaseFourDemoBatch } from "@/features/dashboard/deterministic-capture";
+import { produceMockExpenseBatch } from "@/features/dashboard/mock-expense-capture";
 
 export function LiveDashboard() {
-  return <DashboardPage produceExpenseBatch={producePhaseFourDemoBatch} />;
+  return <DashboardPage produceExpenseBatch={produceMockExpenseBatch} />;
 }

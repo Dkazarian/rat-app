@@ -18,7 +18,7 @@ import type {
   PageSessionDependencies,
   PageSessionSeed,
 } from "@/features/dashboard/types";
-import { getLocale } from "@/i18n";
+import { useLocale } from "@/i18n/locale-context";
 import type { TranslationKey } from "@/i18n";
 import { useTranslation } from "react-i18next";
 
@@ -84,9 +84,9 @@ export function DashboardPage({
   sessionDependencies,
   produceExpenseBatch = rejectCapture,
 }: DashboardPageProps) {
-  const { i18n, t } = useTranslation();
+  const { t } = useTranslation();
   const session = usePageSession(initialSession, sessionDependencies);
-  const locale = getLocale(i18n.resolvedLanguage ?? i18n.language);
+  const locale = useLocale();
   const [titleKey, detailKey, mascotAltKey] =
     feedbackKeys[session.feedback.state];
   const dialogueData = feedbackData[session.feedback.state];
@@ -115,18 +115,7 @@ export function DashboardPage({
     <div className="min-h-screen bg-[#151515] px-3 py-3 text-sm max-[680px]:px-0 max-[680px]:py-0">
       <div className="mx-auto w-full max-w-[1200px]">
         <AppShell label={t("appLabel")}>
-          <Header
-            appName={t("appName")}
-            languageControl={{
-              label: t("languageLabel"),
-              locale,
-              englishLabel: t("english"),
-              spanishLabel: t("spanish"),
-              onLocaleChange: (nextLocale) => {
-                void i18n.changeLanguage(nextLocale);
-              },
-            }}
-          />
+          <Header appName={t("appName")} />
           <main className="p-[22px] max-[680px]:p-[15px]">
             <div className="mb-[22px]">
               <CapturePanel
@@ -163,7 +152,6 @@ export function DashboardPage({
             <DashboardLayout
               categoryPanel={
                 <CategoryPanel
-                  locale={locale}
                   categories={categoryItems}
                   onCreateCategory={session.createCategory}
                   onDeleteCategory={session.deleteCategory}
@@ -173,7 +161,6 @@ export function DashboardPage({
                 <ResultsPanel
                   spendingSummary={
                     <SpendingSummary
-                      locale={locale}
                       title={t("spending")}
                       periodLabel={t("thisMonth")}
                       totalLabel={t("total")}
@@ -188,7 +175,6 @@ export function DashboardPage({
                   }
                   expenseList={
                     <ExpenseList
-                      locale={locale}
                       title={t("recentExpenses")}
                       periodLabel={t("today")}
                       expenses={expenseListItems}

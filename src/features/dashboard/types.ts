@@ -7,11 +7,12 @@ import type {
 import type {
   Expense,
   ExpenseBatchAdditionResult,
-  ExpenseCandidate,
   ExpenseId,
   ExpenseReclassificationResult,
   ExpenseSummary,
 } from "@/services/expenses/types";
+import type { CapturedExpenseCandidate } from "@/services/session/types";
+export type { CapturedExpenseCandidate } from "@/services/session/types";
 
 export type PageFeedbackState =
   | Readonly<{ state: "empty" }>
@@ -30,9 +31,6 @@ export type PageSessionSeed = Readonly<{
   inputValue: string;
   feedback: PageFeedbackState;
 }>;
-
-export type CapturedExpenseCandidate = Omit<ExpenseCandidate, "id"> &
-  Readonly<{ id?: ExpenseId }>;
 
 export type PageSessionDependencies = Readonly<{
   createCategoryId?: () => CategoryId;

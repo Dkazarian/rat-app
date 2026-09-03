@@ -1,22 +1,24 @@
+"use client";
+
 import type { CategoryItemData } from "@/features/categories/view-types";
 import type { CategoryId } from "@/services/categories/types";
-import type { Locale } from "@/i18n";
+import { useLocale } from "@/i18n/locale-context";
 import { categoryColorValues } from "@/features/categories/category-color";
 import { formatAmount } from "@/utils/format-amount";
 
 export type CategoryItemProps = Readonly<{
   category: CategoryItemData;
-  locale: Locale;
   deleteLabel: string;
   onDelete?: (categoryId: CategoryId) => void;
 }>;
 
 export function CategoryItem({
   category,
-  locale,
   deleteLabel,
   onDelete,
 }: CategoryItemProps) {
+  const locale = useLocale();
+
   return (
     <li className="grid grid-cols-[12px_minmax(0,1fr)_auto_auto] items-center gap-[9px] border-b border-[#49404f] py-[10px] last:border-b-0">
       <span

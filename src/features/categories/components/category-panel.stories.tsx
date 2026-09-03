@@ -4,8 +4,6 @@ import { useState } from "react";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
-import { getLocale } from "@/i18n";
-
 import { mapCategoriesToItems } from "../category-display";
 import { CategoryService } from "@/services/categories/category-service";
 import type { Category } from "@/services/categories/types";
@@ -27,14 +25,13 @@ function StoryFrame({ children }: Readonly<{ children: ReactNode }>) {
 }
 
 function InteractiveCategoryPanelStory() {
-  const { i18n, t } = useTranslation();
+  const { t } = useTranslation();
   const [service] = useState(() => new CategoryService());
   const session = useCategories(service);
 
   return (
     <StoryFrame>
       <CategoryPanel
-        locale={getLocale(i18n.resolvedLanguage ?? i18n.language)}
         categories={mapCategoriesToItems(session.categories, t)}
         onCreateCategory={session.createCategory}
         onDeleteCategory={session.deleteCategory}
@@ -46,7 +43,7 @@ function InteractiveCategoryPanelStory() {
 function FixedCategoryPanelStory({
   categories,
 }: Readonly<{ categories: ReadonlyArray<Category> }>) {
-  const { i18n, t } = useTranslation();
+  const { t } = useTranslation();
   const [service] = useState(
     () => new CategoryService({ initialCategories: categories }),
   );
@@ -55,7 +52,6 @@ function FixedCategoryPanelStory({
   return (
     <StoryFrame>
       <CategoryPanel
-        locale={getLocale(i18n.resolvedLanguage ?? i18n.language)}
         categories={mapCategoriesToItems(session.categories, t)}
         onCreateCategory={session.createCategory}
         onDeleteCategory={session.deleteCategory}

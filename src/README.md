@@ -24,12 +24,13 @@ src/
       components/              Dashboard composition and capture UI
       fixtures/                View examples and domain session seeds
       hooks/                   Page-session coordination
-      deterministic-capture.ts Fixed capture adapter for the current demo
+      mock-expense-capture.ts  Mock expense capture for the current demo
       live-dashboard.tsx       Client entry point and capture wiring
       types.ts                 Dashboard session and capture contracts
   services/
     categories/                Category service, domain types, errors, tests
     expenses/                  Expense service, domain types, errors, tests
+    session/                   Session workflows, capture contracts, and tests
   i18n/                        Typed translations and locale provider
   styles/                      Global Tailwind styles
   utils/                       Shared amount formatting and ID generation
@@ -38,8 +39,9 @@ src/
 
 ## Placement and dependencies
 
-- `app/` wires routes to features. The dashboard composes category and expense features; feature Hooks coordinate services and React rendering snapshots.
+- `app/` wires routes to features. The dashboard composes category and expense features; `usePageSession` calls `SessionService` and maintains React rendering snapshots.
 - `services/` owns domain collections, validation, and operations. Services may use domain contracts and framework-independent helpers, but do not import React, components, feature modules, localization, or route code. Service types and typed errors live beside their service.
+- `SessionService` owns a private category/expense pair, assigns missing expense IDs, and coordinates category deletion. It validates deletion before reassigning expenses and deleting the category. `CategoryService` owns category-only rules; it has no expense-service reference. Call `SessionService.deleteCategory` for sessions containing expenses. `ExpenseService` reads categories through a one-way dependency.
 - Feature `components/` owns capability-specific UI. Shared presentation contracts live in feature `view-types.ts`; dashboard session contracts live in `features/dashboard/types.ts`. Other modules import these contracts directly instead of importing types from component or Hook implementations.
 - `components/common/` holds reusable UI, and `components/layout/` holds application framing. Keep dashboard-specific composition within its feature.
 - Hooks stay in their feature's `hooks/` directory. Add a top-level shared Hooks directory only when there is a reusable Hook with consumers across features.
@@ -51,7 +53,7 @@ src/
 
 `features/dashboard/fixtures/dashboard-view-fixtures.ts` contains presentation examples for isolated stories and tests. `dashboard-session-fixtures.ts` contains domain seeds for interactive dashboard stories and tests. These serve different purposes and need not contain identical data. `category-spending.ts` in the same folder supports presentation fixtures only.
 
-The running page uses `deterministic-capture.ts`, not the story fixtures. Each mounted page session creates its own paired category and expense services. Services own their collections, Hooks maintain rendering snapshots, and selectors derive totals and chart data. Refreshing creates a fresh session with only the permanent Unclassified category and no expenses. CategoryService initializes Unclassified directly; sample categories are supplied explicitly by tests and stories. Standalone category examples may use the existing default category service; the dashboard always creates dedicated instances.
+The running page uses `mock-expense-capture.ts`, not the story fixtures. Each mounted page creates one `SessionService` with dedicated category and expense collections. `usePageSession` owns the category rendering snapshot and an expense/input/feedback reducer, applying successful service results without coordinating business operations. `useCategories` remains available for standalone category examples. Selectors derive totals and chart data. Refreshing creates a fresh session with only the permanent Unclassified category and no expenses. CategoryService initializes Unclassified directly; sample categories are supplied explicitly by tests and stories. Standalone category examples may use the existing default category service; the dashboard always creates dedicated instances.
 
 ## Framework and future boundaries
 

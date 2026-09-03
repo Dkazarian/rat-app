@@ -86,6 +86,14 @@ describe("DashboardPage", () => {
     expect(screen.getByRole("button", { name: "Español" })).toHaveFocus();
     await user.keyboard("{Enter}");
 
+    expect(screen.getByRole("button", { name: "Español" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.getByRole("button", { name: "English" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
     expect(screen.getByRole("heading", { name: "Categorías" })).toBeVisible();
     expect(screen.getByRole("heading", { name: "Gastos" })).toBeVisible();
     expect(screen.getByText("Lunch and groceries")).toBeVisible();

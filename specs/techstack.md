@@ -41,9 +41,9 @@ Use platform `fetch` for OpenRouter initially. Do not add an AI SDK unless direc
 
 Ratapp separates feature UI from framework-independent services. Features group components, Hooks, selectors, and presentation helpers by product capability. Category and expense services, domain types, and typed errors live in `src/services`, outside features and components. Shared presentation lives in `src/components/common` and application framing in `src/components/layout`.
 
-Use function components and Hooks for React UI. `CategoryService` and `ExpenseService` own in-memory collections in private Maps and enforce domain validation. Individual operations throw typed errors; expense batch addition returns accepted records and per-candidate errors. Selectors, display mapping, and the React snapshot reducer remain pure. This is the current architecture established by the [Phase 4.5 requirements](spec-phase-4-5-service-refactor/requirements.md).
+Use function components and Hooks for React UI. `CategoryService` and `ExpenseService` own in-memory collections in private Maps and enforce domain validation. `SessionService` coordinates their business workflows. Individual operations throw typed errors; expense batch addition returns accepted records and per-candidate errors. Selectors, display mapping, and the React snapshot reducer remain pure. This extends the [Phase 4.5 requirements](spec-phase-4-5-service-refactor/requirements.md) with a small session service; the historical specification describes the earlier Hook coordination and reciprocal service wiring.
 
-Each mounted dashboard session creates one paired category and expense service. `useCategories` keeps the React category snapshot synchronized after successful operations; `usePageSession` owns the expense rendering snapshot, input, and feedback through a reducer. The session Hook coordinates category reassignment and deletion and exposes actions to the dashboard. Category and expense presentation components receive data and callbacks through props. Locale state remains in the i18n provider. Standalone category examples may use the existing default service, but dashboard sessions never share that default collection.
+Each mounted dashboard session creates one `SessionService`, which owns a private category/expense pair. It assigns missing capture IDs and validates category deletion before reassigning expenses and deleting the category. `CategoryService` handles category-only rules without a reference to expenses; `ExpenseService` retains a one-way dependency for category lookup. `usePageSession` maintains a category rendering snapshot and an expense/input/feedback reducer, updating them from completed service results. `useCategories` remains for standalone category examples. Category and expense presentation components receive data and callbacks through props. Locale state remains in the i18n provider. Dashboard sessions never share the standalone default collections.
 
 Services depend on domain contracts and framework-independent helpers, never on features, React components, or route code. Feature Hooks depend on services. Use interfaces at real external boundaries, such as the future browser classification client and server-side AI provider client. Inject service instances, initial values, and identifier factories through ordinary arguments and props. No dependency-injection container, repository hierarchy, or global-state package is needed.
 
@@ -70,6 +70,7 @@ src/
   services/
     categories/           Category service, domain types, errors, and tests
     expenses/             Expense service, domain types, errors, and tests
+    session/              Session workflows, capture contracts, and tests
   i18n/                   Typed dictionaries and locale setup
   styles/                 Global Tailwind styles
   utils/                  Shared formatting and identifier helpers
@@ -102,14 +103,14 @@ Minimum category fields:
 - Accessible color token
 - System-category flag for permanent `unclassified`
 
-Every session starts with stable IDs for `food`, `home`, `transport`, and `unclassified`. **Unclassified** cannot be renamed or deleted. Other initial and user-created categories may be deleted. The initial release does not support category renaming or manual recoloring.
+Every live session starts with permanent `unclassified` and no expenses. Stories and tests may explicitly seed `food`, `home`, and `transport`. **Unclassified** cannot be renamed or deleted. Other initial and user-created categories may be deleted. The initial release does not support category renaming or manual recoloring.
 
 Category rules:
 
 - A session contains at most ten categories, including **Unclassified**.
 - Names are trimmed, non-empty, case-insensitively unique, and limited to 24 characters.
 - New categories receive a color from a predefined accessible palette.
-- The page-session deletion action reassigns expenses to `unclassified` before deleting their category. Direct service deletion rejects categories that still have expenses; permanent `unclassified` cannot be deleted.
+- `SessionService.deleteCategory` validates the target, reassigns expenses to `unclassified`, and deletes the category synchronously before returning. Sessions must use this operation for cross-collection consistency. Direct `CategoryService.delete` enforces category-only rules and is suitable for standalone category examples; permanent `unclassified` cannot be deleted.
 
 Minimum expense fields:
 
