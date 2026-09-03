@@ -4,6 +4,8 @@
 
 Ratapp is a small, publicly hosted classification demo with a browser-rendered React interface, a server-side OpenRouter boundary, Storybook for isolated UI review, and session-only client state. It does not persist categories, expenses, or language choices.
 
+The current implementation covers the dashboard and in-memory domain services through Phase 4.5. Capture uses a deterministic demo batch; the classification API, provider integration, and public deployment described below remain planned work for Phases 5 and 6. See the [roadmap](roadmap.md) for delivery status.
+
 ## Technical goals and constraints
 
 - Migrate the approved HTML mockup faithfully before making intentional visual changes.
@@ -30,50 +32,55 @@ Exact versions are recorded in the generated lockfile. Major-version upgrades re
 - **Tailwind CSS** for the responsive visual system.
 - **Storybook** for isolated components, responsive compositions, and important UI states.
 - **Recharts** for the donut or pie visualization, paired with accessible textual totals and labels.
-- **Zod** for runtime validation of API input and model output.
+- **i18next and react-i18next** for typed English and Spanish resources and locale switching.
+- **Zod (planned for Phase 5)** for runtime validation of API input and model output; it is not currently installed.
 
 Use platform `fetch` for OpenRouter initially. Do not add an AI SDK unless direct HTTP handling becomes materially harder to maintain.
 
 ## Architecture
 
-Ratapp uses an idiomatic React and Next.js feature-oriented architecture. Code is grouped by product capability, with components, hooks, types, and pure behavior kept close to the feature that owns them. Shared modules are introduced only when more than one feature genuinely uses them.
+Ratapp separates feature UI from framework-independent services. Features group components, Hooks, selectors, and presentation helpers by product capability. Category and expense services, domain types, and typed errors live in `src/services`, outside features and components. Shared presentation lives in `src/components/common` and application framing in `src/components/layout`.
 
-Use function components and Hooks rather than class components, controller classes, or view-model classes. Keep synchronous business rules—such as category validation, color assignment, amount normalization, grouping, and totals—in pure TypeScript functions. Use discriminated unions for expected outcomes and validation failures instead of exception-based control flow.
+Use function components and Hooks for React UI. `CategoryService` and `ExpenseService` own in-memory collections in private Maps and enforce domain validation. Individual operations throw typed errors; expense batch addition returns accepted records and per-candidate errors. Selectors, display mapping, and the React snapshot reducer remain pure. This is the current architecture established by the [Phase 4.5 requirements](spec-phase-4-5-service-refactor/requirements.md).
 
-Interactive browser state belongs in React. A feature Hook or reducer coordinates category and expense state and exposes intention-revealing operations to presentation components. Components receive data and callbacks through props and do not import storage implementations. Context is reserved for state that must be shared across a broad subtree; do not introduce a third-party state library until React state, reducers, and context are demonstrably insufficient.
+Each mounted dashboard session creates one paired category and expense service. `useCategories` keeps the React category snapshot synchronized after successful operations; `usePageSession` owns the expense rendering snapshot, input, and feedback through a reducer. The session Hook coordinates category reassignment and deletion and exposes actions to the dashboard. Category and expense presentation components receive data and callbacks through props. Locale state remains in the i18n provider. Standalone category examples may use the existing default service, but dashboard sessions never share that default collection.
 
-Use interfaces at real external boundaries, such as the browser classification client and the server-side AI provider client. Do not create service and repository class hierarchies for in-memory React state. A small factory or plain object may implement an interface when dependency substitution materially improves tests. Dependency injection is ordinary function arguments, props, or provider values rather than a container or framework.
+Services depend on domain contracts and framework-independent helpers, never on features, React components, or route code. Feature Hooks depend on services. Use interfaces at real external boundaries, such as the future browser classification client and server-side AI provider client. Inject service instances, initial values, and identifier factories through ordinary arguments and props. No dependency-injection container, repository hierarchy, or global-state package is needed.
 
 The Next.js App Router is the framework boundary. Pages and layouts remain Server Components by default. Add `"use client"` at the narrowest practical interactive boundary. Server-only classification code stays outside the client module graph, and route handlers translate HTTP input and output without containing reusable classification rules.
 
-The application has three runtime boundaries:
+The target application has three runtime boundaries; only the browser boundary is currently implemented:
 
-1. **Browser UI:** a Client Component feature boundary owns the current categories, expenses, selected locale, and rat feedback in React memory. Pure selectors derive grouped lists, totals, and chart data from that state.
+1. **Browser UI:** dashboard-scoped services own categories and expenses; React maintains rendering snapshots, input, locale, and feedback. Pure selectors derive grouped lists, totals, and chart data from the current snapshots.
 2. **Next.js classification route:** a thin route handler validates the HTTP request, delegates to server-only classification functions, and maps the result to a safe HTTP response. It is stateless.
 3. **OpenRouter:** performs extraction and category selection using the configured model.
 
-Recommended source organization:
+Current source organization:
 
 ```text
 src/
-  app/                    Next.js routes, layouts, and composition
+  app/                    Next.js route entry points and root layout
+  components/
+    common/               Shared presentation components
+    layout/               Header, language control, app shell, footer
   features/
-    categories/           Category types, rules, Hook, and components
-    expenses/             Expense types, rules, Hook integration, and components
-    classification/       Browser client and shared request/response contracts
-    spending/             Pure selectors and visual presentation
-  server/
-    classification/       Server-only orchestration and provider client
+    categories/           Category UI, Hooks, colors, and display mapping
+    expenses/             Expense UI, spending summary, selectors, and mapping
+    dashboard/            Page composition, Hooks, contracts, and fixtures
+  services/
+    categories/           Category service, domain types, errors, and tests
+    expenses/             Expense service, domain types, errors, and tests
   i18n/                   Typed dictionaries and locale setup
-  components/             Truly shared presentation primitives
+  styles/                 Global Tailwind styles
+  utils/                  Shared formatting and identifier helpers
   test/                   Shared test setup and helpers
 ```
 
-This layout is a direction, not a requirement to create empty folders or split small cohesive files prematurely. Features may begin in the existing component structure and move when behavior makes the ownership boundary useful.
+The [source guide](../src/README.md) documents placement rules, contracts, and fixture ownership. Add `app/api/classify`, browser classification modules, and server-only provider code when Phase 5 needs them; do not create empty placeholder folders. Tests and stories remain colocated with their implementations.
 
 Storybook renders the browser components outside the live application using deterministic fixtures. It does not require OpenRouter.
 
-Classification flow:
+Planned classification flow (Phase 5):
 
 1. The browser sends natural-language text, the selected locale, and the current category IDs and names to `/api/classify`.
 2. The route validates a maximum 500-character message and a maximum of ten categories, then requests structured expense output.
@@ -86,7 +93,7 @@ Classification flow:
 
 No application data is written to `localStorage`, IndexedDB, cookies, a database, or another persistence service. Refreshing or closing the page discards all categories, expenses, and locale changes.
 
-Represent the session with immutable TypeScript values updated through React state or a reducer. Event handlers call feature operations; they do not duplicate domain validation. Derive totals, grouped results, and chart data instead of storing synchronized copies of those values.
+Services store readonly domain values, replacing changed records without mutating earlier records or caller input. Feature Hooks apply successful service results to React rendering snapshots; the reducer contains no service mutations. Event handlers call session actions rather than duplicating domain validation. Derive totals, grouped results, and chart data instead of storing synchronized copies of those values.
 
 Minimum category fields:
 
@@ -102,7 +109,7 @@ Category rules:
 - A session contains at most ten categories, including **Unclassified**.
 - Names are trimmed, non-empty, case-insensitively unique, and limited to 24 characters.
 - New categories receive a color from a predefined accessible palette.
-- Deleting a category moves all its expenses to `unclassified` before removing it.
+- The page-session deletion action reassigns expenses to `unclassified` before deleting their category. Direct service deletion rejects categories that still have expenses; permanent `unclassified` cannot be deleted.
 
 Minimum expense fields:
 
@@ -164,11 +171,11 @@ The initial release supports reclassification and deletion, but not description 
 
 ## Testing and quality gates
 
-- **Unit tests:** pure category and expense rules, reducer transitions, amount normalization, response normalization, grouping, totals, and chart selectors.
+- **Unit tests:** service operations and typed errors, independent candidate validation, session isolation and snapshot synchronization, amount formatting, grouping, totals, and chart selectors. Add provider response normalization tests with Phase 5.
 - **Component tests:** user-visible behavior through rendered components, including language switching, category creation/deletion, fixture and live classification success, zero-result input preservation, provider-error retry, reclassification, deletion, and synchronized chart updates. Avoid asserting Hook or component implementation details.
-- **Route tests:** request validation, English and Spanish input, full and partial success, unknown-category normalization, zero usable items, malformed output, timeout, and rate limiting.
+- **Route tests (Phase 5):** request validation, English and Spanish input, full and partial success, unknown-category normalization, zero usable items, malformed output, timeout, and rate limiting.
 - **Storybook review:** principal component variants and responsive page states in English and Spanish.
-- **End-to-end smoke test:** create a category, submit multiple expenses through a mocked provider, reclassify and delete results, delete a populated category, switch language, verify chart updates, refresh, and verify a clean reset.
+- **End-to-end smoke test:** create a category, capture the deterministic demo batch, reclassify and delete results, delete a populated category, switch language, verify chart updates, refresh, and verify a clean reset. Add a mocked provider when the classification boundary exists.
 - **Static gates:** formatting, linting, strict TypeScript, and production build.
 - **Accessibility:** keyboard workflow, focus visibility, semantic labels, live feedback, textual chart equivalents, and automated scan of the primary view.
 

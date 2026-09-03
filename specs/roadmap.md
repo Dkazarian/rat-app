@@ -6,6 +6,8 @@ A responsive, publicly hosted classification demo in which a visitor adjusts ses
 
 The roadmap remains outcome-oriented. Implementation details and decisions are documented in that phase's specification folder when the phase begins, and each phase ends with an observable review point.
 
+Current architecture and source placement are documented in the [technical baseline](techstack.md) and [source guide](../src/README.md). Services live separately from feature UI; historical phase descriptions below retain the implementation approach used at that time.
+
 ---
 
 ## Phase 0 — Product and UI design ✅

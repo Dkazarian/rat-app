@@ -7,9 +7,9 @@ import { useTranslation } from "react-i18next";
 import { getLocale } from "@/i18n";
 
 import { mapCategoriesToItems } from "../category-display";
-import { CategoryService } from "../category-service";
-import type { Category } from "../types";
-import { useCategories } from "../use-categories";
+import { CategoryService } from "@/services/categories/category-service";
+import type { Category } from "@/services/categories/types";
+import { useCategories } from "@/features/categories/hooks/use-categories";
 
 import { CategoryPanel } from "./category-panel";
 
@@ -106,6 +106,9 @@ export const CategoryLimit: Story = {
         "Pets",
         "Education",
         "Savings",
+        "Books",
+        "Fitness",
+        "Subscriptions",
       ])}
     />
   ),

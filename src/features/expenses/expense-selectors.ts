@@ -1,7 +1,7 @@
-import { UNCLASSIFIED_CATEGORY_ID } from "@/features/categories/category-service";
-import type { Category } from "@/features/categories/types";
+import { UNCLASSIFIED_CATEGORY_ID } from "@/services/categories/category-service";
+import type { Category } from "@/services/categories/types";
 
-import type { Expense, ExpenseSummary } from "./types";
+import type { Expense, ExpenseSummary } from "@/services/expenses/types";
 
 export function selectExpenseSummary(
   categories: ReadonlyArray<Category>,

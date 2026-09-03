@@ -1,15 +1,8 @@
-import type { CategoryColorToken, CategoryId } from "../types";
+import type { CategoryItemData } from "@/features/categories/view-types";
+import type { CategoryId } from "@/services/categories/types";
 import type { Locale } from "@/i18n";
-import { categoryColorValues } from "@/utils/category-color";
+import { categoryColorValues } from "@/features/categories/category-color";
 import { formatAmount } from "@/utils/format-amount";
-
-export type CategoryItemData = Readonly<{
-  id: CategoryId;
-  name: string;
-  color: CategoryColorToken;
-  totalMinor: number;
-  canDelete?: boolean;
-}>;
 
 export type CategoryItemProps = Readonly<{
   category: CategoryItemData;

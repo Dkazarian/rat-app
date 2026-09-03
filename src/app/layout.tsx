@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 
 import { I18nProvider } from "@/i18n/i18n-provider";
 
-import "./globals.css";
+import "@/styles/globals.css";
 
 export const metadata: Metadata = {
   title: "Ratapp",

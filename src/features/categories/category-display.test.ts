@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { TranslationKey } from "@/i18n";
 
-import { createInitialCategories } from "./category-service";
+import { sampleCategories } from "@/features/dashboard/fixtures/dashboard-session-fixtures";
 import {
   getCategoryDisplayName,
   mapCategoriesToItems,
@@ -33,7 +33,7 @@ describe("getCategoryDisplayName", () => {
   });
 
   it("maps session categories to zero-total presentation items", () => {
-    const items = mapCategoriesToItems(createInitialCategories(), translate);
+    const items = mapCategoriesToItems(sampleCategories, translate);
 
     expect(items[0]).toEqual({
       id: "food",

@@ -3,14 +3,17 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { CategoryId, CategoryNameValidationCode } from "../types";
+import type {
+  CategoryId,
+  CategoryNameValidationCode,
+} from "@/services/categories/types";
 import type { Locale } from "@/i18n";
 
-import { CategoryValidationError } from "../category-errors";
+import { CategoryValidationError } from "@/services/categories/category-errors";
 
 import { CategoryForm } from "./category-form";
 import { CategoryItem } from "./category-item";
-import type { CategoryItemData } from "./category-item";
+import type { CategoryItemData } from "@/features/categories/view-types";
 
 export type CategoryPanelProps = Readonly<{
   locale: Locale;

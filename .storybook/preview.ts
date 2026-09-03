@@ -1,7 +1,7 @@
 import type { Preview } from "@storybook/nextjs-vite";
 import { createElement } from "react";
 
-import "../src/app/globals.css";
+import "../src/styles/globals.css";
 import { I18nProvider } from "../src/i18n/i18n-provider";
 import { getLocale } from "../src/i18n";
 

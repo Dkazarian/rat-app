@@ -19,7 +19,7 @@ Status: validated and complete on 2026-09-03. This checklist was written retrosp
 - [x] Eligible built-in and custom categories can be deleted; missing and protected categories throw distinct errors without changing stored data. (R3, R4, R8)
 - [x] Category form validation preserves its draft, displays localized field feedback, and focuses the input; unexpected errors are not converted into ordinary name-validation messages. (R4, R10)
 
-Primary references: `src/features/categories/category-service.test.ts`, `src/features/categories/use-categories.test.tsx`, and `src/features/categories/components/category-panel.test.tsx`.
+Primary references: `src/services/categories/category-service.test.ts`, `src/features/categories/hooks/use-categories.test.tsx`, and `src/features/categories/components/category-panel.test.tsx`.
 
 ## Expense service and partial batches
 
@@ -31,7 +31,7 @@ Primary references: `src/features/categories/category-service.test.ts`, `src/fea
 - [x] Reassignment returns only affected records, preserves unrelated expenses, throws for an unknown category, and does nothing for **Unclassified**. (R8)
 - [x] Category deletion checks current expense references after addition, reclassification, reassignment, and expense deletion; populated categories remain blocked until references are removed. (R8)
 
-Primary reference: `src/features/expenses/expense-service.test.ts`.
+Primary reference: `src/services/expenses/expense-service.test.ts`.
 
 ## Session and dashboard integration
 
@@ -44,7 +44,7 @@ Primary reference: `src/features/expenses/expense-service.test.ts`.
 - [x] Deleting a populated category through the dashboard reassigns before deletion and leaves all expenses visible under **Unclassified** with synchronized results and chart data. (R8–R10)
 - [x] Totals, percentages, chart slices, and grouped results remain derived; custom names and descriptions stay literal, and both locales retain the established `$1285.50` amount format. (R9, R10)
 
-Primary references: `src/features/session/use-page-session.test.tsx`, `src/components/dashboard-page/dashboard-page.test.tsx`, `src/features/expenses/expense-selectors.test.ts`, and the category/expense display tests.
+Primary references: `src/features/dashboard/hooks/use-page-session.test.tsx`, `src/features/dashboard/components/dashboard-page/dashboard-page.test.tsx`, `src/features/expenses/expense-selectors.test.ts`, and the category/expense display tests.
 
 ## Storybook, browser, and accessibility review
 

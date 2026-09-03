@@ -1,7 +1,7 @@
 import type { TranslationKey } from "@/i18n";
 
-import type { CategoryItemData } from "./components/category-item";
-import type { Category } from "./types";
+import type { CategoryItemData } from "@/features/categories/view-types";
+import type { Category } from "@/services/categories/types";
 
 const categoryTranslationKeys: Readonly<
   Partial<Record<string, TranslationKey>>

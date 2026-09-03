@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createInitialCategories } from "@/features/categories/category-service";
+import { sampleCategories } from "@/features/dashboard/fixtures/dashboard-session-fixtures";
 import type { TranslationKey } from "@/i18n";
 
 import {
@@ -9,7 +9,7 @@ import {
   mapExpenseValuesToListItems,
 } from "./expense-display";
 import { selectExpenseSummary } from "./expense-selectors";
-import type { Expense } from "./types";
+import type { Expense } from "@/services/expenses/types";
 
 const translations: Readonly<Partial<Record<TranslationKey, string>>> = {
   food: "Comida",
@@ -22,7 +22,7 @@ const translations: Readonly<Partial<Record<TranslationKey, string>>> = {
 
 const translate = (key: TranslationKey) => translations[key] ?? key;
 const categories = [
-  ...createInitialCategories(),
+  ...sampleCategories,
   {
     id: "health",
     kind: "custom" as const,

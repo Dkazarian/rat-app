@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { CategoryService } from "../category-service";
+import { CategoryService } from "@/services/categories/category-service";
 import { screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { useTranslation } from "react-i18next";
@@ -9,7 +9,7 @@ import { getLocale } from "@/i18n";
 import { renderWithProviders } from "@/test/render";
 
 import { mapCategoriesToItems } from "../category-display";
-import { useCategories } from "../use-categories";
+import { useCategories } from "@/features/categories/hooks/use-categories";
 
 import { CategoryPanel } from "./category-panel";
 
@@ -45,17 +45,13 @@ describe("CategoryPanel", () => {
       screen.getByRole("complementary", { name: "Categories" }),
     );
 
-    expect(panel.getAllByRole("listitem")).toHaveLength(4);
-    expect(panel.getAllByText("$0.00")).toHaveLength(4);
+    expect(panel.getAllByRole("listitem")).toHaveLength(1);
+    expect(panel.getAllByText("$0.00")).toHaveLength(1);
     expect(
       panel
         .getAllByRole("listitem")
-        .map(
-          (item) =>
-            within(item).getByText(/Food|Home|Transport|Unclassified/)
-              .textContent,
-        ),
-    ).toEqual(["Food", "Home", "Transport", "Unclassified"]);
+        .map((item) => within(item).getByText("Unclassified").textContent),
+    ).toEqual(["Unclassified"]);
     expect(
       panel.queryByRole("button", { name: "Delete Unclassified" }),
     ).not.toBeInTheDocument();
@@ -122,8 +118,6 @@ describe("CategoryPanel", () => {
     await user.click(panel.getByRole("button", { name: "Delete Health" }));
     expect(panel.queryByText("Health")).not.toBeInTheDocument();
 
-    await user.click(panel.getByRole("button", { name: "Delete Food" }));
-    expect(panel.queryByText("Food")).not.toBeInTheDocument();
     expect(panel.getByText("Unclassified")).toBeVisible();
   });
 });

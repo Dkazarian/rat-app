@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { createInitialCategories } from "@/features/categories/category-service";
+import { sampleCategories } from "@/features/dashboard/fixtures/dashboard-session-fixtures";
 
 import { selectExpenseSummary } from "./expense-selectors";
-import type { Expense } from "./types";
+import type { Expense } from "@/services/expenses/types";
 
-const categories = createInitialCategories();
+const categories = sampleCategories;
 const expenses: ReadonlyArray<Expense> = [
   {
     id: "lunch",

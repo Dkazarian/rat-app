@@ -1,14 +1,14 @@
-import type { ExpenseListItemData } from "@/components/expense-list/expense-list-item";
-import type { CategorySpendingItemData } from "@/components/spending-summary/category-spending-item";
-import type { CategoryItemData } from "@/features/categories/components/category-item";
+import type { ExpenseListItemData } from "@/features/expenses/view-types";
+import type { CategorySpendingItemData } from "@/features/expenses/view-types";
+import type { CategoryItemData } from "@/features/categories/view-types";
 import { getCategoryDisplayName } from "@/features/categories/category-display";
-import { UNCLASSIFIED_CATEGORY_ID } from "@/features/categories/category-service";
-import type { Category } from "@/features/categories/types";
+import { UNCLASSIFIED_CATEGORY_ID } from "@/services/categories/category-service";
+import type { Category } from "@/services/categories/types";
 import type { TranslationKey } from "@/i18n";
 import type { Locale } from "@/i18n";
 import { formatAmount } from "@/utils/format-amount";
 
-import type { Expense, ExpenseSummary } from "./types";
+import type { Expense, ExpenseSummary } from "@/services/expenses/types";
 
 type Translate = (key: TranslationKey) => string;
 

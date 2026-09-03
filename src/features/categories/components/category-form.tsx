@@ -3,7 +3,7 @@
 import { useId } from "react";
 import type { Ref } from "react";
 
-import type { CategoryNameValidationCode } from "../types";
+import type { CategoryNameValidationCode } from "@/services/categories/types";
 
 export type CategoryFormProps = Readonly<{
   draft: string;
