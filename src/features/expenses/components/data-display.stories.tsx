@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import { useTranslation } from "react-i18next";
+import { useLocale } from "@/i18n/locale-context";
 
 import { ExpenseListItem as ExpenseListItemComponent } from "@/features/expenses/components/expense-list/expense-list-item";
 import { CategorySpendingItem as CategorySpendingItemComponent } from "@/features/expenses/components/spending-summary/category-spending-item";
@@ -23,34 +23,24 @@ type Story = StoryObj<typeof meta>;
 
 export const SpendingChart: Story = {
   render: function LocalizedSpendingChart() {
-    const { t } = useTranslation();
+    const { t } = useLocale();
 
-    const names = {
-      food: t("food"),
-      transport: t("transport"),
-      home: t("home"),
-      fun: t("fun"),
-    };
     return (
       <SpendingChartComponent
         label={t("chartLabel")}
         totalLabel={t("total")}
         totalMinor={fixture.categorySpending.totalMinor}
-        items={fixture.categorySpending.items.map((item) => ({
-          ...item,
-          name: names[item.categoryId as keyof typeof names] ?? t("categories"),
-        }))}
+        items={fixture.categorySpending.items}
       />
     );
   },
 };
 export const CategorySpendingItem: Story = {
   render: function LocalizedCategorySpendingItem() {
-    const { t } = useTranslation();
     return (
       <ul className="w-64 list-none p-0">
         <CategorySpendingItemComponent
-          item={{ ...fixture.categorySpending.items[0], name: t("food") }}
+          item={fixture.categorySpending.items[0]}
         />
       </ul>
     );
@@ -58,17 +48,19 @@ export const CategorySpendingItem: Story = {
 };
 export const ExpenseListItem: Story = {
   render: function LocalizedExpenseListItem() {
-    const { t } = useTranslation();
+    const { t } = useLocale();
     return (
       <ul className="w-64 list-none p-0">
         <ExpenseListItemComponent
           expense={{
             ...fixture.expenses[0],
             description: t("lunch"),
-            categoryName: t("food"),
           }}
           categoryOptions={[
-            { id: "food", name: t("food") },
+            {
+              id: fixture.expenses[0].categoryId,
+              name: fixture.expenses[0].categoryName,
+            },
             { id: "unclassified", name: t("unclassified") },
           ]}
           categorySelectLabel={t("reclassifyExpense", {

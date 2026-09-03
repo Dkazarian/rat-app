@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import { useTranslation } from "react-i18next";
+import { useLocale } from "@/i18n/locale-context";
 
 import { dashboardFixtures } from "@/features/dashboard/fixtures/dashboard-view-fixtures";
 
@@ -11,27 +11,18 @@ type StoryProps = Readonly<{
 }>;
 
 function LocalizedExpenseList({ expenses }: StoryProps) {
-  const { t } = useTranslation();
-
-  const categories: Record<string, string> = {
-    food: t("food"),
-    transport: t("transport"),
-    home: t("home"),
-    fun: t("fun"),
-  };
+  const { t } = useLocale();
 
   return (
     <ExpenseList
       title={t("recentExpenses")}
       periodLabel={t("today")}
-      expenses={expenses.map((expense) => ({
-        ...expense,
-        categoryName: categories[expense.categoryId] ?? t("categories"),
-      }))}
+      expenses={expenses}
       categoryOptions={[
-        { id: "food", name: t("food") },
-        { id: "home", name: t("home") },
-        { id: "transport", name: t("transport") },
+        ...dashboardFixtures.success.categories.map(({ id, name }) => ({
+          id,
+          name,
+        })),
         { id: "unclassified", name: t("unclassified") },
       ]}
       emptyMessage={t("noExpenses")}

@@ -5,33 +5,12 @@ import {
   ProtectedCategoryError,
   DuplicateCategoryIdError,
 } from "./category-errors";
-import type {
-  Category,
-  CategoryId,
-  CustomCategory,
-  BuiltInCategoryIdentity,
-} from "./types";
+import type { Category, CategoryId, CustomCategory } from "./types";
 import { categoryColorTokens } from "./types";
 
 export const CATEGORY_NAME_MAX_LENGTH = 24;
 export const CATEGORY_LIMIT = 10;
 export const UNCLASSIFIED_CATEGORY_ID = "unclassified";
-
-export const builtInCategoryNames = {
-  food: { en: "Food", es: "Comida" },
-  home: { en: "Home", es: "Casa" },
-  transport: { en: "Transport", es: "Transporte" },
-  unclassified: { en: "Unclassified", es: "Sin clasificar" },
-} as const satisfies Record<
-  BuiltInCategoryIdentity,
-  Readonly<{ en: string; es: string }>
->;
-
-const reservedCategoryNames = new Set(
-  Object.values(builtInCategoryNames)
-    .flatMap(({ en, es }) => [en, es])
-    .map(normalizeForComparison),
-);
 
 export class CategoryService {
   private readonly categories: Map<CategoryId, Category>;
@@ -52,7 +31,6 @@ export class CategoryService {
     this.categories.set(UNCLASSIFIED_CATEGORY_ID, {
       id: UNCLASSIFIED_CATEGORY_ID,
       kind: "built-in",
-      identity: "unclassified",
       color: "muted",
       system: true,
     });
@@ -104,7 +82,10 @@ export class CategoryService {
     if (name.length > CATEGORY_NAME_MAX_LENGTH)
       throw new CategoryValidationError("too-long");
     const comparableName = normalizeForComparison(name);
-    if (reservedCategoryNames.has(comparableName))
+    if (
+      comparableName === "unclassified" ||
+      comparableName === "sin clasificar"
+    )
       throw new CategoryValidationError("reserved");
     if (
       this.list().some(

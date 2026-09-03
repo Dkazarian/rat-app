@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import { useTranslation } from "react-i18next";
+import { useLocale } from "@/i18n/locale-context";
 
 import { AppShell as AppShellComponent } from "@/components/layout/app-shell";
 import { DashboardLayout as DashboardLayoutComponent } from "@/features/dashboard/components/dashboard-page/dashboard-layout";
@@ -23,7 +23,7 @@ type Story = StoryObj<typeof meta>;
 export const AppShellStory: Story = {
   name: "AppShell",
   render: function LocalizedAppShell() {
-    const { t } = useTranslation();
+    const { t } = useLocale();
     return (
       <AppShellComponent label={t("appLabel")}>
         {t("appName")}
@@ -34,7 +34,7 @@ export const AppShellStory: Story = {
 export const DashboardLayoutStory: Story = {
   name: "DashboardLayout",
   render: function LocalizedDashboardLayout() {
-    const { t } = useTranslation();
+    const { t } = useLocale();
     return (
       <div className="w-[700px] max-w-full">
         <DashboardLayoutComponent
@@ -52,7 +52,7 @@ export const DashboardLayoutStory: Story = {
 export const ResultsPanelStory: Story = {
   name: "ResultsPanel",
   render: function LocalizedResultsPanel() {
-    const { t } = useTranslation();
+    const { t } = useLocale();
     return (
       <ResultsPanelComponent
         spendingSummary={<div>{t("spending")}</div>}
@@ -64,7 +64,7 @@ export const ResultsPanelStory: Story = {
 export const FooterStory: Story = {
   name: "Footer",
   render: function LocalizedFooter() {
-    const { t } = useTranslation();
+    const { t } = useLocale();
     return (
       <FooterComponent
         poweredByLabel={t("poweredBy")}

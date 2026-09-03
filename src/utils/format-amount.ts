@@ -1,20 +1,10 @@
-import type { Locale } from "@/i18n";
-
-const numberLocales = {
-  en: "en-US",
-  es: "en-US",
-} as const satisfies Record<Locale, string>;
-
-export function formatAmount(minorUnits: number, locale: Locale): string {
+export function formatAmount(minorUnits: number): string {
   if (!Number.isSafeInteger(minorUnits) || minorUnits < 0) {
     throw new RangeError("minorUnits must be a non-negative safe integer");
   }
 
-  const amount = new Intl.NumberFormat(numberLocales[locale], {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-    useGrouping: false,
-  }).format(minorUnits / 100);
+  const whole = Math.floor(minorUnits / 100);
+  const cents = String(minorUnits % 100).padStart(2, "0");
 
-  return `$${amount}`;
+  return `$${whole}.${cents}`;
 }

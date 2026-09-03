@@ -8,27 +8,12 @@ import {
 } from "@/services/categories/category-errors";
 import { ExpenseValidationError } from "@/services/expenses/expense-errors";
 import { sampleCategories } from "@/features/dashboard/fixtures/dashboard-session-fixtures";
-import type { TranslationKey } from "@/i18n";
+import { createI18n, type Locale } from "@/i18n";
 
 import {
   createInitialPageSessionSeed,
   usePageSession,
 } from "./use-page-session";
-
-const translations = {
-  en: {
-    food: "Food",
-    home: "Home",
-    transport: "Transport",
-    unclassified: "Unclassified",
-  },
-  es: {
-    food: "Comida",
-    home: "Casa",
-    transport: "Transporte",
-    unclassified: "Sin clasificar",
-  },
-} as const;
 
 describe("usePageSession", () => {
   it("isolates simultaneous page sessions including category deletion and reassignment", () => {
@@ -491,8 +476,9 @@ describe("usePageSession", () => {
   });
 
   it("preserves domain state while localized presentation changes", () => {
+    const i18n = createI18n();
     const { result, rerender } = renderHook(
-      ({ locale }: { locale: "en" | "es" }) => {
+      ({ locale }: { locale: Locale }) => {
         const session = usePageSession(
           { ...createInitialPageSessionSeed(), categories: sampleCategories },
           {
@@ -500,8 +486,7 @@ describe("usePageSession", () => {
             createExpenseId: () => "expense-1",
           },
         );
-        const translate = (key: TranslationKey) =>
-          translations[locale][key as keyof (typeof translations)["en"]] ?? key;
+        const translate = i18n.getFixedT(locale);
 
         return {
           session,
@@ -510,7 +495,7 @@ describe("usePageSession", () => {
           ),
         };
       },
-      { initialProps: { locale: "en" as "en" | "es" } },
+      { initialProps: { locale: "en" as Locale } },
     );
 
     act(() => {
@@ -525,7 +510,8 @@ describe("usePageSession", () => {
 
     rerender({ locale: "es" });
 
-    expect(result.current.names).toContain("Comida");
+    expect(result.current.names).toContain("Food");
+    expect(result.current.names).toContain("Sin clasificar");
     expect(result.current.names).toContain("Health");
     expect(result.current.session.expenses[0]).toMatchObject({
       id: expenseId,

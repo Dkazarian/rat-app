@@ -3,7 +3,6 @@
 import { Cell, Pie, PieChart } from "recharts";
 
 import type { CategorySpendingItemData } from "@/features/expenses/view-types";
-import { useLocale } from "@/i18n/locale-context";
 import { categoryColorValues } from "@/features/categories/category-color";
 import { formatAmount } from "@/utils/format-amount";
 
@@ -20,7 +19,6 @@ export function SpendingChart({
   totalMinor,
   items,
 }: SpendingChartProps) {
-  const locale = useLocale();
   const chartItems =
     items.length < 2 ? items : [items[0], ...items.slice(1).reverse()];
 
@@ -49,7 +47,7 @@ export function SpendingChart({
         </PieChart>
         <span className="pointer-events-none absolute inset-0 grid place-content-center text-center">
           <strong className="font-medium tabular-nums">
-            {formatAmount(totalMinor, locale)}
+            {formatAmount(totalMinor)}
           </strong>
           <span className="text-[#bbb1c1]">{totalLabel}</span>
         </span>

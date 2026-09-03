@@ -1,10 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import { useTranslation } from "react-i18next";
+import { useLocale } from "@/i18n/locale-context";
 
 import { MascotCard } from "./mascot-card";
 
 function LocalizedMascotCard() {
-  const { t } = useTranslation();
+  const { t } = useLocale();
 
   return (
     <MascotCard

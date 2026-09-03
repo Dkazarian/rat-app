@@ -8,16 +8,6 @@ export const categoryColorTokens = [
 
 export type CategoryColorToken = (typeof categoryColorTokens)[number] | "muted";
 
-export const builtInCategoryIdentities = [
-  "food",
-  "home",
-  "transport",
-  "unclassified",
-] as const;
-
-export type BuiltInCategoryIdentity =
-  (typeof builtInCategoryIdentities)[number];
-export type BuiltInCategoryId = BuiltInCategoryIdentity;
 export type CategoryId = string;
 export type CustomCategoryName = string;
 
@@ -26,15 +16,12 @@ type CategoryBase = Readonly<{
   color: CategoryColorToken;
 }>;
 
-export type BuiltInCategory = {
-  [Identity in BuiltInCategoryIdentity]: CategoryBase &
-    Readonly<{
-      id: Identity;
-      kind: "built-in";
-      identity: Identity;
-      system: Identity extends "unclassified" ? true : false;
-    }>;
-}[BuiltInCategoryIdentity];
+export type UnclassifiedCategory = CategoryBase &
+  Readonly<{
+    id: "unclassified";
+    kind: "built-in";
+    system: true;
+  }>;
 
 export type CustomCategory = CategoryBase &
   Readonly<{
@@ -43,7 +30,7 @@ export type CustomCategory = CategoryBase &
     system: false;
   }>;
 
-export type Category = BuiltInCategory | CustomCategory;
+export type Category = UnclassifiedCategory | CustomCategory;
 
 export const categoryNameValidationCodes = [
   "empty",

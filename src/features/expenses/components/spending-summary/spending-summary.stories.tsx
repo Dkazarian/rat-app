@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import { useTranslation } from "react-i18next";
+import { useLocale } from "@/i18n/locale-context";
 
 import { dashboardFixtures } from "@/features/dashboard/fixtures/dashboard-view-fixtures";
 
@@ -15,14 +15,7 @@ type StoryProps = Readonly<{
 }>;
 
 function LocalizedSpendingSummary({ totalMinor, items, empty }: StoryProps) {
-  const { t } = useTranslation();
-
-  const names: Record<string, string> = {
-    food: t("food"),
-    transport: t("transport"),
-    home: t("home"),
-    fun: t("fun"),
-  };
+  const { t } = useLocale();
 
   return (
     <SpendingSummary
@@ -31,10 +24,7 @@ function LocalizedSpendingSummary({ totalMinor, items, empty }: StoryProps) {
       totalLabel={t("total")}
       totalMinor={totalMinor}
       chartLabel={empty ? t("noSpending") : t("chartLabel")}
-      items={items.map((item) => ({
-        ...item,
-        name: names[item.categoryId] ?? t("categories"),
-      }))}
+      items={items}
     />
   );
 }

@@ -55,6 +55,8 @@ src/
 
 The running page uses `mock-expense-capture.ts`, not the story fixtures. Each mounted page creates one `SessionService` with dedicated category and expense collections. `usePageSession` owns the category rendering snapshot and an expense/input/feedback reducer, applying successful service results without coordinating business operations. `useCategories` remains available for standalone category examples. Selectors derive totals and chart data. Refreshing creates a fresh session with only the permanent Unclassified category and no expenses. CategoryService initializes Unclassified directly; sample categories are supplied explicitly by tests and stories. Standalone category examples may use the existing default category service; the dashboard always creates dedicated instances.
 
+Unclassified is the only system category and the only category whose display name is translated. Food, Home, and Transport in fixtures are ordinary custom categories with literal names. Their names are available for user-created categories; only the English and Spanish names of Unclassified remain reserved.
+
 ## Framework and future boundaries
 
 Static files remain in repository-level `public/assets/`. Global CSS lives in `styles/globals.css` and is imported by both the root layout and Storybook.

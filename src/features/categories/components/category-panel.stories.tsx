@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { expect, userEvent, within } from "storybook/test";
 import { useState } from "react";
 import type { ReactNode } from "react";
-import { useTranslation } from "react-i18next";
+import { useLocale } from "@/i18n/locale-context";
 
 import { mapCategoriesToItems } from "../category-display";
 import { CategoryService } from "@/services/categories/category-service";
@@ -25,7 +25,7 @@ function StoryFrame({ children }: Readonly<{ children: ReactNode }>) {
 }
 
 function InteractiveCategoryPanelStory() {
-  const { t } = useTranslation();
+  const { t } = useLocale();
   const [service] = useState(() => new CategoryService());
   const session = useCategories(service);
 
@@ -43,7 +43,7 @@ function InteractiveCategoryPanelStory() {
 function FixedCategoryPanelStory({
   categories,
 }: Readonly<{ categories: ReadonlyArray<Category> }>) {
-  const { t } = useTranslation();
+  const { t } = useLocale();
   const [service] = useState(
     () => new CategoryService({ initialCategories: categories }),
   );

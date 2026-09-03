@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { sampleCategories } from "@/features/dashboard/fixtures/dashboard-session-fixtures";
-import type { TranslationKey } from "@/i18n";
+import { createI18n } from "@/i18n";
 
 import {
   buildSpendingChartLabel,
@@ -11,16 +11,7 @@ import {
 import { selectExpenseSummary } from "./expense-selectors";
 import type { Expense } from "@/services/expenses/types";
 
-const translations: Readonly<Partial<Record<TranslationKey, string>>> = {
-  food: "Comida",
-  home: "Casa",
-  transport: "Transporte",
-  unclassified: "Sin clasificar",
-  spending: "Gastos",
-  total: "total",
-};
-
-const translate = (key: TranslationKey) => translations[key] ?? key;
+const translate = createI18n("es").t;
 const categories = [
   ...sampleCategories,
   {
@@ -47,7 +38,7 @@ const expenses: ReadonlyArray<Expense> = [
 ];
 
 describe("expense presentation mapping", () => {
-  it("localizes built-in names but preserves descriptions and custom names", () => {
+  it("preserves descriptions and custom category names", () => {
     expect(
       mapExpenseValuesToListItems(expenses, categories, translate),
     ).toEqual([
@@ -56,7 +47,7 @@ describe("expense presentation mapping", () => {
         description: "Almuerzo with Alex",
         amountMinor: 1_800,
         categoryId: "food",
-        categoryName: "Comida",
+        categoryName: "Food",
         color: "coral",
       },
       {
@@ -75,7 +66,7 @@ describe("expense presentation mapping", () => {
 
     expect(mapExpenseSummaryToSpendingItems(summary, translate)).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ categoryId: "food", name: "Comida" }),
+        expect.objectContaining({ categoryId: "food", name: "Food" }),
         expect.objectContaining({
           categoryId: "health",
           name: "Salud & Wellness",
@@ -87,19 +78,17 @@ describe("expense presentation mapping", () => {
   it("derives chart accessibility text from current values", () => {
     const before = buildSpendingChartLabel(
       selectExpenseSummary(categories, expenses),
-      "es",
       translate,
     );
     const after = buildSpendingChartLabel(
       selectExpenseSummary(categories, expenses.slice(1)),
-      "es",
       translate,
     );
 
-    expect(before).toContain("Comida 80%");
+    expect(before).toContain("Food 80%");
     expect(before).toContain("Salud & Wellness 20%");
     expect(before).toContain("$22.50");
-    expect(after).not.toContain("Comida 80%");
+    expect(after).not.toContain("Food 80%");
     expect(after).toContain("Salud & Wellness 100%");
     expect(after).toContain("$4.50");
   });

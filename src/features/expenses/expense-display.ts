@@ -5,7 +5,6 @@ import { getCategoryDisplayName } from "@/features/categories/category-display";
 import { UNCLASSIFIED_CATEGORY_ID } from "@/services/categories/category-service";
 import type { Category } from "@/services/categories/types";
 import type { TranslationKey } from "@/i18n";
-import type { Locale } from "@/i18n";
 import { formatAmount } from "@/utils/format-amount";
 
 import type { Expense, ExpenseSummary } from "@/services/expenses/types";
@@ -93,7 +92,6 @@ export function mapExpenseSummaryToCategoryItems(
 
 export function buildSpendingChartLabel(
   summary: ExpenseSummary,
-  locale: Locale,
   translate: Translate,
 ): string {
   const categorySummary = summary.groups
@@ -105,5 +103,5 @@ export function buildSpendingChartLabel(
     .join(", ");
   const spendingSummary = categorySummary || translate("noSpending");
 
-  return `${translate("spending")}: ${spendingSummary}. ${translate("total")}: ${formatAmount(summary.totalMinor, locale)}`;
+  return `${translate("spending")}: ${spendingSummary}. ${translate("total")}: ${formatAmount(summary.totalMinor)}`;
 }

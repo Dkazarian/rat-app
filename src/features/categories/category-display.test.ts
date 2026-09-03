@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { TranslationKey } from "@/i18n";
+import { createI18n } from "@/i18n";
 
 import { sampleCategories } from "@/features/dashboard/fixtures/dashboard-session-fixtures";
 import {
@@ -8,16 +8,10 @@ import {
   mapCategoriesToItems,
 } from "./category-display";
 
-const translations: Readonly<Partial<Record<TranslationKey, string>>> = {
-  food: "Comida",
-  unclassified: "Sin clasificar",
-};
-
-const translate = (key: TranslationKey) => translations[key] ?? key;
+const translate = createI18n("es").t;
 
 describe("getCategoryDisplayName", () => {
-  it("translates a recognized stable category identifier", () => {
-    expect(getCategoryDisplayName({ id: "food" }, translate)).toBe("Comida");
+  it("translates only Unclassified", () => {
     expect(
       getCategoryDisplayName(
         { id: "unclassified", name: "stale fixture name" },
@@ -25,6 +19,15 @@ describe("getCategoryDisplayName", () => {
       ),
     ).toBe("Sin clasificar");
   });
+
+  it.each(["food", "home", "transport"])(
+    "preserves custom names even when the ID is %s",
+    (id) => {
+      expect(
+        getCategoryDisplayName({ id, name: "My category" }, translate),
+      ).toBe("My category");
+    },
+  );
 
   it("preserves the literal name of an unrecognized custom category", () => {
     expect(
@@ -37,7 +40,7 @@ describe("getCategoryDisplayName", () => {
 
     expect(items[0]).toEqual({
       id: "food",
-      name: "Comida",
+      name: "Food",
       color: "coral",
       totalMinor: 0,
       canDelete: true,

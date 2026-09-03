@@ -13,15 +13,15 @@ import { SessionService } from "./session-service";
 const categories: ReadonlyArray<Category> = [
   {
     id: "food",
-    kind: "built-in",
-    identity: "food",
+    kind: "custom",
+    name: "Food",
     color: "coral",
     system: false,
   },
   {
     id: "home",
-    kind: "built-in",
-    identity: "home",
+    kind: "custom",
+    name: "Home",
     color: "purple",
     system: false,
   },

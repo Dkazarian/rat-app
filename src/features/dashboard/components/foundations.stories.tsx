@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import { useTranslation } from "react-i18next";
+import { useLocale } from "@/i18n/locale-context";
 
 import { ExpenseInput as ExpenseInputComponent } from "@/features/dashboard/components/capture-panel/expense-input";
 import { Mascot as MascotComponent } from "@/features/dashboard/components/capture-panel/mascot";
@@ -25,7 +25,7 @@ export const LanguageControl: Story = {
 };
 export const Mascot: Story = {
   render: function LocalizedMascot() {
-    const { t } = useTranslation();
+    const { t } = useLocale();
     return (
       <MascotComponent
         src="/assets/rat-mascot.png"
@@ -36,7 +36,7 @@ export const Mascot: Story = {
 };
 export const AwaitingMascot: Story = {
   render: function LocalizedAwaitingMascot() {
-    const { t } = useTranslation();
+    const { t } = useLocale();
     return (
       <MascotComponent
         src="/assets/rat-mascot-awaiting.png"
@@ -47,7 +47,7 @@ export const AwaitingMascot: Story = {
 };
 export const RatDialogue: Story = {
   render: function LocalizedRatDialogue() {
-    const { t } = useTranslation();
+    const { t } = useLocale();
     return (
       <RatDialogueComponent
         state="success"
@@ -60,7 +60,7 @@ export const RatDialogue: Story = {
 };
 export const ExpenseInput: Story = {
   render: function LocalizedExpenseInput() {
-    const { t } = useTranslation();
+    const { t } = useLocale();
     return (
       <ExpenseInputComponent
         label={t("inputLabel")}

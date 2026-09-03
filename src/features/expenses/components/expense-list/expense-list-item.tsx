@@ -6,7 +6,6 @@ import type {
 } from "@/features/expenses/view-types";
 import type { CategoryId } from "@/services/categories/types";
 import type { ExpenseId } from "@/services/expenses/types";
-import { useLocale } from "@/i18n/locale-context";
 import { categoryColorValues } from "@/features/categories/category-color";
 import { formatAmount } from "@/utils/format-amount";
 
@@ -27,8 +26,6 @@ export function ExpenseListItem({
   onCategoryChange,
   onDelete,
 }: ExpenseListItemProps) {
-  const locale = useLocale();
-
   return (
     <li className="grid grid-cols-[12px_minmax(0,1fr)_auto] items-center gap-x-[10px] gap-y-2 border-b border-[#49404f] py-[11px] last:border-b-0 max-[520px]:grid-cols-[12px_minmax(0,1fr)]">
       <span
@@ -43,7 +40,7 @@ export function ExpenseListItem({
         </span>
       </span>
       <span className="font-medium whitespace-nowrap tabular-nums max-[520px]:col-start-2">
-        {formatAmount(expense.amountMinor, locale)}
+        {formatAmount(expense.amountMinor)}
       </span>
       <div className="col-start-2 col-span-2 flex w-full min-w-0 items-center gap-2 max-[520px]:col-start-1 max-[520px]:col-end-3">
         <select

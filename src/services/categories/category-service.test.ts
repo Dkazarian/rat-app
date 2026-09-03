@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CategoryService, builtInCategoryNames } from "./category-service";
+import { CategoryService } from "./category-service";
 import {
   CategoryValidationError,
   CategoryNotFoundError,
@@ -69,15 +69,27 @@ describe("CategoryService", () => {
     );
     expect(service.list()).toHaveLength(2);
   });
-  it("reserves English and Spanish built-in names without seeded categories", () => {
-    const service = new CategoryService({ initialCategories: [] });
-    for (const { en, es } of Object.values(builtInCategoryNames)) {
-      for (const name of [en, es])
-        expect(() => service.create(name.toLocaleUpperCase())).toThrow(
-          expect.objectContaining({ code: "reserved" }),
-        );
-    }
-  });
+  it.each(["Food", "Comida", "Home", "Casa", "Transport", "Transporte"])(
+    "allows the former built-in name %s as an ordinary custom category",
+    (name) => {
+      const service = new CategoryService();
+      const category = service.create(name);
+      expect(category).toMatchObject({ name, kind: "custom", system: false });
+      expect(() => service.create(name.toUpperCase())).toThrow(
+        expect.objectContaining({ code: "duplicate" }),
+      );
+      expect(service.delete(category.id)).toEqual(category);
+    },
+  );
+  it.each(["Unclassified", "Sin clasificar"])(
+    "reserves the system category name %s",
+    (name) => {
+      const service = new CategoryService();
+      expect(() => service.create(`  ${name.toUpperCase()}  `)).toThrow(
+        expect.objectContaining({ code: "reserved" }),
+      );
+    },
+  );
   it("enforces the limit and cycles colored category tokens", () => {
     const service = new CategoryService();
     const colors = Array.from(
@@ -127,7 +139,6 @@ describe("CategoryService", () => {
       {
         id: "unclassified",
         kind: "built-in",
-        identity: "unclassified",
         color: "muted",
         system: true,
       },

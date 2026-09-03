@@ -2,15 +2,7 @@ import type { TranslationKey } from "@/i18n";
 
 import type { CategoryItemData } from "@/features/categories/view-types";
 import type { Category } from "@/services/categories/types";
-
-const categoryTranslationKeys: Readonly<
-  Partial<Record<string, TranslationKey>>
-> = {
-  food: "food",
-  home: "home",
-  transport: "transport",
-  unclassified: "unclassified",
-};
+import { UNCLASSIFIED_CATEGORY_ID } from "@/services/categories/category-service";
 
 export type CategoryNameSource = Readonly<{
   id: string;
@@ -21,9 +13,9 @@ export function getCategoryDisplayName(
   category: CategoryNameSource,
   translate: (key: TranslationKey) => string,
 ): string {
-  const translationKey = categoryTranslationKeys[category.id];
-
-  return translationKey ? translate(translationKey) : (category.name ?? "");
+  return category.id === UNCLASSIFIED_CATEGORY_ID
+    ? translate("unclassified")
+    : (category.name ?? "");
 }
 
 export function mapCategoriesToItems(

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { CategoryService } from "@/services/categories/category-service";
 import { screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { useTranslation } from "react-i18next";
+import { useLocale } from "@/i18n/locale-context";
 
 import { I18nProvider } from "@/i18n/i18n-provider";
 import { renderWithProviders } from "@/test/render";
@@ -13,7 +13,7 @@ import { useCategories } from "@/features/categories/hooks/use-categories";
 import { CategoryPanel } from "./category-panel";
 
 function CategoryPanelHarness() {
-  const { t } = useTranslation();
+  const { t } = useLocale();
   const [service] = useState(
     () => new CategoryService({ createId: () => "custom-health" }),
   );

@@ -1,6 +1,5 @@
 import { screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { useTranslation } from "react-i18next";
 
 import { renderWithProviders } from "@/test/render";
 
@@ -9,17 +8,14 @@ import { I18nProvider } from "./i18n-provider";
 import { useLocale } from "./locale-context";
 
 function TranslationConsumer() {
-  const { i18n, t } = useTranslation();
-  const locale = useLocale();
+  const { locale, t, changeLocale } = useLocale();
 
   return (
     <div>
       <p>{t("scaffoldTitle")}</p>
       <button
         type="button"
-        onClick={() =>
-          void i18n.changeLanguage(i18n.language === "en" ? "es" : "en")
-        }
+        onClick={() => void changeLocale(locale === "en" ? "es" : "en")}
       >
         {locale}
       </button>

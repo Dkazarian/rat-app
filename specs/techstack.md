@@ -103,7 +103,7 @@ Minimum category fields:
 - Accessible color token
 - System-category flag for permanent `unclassified`
 
-Every live session starts with permanent `unclassified` and no expenses. Stories and tests may explicitly seed `food`, `home`, and `transport`. **Unclassified** cannot be renamed or deleted. Other initial and user-created categories may be deleted. The initial release does not support category renaming or manual recoloring.
+Every live session starts with permanent `unclassified` and no expenses. Unclassified is the only system category and is initialized by the category service constructor. Stories and tests may explicitly seed `food`, `home`, and `transport` as ordinary custom categories whose literal names do not change with the locale. Those names are available for user-created categories; only the English and Spanish names of Unclassified remain reserved. **Unclassified** cannot be renamed or deleted. Other initial and user-created categories may be deleted. The initial release does not support category renaming or manual recoloring.
 
 Category rules:
 

@@ -1,7 +1,5 @@
 "use client";
 
-import { useTranslation } from "react-i18next";
-
 import type { Locale } from "@/i18n";
 import { useLocale } from "@/i18n/locale-context";
 
@@ -15,8 +13,7 @@ const options = [
 }>;
 
 export function LanguageControl() {
-  const { i18n, t } = useTranslation();
-  const locale = useLocale();
+  const { locale, t, changeLocale } = useLocale();
 
   return (
     <div
@@ -31,7 +28,7 @@ export function LanguageControl() {
           aria-label={t(option.labelKey)}
           aria-pressed={locale === option.locale}
           onClick={() => {
-            void i18n.changeLanguage(option.locale);
+            void changeLocale(option.locale);
           }}
           className="min-w-[42px] cursor-pointer rounded-full border-0 bg-transparent px-[10px] py-[7px] text-[#bbb1c1] outline-offset-2 transition-colors aria-pressed:bg-[#efe7f2] aria-pressed:text-[#26222d] focus-visible:outline-2 focus-visible:outline-[#86afe0] motion-reduce:transition-none"
         >

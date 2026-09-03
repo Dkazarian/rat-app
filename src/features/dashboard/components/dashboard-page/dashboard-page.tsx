@@ -18,9 +18,8 @@ import type {
   PageSessionDependencies,
   PageSessionSeed,
 } from "@/features/dashboard/types";
-import { useLocale } from "@/i18n/locale-context";
 import type { TranslationKey } from "@/i18n";
-import { useTranslation } from "react-i18next";
+import { useLocale } from "@/i18n/locale-context";
 
 import { AppShell } from "@/components/layout/app-shell";
 import { DashboardLayout } from "./dashboard-layout";
@@ -84,9 +83,8 @@ export function DashboardPage({
   sessionDependencies,
   produceExpenseBatch = rejectCapture,
 }: DashboardPageProps) {
-  const { t } = useTranslation();
+  const { t } = useLocale();
   const session = usePageSession(initialSession, sessionDependencies);
-  const locale = useLocale();
   const [titleKey, detailKey, mascotAltKey] =
     feedbackKeys[session.feedback.state];
   const dialogueData = feedbackData[session.feedback.state];
@@ -167,7 +165,6 @@ export function DashboardPage({
                       totalMinor={session.summary.totalMinor}
                       chartLabel={buildSpendingChartLabel(
                         session.summary,
-                        locale,
                         t,
                       )}
                       items={categorySpendingItems}

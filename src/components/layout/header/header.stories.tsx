@@ -1,10 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import { useTranslation } from "react-i18next";
+import { useLocale } from "@/i18n/locale-context";
 
 import { Header } from "./header";
 
 function LocalizedHeader() {
-  const { t } = useTranslation();
+  const { t } = useLocale();
 
   return <Header appName={t("appName")} />;
 }

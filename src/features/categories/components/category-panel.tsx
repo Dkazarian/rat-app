@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
+import { useLocale } from "@/i18n/locale-context";
 
 import type {
   CategoryId,
@@ -25,7 +25,7 @@ export function CategoryPanel({
   onCreateCategory,
   onDeleteCategory,
 }: CategoryPanelProps) {
-  const { t } = useTranslation();
+  const { t } = useLocale();
   const titleId = useId();
   const createButtonRef = useRef<HTMLButtonElement>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);

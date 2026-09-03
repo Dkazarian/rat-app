@@ -2,7 +2,6 @@
 
 import type { CategoryItemData } from "@/features/categories/view-types";
 import type { CategoryId } from "@/services/categories/types";
-import { useLocale } from "@/i18n/locale-context";
 import { categoryColorValues } from "@/features/categories/category-color";
 import { formatAmount } from "@/utils/format-amount";
 
@@ -17,8 +16,6 @@ export function CategoryItem({
   deleteLabel,
   onDelete,
 }: CategoryItemProps) {
-  const locale = useLocale();
-
   return (
     <li className="grid grid-cols-[12px_minmax(0,1fr)_auto_auto] items-center gap-[9px] border-b border-[#49404f] py-[10px] last:border-b-0">
       <span
@@ -28,7 +25,7 @@ export function CategoryItem({
       />
       <span className="min-w-0 break-words">{category.name}</span>
       <span className="font-medium whitespace-nowrap tabular-nums">
-        {formatAmount(category.totalMinor, locale)}
+        {formatAmount(category.totalMinor)}
       </span>
       {category.canDelete ? (
         <button

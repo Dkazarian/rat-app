@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import { useTranslation } from "react-i18next";
+import { useLocale } from "@/i18n/locale-context";
 
 import { CapturePanel } from "./capture-panel";
 import type { RatDialogueState } from "./rat-dialogue";
@@ -19,7 +19,7 @@ const mascotByState: Record<RatDialogueState, string> = {
 };
 
 function LocalizedCapturePanel({ state, inputValue, disabled }: StoryProps) {
-  const { t } = useTranslation();
+  const { t } = useLocale();
   const titleKey = {
     empty: "emptyTitle",
     loading: "loadingTitle",
