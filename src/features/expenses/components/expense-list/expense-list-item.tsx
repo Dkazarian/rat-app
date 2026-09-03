@@ -4,8 +4,6 @@ import type {
   ExpenseListItemData,
   ExpenseCategoryOption,
 } from "@/features/expenses/view-types";
-import type { CategoryId } from "@/services/categories/types";
-import type { ExpenseId } from "@/services/expenses/types";
 import { categoryColorValues } from "@/features/categories/category-color";
 import { formatAmount } from "@/utils/format-amount";
 
@@ -14,8 +12,9 @@ export type ExpenseListItemProps = Readonly<{
   categoryOptions: ReadonlyArray<ExpenseCategoryOption>;
   categorySelectLabel: string;
   deleteLabel: string;
-  onCategoryChange: (expenseId: ExpenseId, categoryId: CategoryId) => void;
-  onDelete: (expenseId: ExpenseId) => void;
+  disabled?: boolean;
+  onCategoryChange: (expenseId: string, categoryId: string | null) => void;
+  onDelete: (expenseId: string) => void;
 }>;
 
 export function ExpenseListItem({
@@ -25,6 +24,7 @@ export function ExpenseListItem({
   deleteLabel,
   onCategoryChange,
   onDelete,
+  disabled = false,
 }: ExpenseListItemProps) {
   return (
     <li className="grid grid-cols-[12px_minmax(0,1fr)_auto] items-center gap-x-[10px] gap-y-2 border-b border-[#49404f] py-[11px] last:border-b-0 max-[520px]:grid-cols-[12px_minmax(0,1fr)]">
@@ -46,6 +46,7 @@ export function ExpenseListItem({
         <select
           aria-label={categorySelectLabel}
           value={expense.categoryId ?? ""}
+          disabled={disabled}
           onChange={(event) =>
             onCategoryChange(
               expense.id,
@@ -64,6 +65,7 @@ export function ExpenseListItem({
           type="button"
           aria-label={deleteLabel}
           onClick={() => onDelete(expense.id)}
+          disabled={disabled}
           className="min-h-9 shrink-0 cursor-pointer rounded-lg border border-[#49404f] bg-[#302a37] px-3 text-[#bbb1c1] outline-offset-2 hover:text-[#f7f2fa] focus-visible:outline-2 focus-visible:outline-[#86afe0]"
         >
           <span aria-hidden="true">×</span>

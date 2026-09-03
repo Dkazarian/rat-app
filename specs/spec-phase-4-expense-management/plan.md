@@ -163,7 +163,7 @@ The identifiers below are planning and traceability references; they do not pref
 
 ## Completion handoff
 
-After Phase 4 passes validation, Phase 5 can provide the same capture boundary with validated multi-expense results from the same-origin classification API. Phase 5 must not replace the cumulative session, correction, reassignment, selector, localization, or accessibility behavior established here.
+After the Phase 5 API-backed redesign, Phase 6 can provide the same capture boundary with validated multi-expense results from the same-origin classification API. Neither later phase may replace the cumulative session, correction, reassignment, selector, localization, or accessibility behavior established here.
 
 ## Current completion status — 2026-09-02
 

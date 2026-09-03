@@ -1,25 +1,21 @@
-import type {
-  CategoryColorToken,
-  CategoryId,
-} from "@/services/categories/types";
-import type { ExpenseId } from "@/services/expenses/types";
+import type { CategoryColorToken } from "@/features/categories/category-color";
 
 export type ExpenseListItemData = Readonly<{
-  id: ExpenseId;
+  id: string;
   description: string;
-  categoryId: CategoryId;
+  categoryId: string | null;
   categoryName: string;
   color: CategoryColorToken;
   amountMinor: number;
 }>;
 
 export type ExpenseCategoryOption = Readonly<{
-  id: CategoryId;
+  id: string | null;
   name: string;
 }>;
 
 export type CategorySpendingItemData = Readonly<{
-  categoryId: CategoryId;
+  categoryId: string | null;
   name: string;
   color: CategoryColorToken;
   percent: number;

@@ -3,27 +3,24 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { useLocale } from "@/i18n/locale-context";
 
-import type {
-  CategoryId,
-  CategoryNameValidationCode,
-} from "@/services/categories/types";
-
-import { CategoryValidationError } from "@/services/categories/category-errors";
-
 import { CategoryForm } from "./category-form";
+import type { CategoryNameValidationCode } from "./category-form";
 import { CategoryItem } from "./category-item";
 import type { CategoryItemData } from "@/features/categories/view-types";
+import { SessionApiError } from "@/features/dashboard/api/session-api-client";
 
 export type CategoryPanelProps = Readonly<{
   categories: ReadonlyArray<CategoryItemData>;
-  onCreateCategory: (name: string) => void;
-  onDeleteCategory: (categoryId: CategoryId) => void;
+  disabled?: boolean;
+  onCreateCategory: (name: string) => Promise<void>;
+  onDeleteCategory: (categoryId: string) => Promise<void>;
 }>;
 
 export function CategoryPanel({
   categories,
   onCreateCategory,
   onDeleteCategory,
+  disabled = false,
 }: CategoryPanelProps) {
   const { t } = useLocale();
   const titleId = useId();
@@ -40,6 +37,7 @@ export function CategoryPanel({
     empty: t("categoryValidationEmpty"),
     "too-long": t("categoryValidationTooLong"),
     duplicate: t("categoryValidationDuplicate"),
+    reserved: t("categoryValidationReserved"),
     "limit-reached": t("categoryValidationLimit"),
   };
 
@@ -57,13 +55,23 @@ export function CategoryPanel({
     setIsCreating(false);
   };
 
-  const submitDraft = () => {
+  const submitDraft = async () => {
     try {
-      onCreateCategory(draft);
+      await onCreateCategory(draft);
       closeForm();
     } catch (error) {
-      if (!(error instanceof CategoryValidationError)) throw error;
-      setValidationCode(error.code);
+      if (!(error instanceof SessionApiError)) throw error;
+      const code: CategoryNameValidationCode =
+        error.code === "category_name_duplicate"
+          ? "duplicate"
+          : error.code === "category_limit_reached"
+            ? "limit-reached"
+            : error.message.toLowerCase().includes("reserved")
+              ? "reserved"
+              : draft.trim().length === 0
+                ? "empty"
+                : "too-long";
+      setValidationCode(code);
       nameInputRef.current?.focus();
     }
   };
@@ -81,6 +89,7 @@ export function CategoryPanel({
           <button
             ref={createButtonRef}
             type="button"
+            disabled={disabled}
             onClick={() => {
               hasOpenedFormRef.current = true;
               setIsCreating(true);
@@ -106,7 +115,7 @@ export function CategoryPanel({
             setDraft(nextDraft);
             setValidationCode(undefined);
           }}
-          onSubmit={submitDraft}
+          onSubmit={() => void submitDraft()}
           onCancel={closeForm}
         />
       ) : null}
@@ -117,6 +126,7 @@ export function CategoryPanel({
             category={category}
             deleteLabel={t("deleteCategory", { name: category.name })}
             onDelete={onDeleteCategory}
+            disabled={disabled}
           />
         ))}
       </ul>

@@ -62,7 +62,25 @@ This intermediate phase records the refactor between expense management and AI i
 
 Validated on 2026-09-03: all six automated gates, 106 tests, and bilingual desktop/narrow browser workflows pass.
 
-## Phase 5 — AI classification API
+## Phase 5 — Redesign
+
+- Replace browser-owned category and expense services with a server API as the source of truth
+- Create a short-lived Redis-backed anonymous session and associate subsequent requests with it
+- Start production sessions without category records; treat Unclassified as an implicit fallback bucket
+- Load category totals and expenses from the API
+- Submit expense prompts through the session API, ready for the Phase 6 AI implementation
+- Create and delete categories, reclassify expenses, and delete expenses through API operations
+- Replace the current service-oriented Hooks with section-owned queries and mutations plus a small refresh coordinator
+- Simplify dashboard composition by removing feature-specific rendered-element layout props
+- Rewrite domain rules in the backend and remove the current client-side category, expense, and session services
+- Provide deterministic Redis seed data for API and dashboard testing before live AI integration
+- Preserve category-deletion cascading behavior and the existing session-only product experience
+
+Detailed HTTP contracts and session-transport decisions are defined in the [Phase 5 requirements](spec-phase-5-redesign/requirements.md).
+
+Validated on 2026-09-03: unit/component and Upstash integration suites, lint, strict TypeScript, Storybook, production build, and bilingual seeded browser review pass.
+
+## Phase 6 — AI classification API
 
 - Same-origin classification API connected to the configured AI provider
 - English and Spanish multi-expense extraction using the visitor's current categories
@@ -70,7 +88,7 @@ Validated on 2026-09-03: all six automated gates, 106 tests, and bilingual deskt
 - Cumulative success and recoverable failure behavior
 - Server-only provider credentials and safe error responses
 
-## Phase 6 — Public demo release
+## Phase 7 — Public demo release
 
 - Responsive, bilingual, accessibility, privacy, and failure-recovery review
 - Public API safeguards and privacy-conscious operations
@@ -90,8 +108,9 @@ Category renaming, manual category colors, AI-facing category descriptions, expe
 | --- | --- |
 | Faithful React and Storybook migration | Phases 1–2 |
 | Session-only category controls | Phase 3 |
-| Cumulative results, correction, totals, and chart | Phases 4 and 4.5 |
-| Multi-expense bilingual AI classification | Phase 5 |
-| Clear success and recoverable failure behavior | Phase 5 |
-| Accessible English and Spanish experience | Phases 2–6 |
-| Safe publicly hosted demo | Phase 6 |
+| Cumulative results, correction, totals, and chart | Phases 4, 4.5, and 5 |
+| Server-backed anonymous session | Phase 5 |
+| Multi-expense bilingual AI classification | Phase 6 |
+| Clear success and recoverable failure behavior | Phase 6 |
+| Accessible English and Spanish experience | Phases 2–7 |
+| Safe publicly hosted demo | Phase 7 |

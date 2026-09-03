@@ -5,8 +5,6 @@ import type {
   ExpenseCategoryOption,
   ExpenseListItemData,
 } from "@/features/expenses/view-types";
-import type { CategoryId } from "@/services/categories/types";
-import type { ExpenseId } from "@/services/expenses/types";
 
 export type ExpenseListProps = Readonly<{
   title: string;
@@ -16,8 +14,9 @@ export type ExpenseListProps = Readonly<{
   emptyMessage: string;
   getCategorySelectLabel: (expense: ExpenseListItemData) => string;
   getDeleteLabel: (expense: ExpenseListItemData) => string;
-  onCategoryChange: (expenseId: ExpenseId, categoryId: CategoryId) => void;
-  onDeleteExpense: (expenseId: ExpenseId) => void;
+  disabled?: boolean;
+  onCategoryChange: (expenseId: string, categoryId: string | null) => void;
+  onDeleteExpense: (expenseId: string) => void;
 }>;
 
 export function ExpenseList({
@@ -30,6 +29,7 @@ export function ExpenseList({
   getDeleteLabel,
   onCategoryChange,
   onDeleteExpense,
+  disabled = false,
 }: ExpenseListProps) {
   const titleId = useId();
 
@@ -54,6 +54,7 @@ export function ExpenseList({
             deleteLabel={getDeleteLabel(expense)}
             onCategoryChange={onCategoryChange}
             onDelete={onDeleteExpense}
+            disabled={disabled}
           />
         ))}
       </ul>

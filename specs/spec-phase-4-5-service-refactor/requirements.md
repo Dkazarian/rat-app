@@ -2,7 +2,7 @@
 
 ## Objective
 
-Record the category and expense refactor implemented after Phase 4 and before Phase 5. Move domain operations into stateful TypeScript services, preserve the session-only dashboard workflow, and accept valid expense candidates independently so the capture boundary is ready for partial AI results.
+Record the category and expense refactor implemented after Phase 4 and before the Phase 5 API-backed redesign. Move domain operations into stateful TypeScript services, preserve the session-only dashboard workflow, and accept valid expense candidates independently so the capture boundary is ready for partial AI results.
 
 This is a retrospective specification of the refactor, not evidence that its acceptance checks or a test-first implementation sequence have passed.
 
@@ -42,7 +42,7 @@ Historical Phase 4 validation describes the earlier implementation. Its complete
 
 ## Context and completion
 
-- [Roadmap](../roadmap.md): intermediate Phase 4.5, preserving Phase 5 and Phase 6 numbering.
+- [Roadmap](../roadmap.md): intermediate Phase 4.5, followed by the Phase 5 redesign, Phase 6 AI integration, and Phase 7 release.
 - [Phase 4 requirements](../spec-phase-4-expense-management/requirements.md): established expense workflow and the contracts revised above.
 - [Technical baseline](../techstack.md): retained session-only, localization, amount-formatting, and future classification expectations.
 

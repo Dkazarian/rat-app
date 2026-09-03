@@ -2,13 +2,13 @@
 
 Ratapp is a bilingual expense-classification demo built with Next.js, React, and TypeScript. It supports session-only category management, expense capture, reclassification and deletion, and a synchronized spending summary in English and Spanish.
 
-The current implementation includes the Phase 4.5 category and expense services. Capture uses a fixed demo batch (lunch, coffee, and taxi), regardless of the submitted text; live AI extraction is planned for Phase 5. No API key or environment configuration is required to run the current demo. Refreshing resets the session and language.
+The current implementation is the Phase 5 Redis-backed redesign. The browser creates or resumes an expiring anonymous session, loads categories and expenses from the API, and performs category and expense mutations server-side. The prompt endpoint intentionally returns `classification_unavailable`; live AI extraction is planned for Phase 6.
 
 ## Project map
 
-- [`src/app`](src/app) — Next.js route entry points and root layout.
+- [`src/app`](src/app) — Next.js page and HTTP route entry points.
+- [`src/server`](src/server) and [`src/contracts`](src/contracts) — server-only domain/persistence code and shared API wire contracts.
 - [`src/features`](src/features) — category and expense UI, feature Hooks, and dashboard coordination.
-- [`src/services`](src/services) — framework-independent category, expense, and session services, domain types, errors, and service tests. `SessionService` coordinates capture and category deletion; React Hooks apply its results to rendering snapshots.
 - [`src/components`](src/components) — common UI and application layout components.
 - [`src/i18n`](src/i18n), [`src/styles`](src/styles), and [`src/utils`](src/utils) — translations, global styles, and shared helpers.
 - [`public/assets`](public/assets) — mascot images served by the application.
@@ -62,6 +62,9 @@ npm run format:check
 npm run lint
 npm run typecheck
 npm test
+npm run test:redis
 ```
+
+`test:redis` loads `.env.development.local` and runs the Upstash persistence and deterministic-seeder integration suites. Seed a non-production demo session with `npm run seed:redis`, optionally followed by `-- --session-id <uuid>`.
 
 The formatting check, lint, type-check, tests, Storybook build, and Next.js build all run non-interactively and are suitable for CI.

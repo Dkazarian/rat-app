@@ -59,5 +59,9 @@
   "scaffoldEyebrow": "Base lista",
   "scaffoldTitle": "Ratapp está listo para su interfaz.",
   "scaffoldDescription": "La base de componentes está lista para la maqueta aprobada.",
-  "switchLanguage": "Cambiar a inglés"
+  "switchLanguage": "Cambiar a inglés",
+  "loadingSession": "Iniciando tu sesión anónima…",
+  "loadingCategories": "Cargando categorías…",
+  "loadingExpenses": "Cargando gastos…",
+  "retry": "Reintentar"
 }

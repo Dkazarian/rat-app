@@ -16,15 +16,19 @@
     "format:check": "prettier --check .",
     "lint": "eslint . --max-warnings=0",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "seed:redis": "tsx --env-file=.env.development.local src/server/seed/seed-redis.ts",
+    "test:redis": "node --env-file=.env.development.local ./node_modules/vitest/vitest.mjs run src/server/redis/persistence.integration.test.ts src/server/seed/seed-session.integration.test.ts"
   },
   "dependencies": {
+    "@upstash/redis": "^1.38.3",
     "i18next": "^26.4.0",
     "next": "16.3.2",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "react-i18next": "^17.0.12",
-    "recharts": "3.10.1"
+    "recharts": "3.10.1",
+    "zod": "^4.5.4"
   },
   "devDependencies": {
     "@storybook/addon-a11y": "10.5.10",
@@ -45,6 +49,7 @@
     "prettier": "3.9.6",
     "storybook": "10.5.10",
     "tailwindcss": "4.3.3",
+    "tsx": "^4.23.13",
     "typescript": "6.0.3",
     "vite": "8.2.2",
     "vitest": "4.1.11"

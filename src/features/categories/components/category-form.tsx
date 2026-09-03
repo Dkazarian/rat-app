@@ -3,7 +3,8 @@
 import { useId } from "react";
 import type { Ref } from "react";
 
-import type { CategoryNameValidationCode } from "@/services/categories/types";
+export type CategoryNameValidationCode =
+  "empty" | "too-long" | "duplicate" | "reserved" | "limit-reached";
 
 export type CategoryFormProps = Readonly<{
   draft: string;

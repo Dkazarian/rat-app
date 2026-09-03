@@ -59,5 +59,9 @@
   "scaffoldEyebrow": "Foundation ready",
   "scaffoldTitle": "Ratapp is ready for its interface.",
   "scaffoldDescription": "The component foundation is ready for the approved mockup.",
-  "switchLanguage": "Switch to Spanish"
+  "switchLanguage": "Switch to Spanish",
+  "loadingSession": "Starting your anonymous session…",
+  "loadingCategories": "Loading categories…",
+  "loadingExpenses": "Loading expenses…",
+  "retry": "Retry"
 }

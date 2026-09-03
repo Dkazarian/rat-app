@@ -1,89 +1,94 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-
-import { pageSessionFixtures } from "@/features/dashboard/fixtures/dashboard-session-fixtures";
-import { produceMockExpenseBatch } from "@/features/dashboard/mock-expense-capture";
-
+import type { SessionApi } from "@/features/dashboard/api/session-api-client";
 import { DashboardPage } from "./dashboard-page";
+
+const categories = {
+  categories: [
+    {
+      id: "10000000-0000-4000-8000-000000000001",
+      name: "Food",
+      color: "coral" as const,
+      totalMinor: 5183,
+    },
+    {
+      id: "10000000-0000-4000-8000-000000000002",
+      name: "Home",
+      color: "purple" as const,
+      totalMinor: 0,
+    },
+    {
+      id: "10000000-0000-4000-8000-000000000003",
+      name: "Transport",
+      color: "teal" as const,
+      totalMinor: 3400,
+    },
+  ],
+  unclassifiedTotalMinor: 725,
+  totalMinor: 9308,
+};
+const expenses = {
+  expenses: [
+    {
+      id: "20000000-0000-4000-8000-000000000003",
+      description: "Mystery purchase",
+      amountMinor: 725,
+      categoryId: null,
+      createdAt: 3,
+    },
+    {
+      id: "20000000-0000-4000-8000-000000000002",
+      description: "Taxi home",
+      amountMinor: 3400,
+      categoryId: categories.categories[2].id,
+      createdAt: 2,
+    },
+    {
+      id: "20000000-0000-4000-8000-000000000001",
+      description: "Lunch with groceries",
+      amountMinor: 5183,
+      categoryId: categories.categories[0].id,
+      createdAt: 1,
+    },
+  ],
+};
+
+const populatedApi: SessionApi = {
+  createSession: async () => ({
+    sessionId: "00000000-0000-4000-8000-000000000001",
+  }),
+  getCategories: async () => categories,
+  createCategory: async (_sessionId, name) => ({
+    category: { id: crypto.randomUUID(), name, color: "blue", totalMinor: 0 },
+  }),
+  deleteCategory: async () => undefined,
+  getExpenses: async () => expenses,
+  updateExpenseCategory: async (_sessionId, expenseId, categoryId) => ({
+    expense: { ...expenses.expenses[0], id: expenseId, categoryId },
+  }),
+  deleteExpense: async () => undefined,
+  submitPrompt: async () => ({ expenses: [], rejectedCount: 0 }),
+};
+const emptyApi: SessionApi = {
+  ...populatedApi,
+  getCategories: async () => ({
+    categories: [],
+    unclassifiedTotalMinor: 0,
+    totalMinor: 0,
+  }),
+  getExpenses: async () => ({ expenses: [] }),
+};
 
 const meta = {
   title: "Pages/Dashboard",
   component: DashboardPage,
   parameters: { layout: "fullscreen" },
-  args: { initialSession: pageSessionFixtures.success },
+  args: { api: populatedApi },
 } satisfies Meta<typeof DashboardPage>;
-
 export default meta;
 type Story = StoryObj<typeof meta>;
-
-export const DesktopSuccess: Story = {
-  parameters: { viewport: { defaultViewport: "desktop" } },
-};
-
-export const Empty: Story = {
-  args: {
-    initialSession: pageSessionFixtures.empty,
-    produceExpenseBatch: produceMockExpenseBatch,
-  },
-};
-export const Loading: Story = {
-  args: { initialSession: pageSessionFixtures.loading },
-};
-
-export const PartialBatch: Story = {
-  args: {
-    initialSession: pageSessionFixtures.empty,
-    produceExpenseBatch: () => [
-      { description: "Accepted coffee", amountMinor: 450, categoryId: "food" },
-      { description: "Rejected expense", amountMinor: 0, categoryId: "food" },
-    ],
-  },
-};
-
-export const AllInvalidBatch: Story = {
-  args: {
-    initialSession: pageSessionFixtures.empty,
-    produceExpenseBatch: () => [
-      { description: "Rejected expense", amountMinor: 0, categoryId: "food" },
-      { description: " ", amountMinor: 100, categoryId: "food" },
-    ],
-  },
-};
-export const ExtractionFailure: Story = {
-  args: {
-    initialSession: pageSessionFixtures["extraction-failure"],
-    produceExpenseBatch: () => [],
-  },
-};
-export const ProviderError: Story = {
-  args: { initialSession: pageSessionFixtures["provider-error"] },
-};
-
-export const OneAcceptedBatch: Story = {
-  args: { initialSession: pageSessionFixtures["one-accepted-batch"] },
-};
-
-export const CumulativeBatches: Story = {
-  args: { initialSession: pageSessionFixtures["cumulative-batches"] },
-};
-
-export const Reclassification: Story = {
-  args: { initialSession: pageSessionFixtures.reclassified },
-};
-
-export const ExpenseDeletion: Story = {
-  args: { initialSession: pageSessionFixtures["expense-deleted"] },
-};
-
-export const PopulatedCategoryDeletion: Story = {
-  args: { initialSession: pageSessionFixtures["category-deleted"] },
-};
-
-export const Spanish: Story = {
-  args: { initialSession: pageSessionFixtures.success },
-  globals: { locale: "es" },
-};
-
-export const NarrowCorrection: Story = {
-  args: { initialSession: pageSessionFixtures.success },
+export const SeededDesktop: Story = {};
+export const EmptyProduction: Story = { args: { api: emptyApi } };
+export const Spanish: Story = { globals: { locale: "es" } };
+export const Narrow: Story = {
   parameters: { viewport: { defaultViewport: "narrow" } },
 };

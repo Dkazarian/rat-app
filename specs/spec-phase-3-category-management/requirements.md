@@ -4,7 +4,7 @@
 
 Turn the existing category presentation into a complete session-only category-management feature. Visitors can inspect the initial categories, create their own categories, and delete any category except permanent **Unclassified**.
 
-This phase introduces interactive category state only. Expense behavior begins in Phase 4, and live classification begins in Phase 5.
+This phase introduces interactive category state only. Expense behavior begins in Phase 4, the API-backed redesign begins in Phase 5, and live classification begins in Phase 6.
 
 ## Requirements
 

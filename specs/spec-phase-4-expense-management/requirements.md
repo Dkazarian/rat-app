@@ -4,7 +4,7 @@
 
 Turn the existing expense, totals, and chart presentation into a complete session-only expense-management feature. The current page session can accumulate expense batches, reclassify and delete individual expenses, preserve referential integrity when categories are deleted, and derive every displayed result from the same in-memory collections.
 
-This phase establishes interactive expense behavior with deterministic caller-supplied data. Natural-language extraction, the classification route, and the external AI provider begin in Phase 5.
+This phase establishes interactive expense behavior with deterministic caller-supplied data. The API-backed redesign begins in Phase 5; natural-language extraction, the classification route, and the external AI provider begin in Phase 6.
 
 ## Requirements
 
@@ -26,7 +26,7 @@ This phase establishes interactive expense behavior with deterministic caller-su
 
 - Represent monetary values as positive integer minor units and format them only at the presentation boundary.
 - Generate expense identifiers at the feature boundary and inject deterministic identifiers in tests and stories.
-- Add expenses in batches because Phase 5 will return multiple extracted expenses from one message.
+- Add expenses in batches because Phase 6 will return multiple extracted expenses from one message.
 - Treat the batch-producing boundary as a caller dependency in Phase 4. Deterministic fixtures can exercise the complete session transition without pretending to classify natural language.
 - Coordinate category and expense transitions in the existing page-session boundary rather than making the category feature import expense behavior.
 - Reassign populated categories to **Unclassified** before deletion and derive all downstream output from the resulting collections.
@@ -48,7 +48,7 @@ This phase establishes interactive expense behavior with deterministic caller-su
 
 - `specs/mission.md` defines cumulative session behavior, correction controls, category-deletion reassignment, synchronized outputs, localization, and accessibility expectations.
 - `specs/techstack.md` defines the immutable minor-unit model, React-memory session boundary, pure selectors, feature organization, formatting behavior, and quality gates.
-- `specs/roadmap.md` keeps this phase focused on expense state and correction; natural-language AI classification begins in Phase 5.
+- `specs/roadmap.md` keeps this phase focused on expense state and correction; the API-backed redesign begins in Phase 5 and natural-language AI classification begins in Phase 6.
 - Phase 3 supplies stable category identifiers, permanent **Unclassified**, category operations, and localized category display names. Phase 4 must preserve those guarantees while coordinating expense references.
 - Preserve the approved Phase 2 presentation and extend the current capture, results, spending, chart, and rat-dialogue components rather than redesigning the dashboard.
 - Keep all new visible and accessible English and Spanish copy in the typed i18next dictionaries.

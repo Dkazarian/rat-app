@@ -1,4 +1,6 @@
-import type { CategoryColorToken } from "@/services/categories/types";
+import type { CategoryColor } from "@/contracts/session-api";
+
+export type CategoryColorToken = CategoryColor | "muted";
 
 export const categoryColorValues = {
   coral: "#ff8b85",

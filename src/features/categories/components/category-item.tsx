@@ -1,20 +1,21 @@
 "use client";
 
 import type { CategoryItemData } from "@/features/categories/view-types";
-import type { CategoryId } from "@/services/categories/types";
 import { categoryColorValues } from "@/features/categories/category-color";
 import { formatAmount } from "@/utils/format-amount";
 
 export type CategoryItemProps = Readonly<{
   category: CategoryItemData;
   deleteLabel: string;
-  onDelete?: (categoryId: CategoryId) => void;
+  disabled?: boolean;
+  onDelete?: (categoryId: string) => void;
 }>;
 
 export function CategoryItem({
   category,
   deleteLabel,
   onDelete,
+  disabled = false,
 }: CategoryItemProps) {
   return (
     <li className="grid grid-cols-[12px_minmax(0,1fr)_auto_auto] items-center gap-[9px] border-b border-[#49404f] py-[10px] last:border-b-0">
@@ -30,8 +31,9 @@ export function CategoryItem({
       {category.canDelete ? (
         <button
           type="button"
+          disabled={disabled}
           aria-label={deleteLabel}
-          onClick={() => onDelete?.(category.id)}
+          onClick={() => category.id !== null && onDelete?.(category.id)}
           className="size-7 cursor-pointer rounded-lg border border-[#49404f] bg-[#302a37] text-[#bbb1c1] outline-offset-2 hover:text-[#f7f2fa] focus-visible:outline-2 focus-visible:outline-[#86afe0]"
         >
           <span aria-hidden="true">×</span>

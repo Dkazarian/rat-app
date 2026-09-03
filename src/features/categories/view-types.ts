@@ -1,10 +1,7 @@
-import type {
-  CategoryColorToken,
-  CategoryId,
-} from "@/services/categories/types";
+import type { CategoryColorToken } from "@/features/categories/category-color";
 
 export type CategoryItemData = Readonly<{
-  id: CategoryId;
+  id: string | null;
   name: string;
   color: CategoryColorToken;
   totalMinor: number;

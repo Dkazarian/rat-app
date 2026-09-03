@@ -1,68 +1,34 @@
 # Source structure
 
-The layout adapts [Pramod Boda's React folder guide](https://dev.to/pramod_boda/recommended-folder-structure-for-react-2025-48mc) to this Next.js application. Feature UI, shared components, and services have separate homes. Next.js `app/` owns routing; services remain outside features, as a project convention.
-
 ```text
 src/
-  app/                         Route entry points and root layout
-  components/
-    common/                    Reusable UI, including mascot-card
-    layout/                    Header, language control, app shell, footer
-  features/
-    categories/
-      components/              Category panel, form, and item
-      hooks/                   React category snapshots and actions
-      category-color.ts        Category presentation palette
-      category-display.ts      Localized presentation mapping
-      view-types.ts            Category presentation contracts
-    expenses/
-      components/              Expense list and spending summary
-      expense-display.ts       Localized presentation mapping
-      expense-selectors.ts     Pure grouping, totals, and chart derivation
-      view-types.ts            Expense presentation contracts
-    dashboard/
-      components/              Dashboard composition and capture UI
-      fixtures/                View examples and domain session seeds
-      hooks/                   Page-session coordination
-      mock-expense-capture.ts  Mock expense capture for the current demo
-      live-dashboard.tsx       Client entry point and capture wiring
-      types.ts                 Dashboard session and capture contracts
-  services/
-    categories/                Category service, domain types, errors, tests
-    expenses/                  Expense service, domain types, errors, tests
-    session/                   Session workflows, capture contracts, and tests
-  i18n/                        Typed translations and locale provider
-  styles/                      Global Tailwind styles
-  utils/                       Shared amount formatting and ID generation
-  test/                        Shared test setup and rendering helpers
+  app/          Next.js page and anonymous-session HTTP routes
+  components/   Reusable UI and application framing
+  contracts/    Shared browser/server API wire contracts
+  features/     Category, expense, and dashboard UI with focused Hooks
+  server/       Server-only domain rules, Redis repositories, HTTP helpers, and seeder
+  i18n/         Typed English and Spanish translations
+  styles/       Global Tailwind styles
+  test/         Shared test setup and route/rendering helpers
+  utils/        Presentation-neutral browser/server helpers
 ```
 
-## Placement and dependencies
+## Boundaries
 
-- `app/` wires routes to features. The dashboard composes category and expense features; `usePageSession` calls `SessionService` and maintains React rendering snapshots.
-- `services/` owns domain collections, validation, and operations. Services may use domain contracts and framework-independent helpers, but do not import React, components, feature modules, localization, or route code. Service types and typed errors live beside their service.
-- `SessionService` owns a private category/expense pair, passes its user ID to category and expense operations, and coordinates category deletion. It looks up custom categories before clearing their expense assignments and deleting them; missing and system-category deletions are no-ops. `CategoryService` owns category-only rules; it has no expense-service reference. Call `SessionService.deleteCategory` for sessions containing expenses. `ExpenseService` reads categories through a one-way dependency and generates expense IDs during creation.
-- Feature `components/` owns capability-specific UI. Shared presentation contracts live in feature `view-types.ts`; dashboard session contracts live in `features/dashboard/types.ts`. Other modules import these contracts directly instead of importing types from component or Hook implementations.
-- `components/common/` holds reusable UI, and `components/layout/` holds application framing. Keep dashboard-specific composition within its feature.
-- Hooks stay in their feature's `hooks/` directory. Add a top-level shared Hooks directory only when there is a reusable Hook with consumers across features.
-- `utils/` holds broadly reusable helpers. Category presentation colors belong to the category feature; fixture-only calculations belong beside fixtures.
-- Prefer `@/` imports across ownership boundaries and relative imports within a cohesive module. Avoid barrel files that mix service, client, and future server exports.
-- Tests (`*.test.ts` or `*.test.tsx`) and stories (`*.stories.tsx`) stay beside the code they cover. `test/` contains shared infrastructure only. Storybook discovers stories throughout `src/`.
+- `app/session/` contains thin route handlers. It validates transport input and delegates authoritative behavior to `server/`.
+- `contracts/` contains stable JSON wire types. It imports neither React nor server implementations.
+- `server/` is server-only. Redis credentials, persistence, stored records, category/expense rules, session identity, and deterministic seed data stay here.
+- `features/dashboard/api/` is the browser HTTP boundary. It uses same-origin credentials and stable error envelopes and never reads Redis configuration.
+- `usePageSession` owns only session readiness, retry, a page-wide one-at-a-time mutation gate, and a refresh signal.
+- `DashboardResults` owns the categories query used by Category Panel and Spending Summary. Its nested expense section independently owns the expenses query. Both protect against aborted and stale responses.
+- Category and expense writes run through the shared mutation gate and refresh server-authoritative data after success. No browser domain service or page-wide mutable snapshot remains.
 
-## Fixtures and runtime state
+## Runtime state and fixtures
 
-`features/dashboard/fixtures/dashboard-view-fixtures.ts` contains presentation examples for isolated stories and tests. `dashboard-session-fixtures.ts` contains domain seeds for interactive dashboard stories and tests. These serve different purposes and need not contain identical data. `category-spending.ts` in the same folder supports presentation fixtures only.
+Production sessions start with no real categories and no expenses. Unclassified is an implicit localized presentation bucket represented by `categoryId: null`; it is never stored as a category record. Food, Home, and Transport are ordinary category names.
 
-The running page uses `mock-expense-capture.ts`, not the story fixtures. Each mounted page creates one `SessionService` with dedicated category and expense collections. `usePageSession` owns the category rendering snapshot and an expense/input/feedback reducer, applying successful service results without coordinating business operations. `useCategories` remains available for standalone category examples. Selectors derive totals and chart data. Refreshing creates a fresh session with only the permanent Unclassified category and no expenses. CategoryService appends Unclassified to every user's category list. Session seeds create custom categories through the public service API and remap seeded expenses to the generated category IDs. Standalone category examples may use the existing default category service; the dashboard always creates dedicated instances.
+The browser obtains or resumes an anonymous session through `POST /session`. Redis keys are scoped by environment prefix and session UUID, expire after the configured TTL, and are never exposed to the browser. The Phase 5 prompt route intentionally returns `501 classification_unavailable`; Phase 6 will replace that endpoint behavior.
 
-Unclassified is the only system category and the only category whose display name is translated. Its ID is `null`; expenses use `categoryId: null` to represent no category assignment. Custom category IDs remain strings. Food, Home, and Transport in fixtures are ordinary custom categories with literal names. Custom names may also be Unclassified or Sin clasificar; their generated IDs distinguish them from the permanent system category.
+Run `npm run seed:redis` to load `.env.development.local`, replace one exact non-production session family with deterministic backend fixtures, verify it through the repositories, and register it as the active seeded session. Pass a fixed ID with `npm run seed:redis -- --session-id <uuid>`. Production seeding is refused.
 
-The dashboard's in-memory `UserStore` reuses a supplied user ID or creates one when absent. Only the resolved ID is passed to services. `ExpenseService` stores a `Map<UserId, Expense[]>`; all expense operations require an explicit user ID. Capture and seed candidates contain a description, amount in minor units, and category ID (`null` for Unclassified), without an expense ID. `createExpense` generates an ID; `addExpenseBatch` delegates each candidate to it and collects validation errors. Repeated candidates create separate expenses. Page snapshots initialize from the accepted service records so editing and deletion use the generated IDs.
-
-`listExpensesForUser(userId)` returns a copy in insertion order; setting `sorted` to `true` sorts by descending ID. `SessionService.listRecentExpenses(amount)` slices that sorted list. UUID sorting does not imply chronological order. Category totals sum minor units, and `removeCategoryFromExpensesInCategory` clears matching assignments for one user. The query helpers isolate collection reads for a future database implementation.
-
-## Framework and future boundaries
-
-Static files remain in repository-level `public/assets/`. Global CSS lives in `styles/globals.css` and is imported by both the root layout and Storybook.
-
-There is currently no classification API or provider integration. When Phase 5 is implemented, HTTP handlers belong in `app/api/`, browser classification code in its feature, and provider credentials and provider calls in server-only modules. Do not add empty `pages`, `routes`, `store`, `config`, or server folders in anticipation of future work.
+Storybook uses injected API-shaped fixtures and does not require Redis, cookies, or Upstash credentials. Tests and stories remain colocated with the code they cover; Redis integration tests use a unique prefix and exact-key cleanup.

@@ -11,13 +11,13 @@ Ratapp demonstrates natural-language interaction, AI-assisted classification, an
 - Demo viewers evaluating how natural-language input can simplify routine classification.
 - Portfolio viewers assessing the product, UX, frontend, and AI-integration work behind the demo.
 
-The initial release is anonymous, has no accounts or roles, and does not persist visitor categories, expenses, or language choices.
+The initial release is anonymous, has no accounts or roles, and does not retain visitor categories or expenses as durable history. Language choices remain browser-memory-only.
 
 ## Core experience
 
-1. Every fresh page session starts with **Food**, **Home**, **Transport**, and permanent **Unclassified** categories.
-2. Visitors can create categories and delete any category except **Unclassified**. Expenses in a deleted category move automatically to **Unclassified**.
-3. A session can contain no more than ten categories, including **Unclassified**. Category names are trimmed, case-insensitively unique, non-empty, and limited to 24 characters. The interface assigns category colors from an accessible palette.
+1. Every fresh page session starts with no categories or expenses. **Unclassified** is an implicit fallback bucket, not a category record.
+2. Visitors can create and delete categories. Expenses in a deleted category move automatically to the **Unclassified** fallback bucket.
+3. A session can contain no more than ten real categories. Category names are trimmed, case-insensitively unique, non-empty, and limited to 24 characters. The interface assigns category colors from an accessible palette.
 4. Visitors can enter one or more expenses in a natural-language message of up to 500 characters. Amounts may be written with or without a `$` symbol.
 5. The system extracts separate expenses, gives them concise descriptions that retain useful details, and assigns each to the most appropriate current category. Unknown or uncertain category results go to **Unclassified**.
 6. If at least one valid expense is extracted, all usable results are added to the current session, the input is cleared, and the rat reports **“Extracted X expenses.”** This is the normal success behavior even if some input was not extracted.
@@ -25,7 +25,7 @@ The initial release is anonymous, has no accounts or roles, and does not persist
 8. Visitors can reclassify or delete an extracted expense. They cannot edit its description or amount in the initial release.
 9. Categorized lists, per-category totals, the overall total, and the spending chart update immediately after every change and accumulate across submissions in the current page session.
 10. Visitors can switch the complete interface between English and Spanish without losing the current session.
-11. Refreshing or closing the page resets categories, expenses, and language. Ratapp does not use browser storage or server-side persistence.
+11. A short-lived anonymous server session holds categories and expenses. Refreshing can resume that session through an HTTP-only session cookie; closing the browser or server expiry discards it. Language remains browser-memory-only and resets on refresh. Ratapp does not provide durable persistence.
 
 ## Product principles
 
@@ -42,8 +42,8 @@ The initial release is anonymous, has no accounts or roles, and does not persist
 
 - Responsive single-page experience for desktop and mobile browsers.
 - Faithful React migration of the approved HTML mockup, organized as reusable components and inspectable Storybook stories.
-- Four initial categories: **Food**, **Home**, **Transport**, and permanent **Unclassified**.
-- Session-only category creation and deletion, with automatic accessible colors and a maximum of ten categories.
+- Fresh sessions with no category records; **Unclassified** exists only as the implicit fallback for unassigned expenses.
+- Session-only category creation and deletion, with automatic accessible colors and a maximum of ten real categories.
 - Natural-language capture of one or multiple expenses per message in English or Spanish.
 - Currency-neutral amounts displayed as `$` followed by an ungrouped number with a `.` decimal separator and exactly two fractional digits in both languages (for example, `$1285.50`).
 - Server-side AI classification through OpenRouter, with the provider model kept configurable.
@@ -74,8 +74,8 @@ The initial demo is successful when:
 - The success message accurately reports how many expenses were extracted; any non-empty usable subset follows the normal success flow.
 - A zero-expense result or provider failure adds nothing and preserves the exact input for correction or retry.
 - Reclassification, expense deletion, and category deletion update lists, totals, and the chart immediately.
-- Deleting a category moves its expenses to permanent **Unclassified**.
-- Refreshing the page reliably returns the demo to its initial state without reading or writing stored user data.
+- Deleting a category moves its expenses to the **Unclassified** fallback bucket.
+- Closing the browser or allowing the anonymous session to expire reliably discards session data; refresh may resume the same short-lived server session without using browser storage.
 - The workflow is usable on narrow mobile and desktop layouts, by keyboard, and without relying on color alone.
 - The complete workflow and recovery messages work in English and Spanish.
 - The public deployment protects provider credentials, limits anonymous abuse, and does not log raw expense text.
