@@ -45,12 +45,17 @@ export function ExpenseListItem({
       <div className="col-start-2 col-span-2 flex w-full min-w-0 items-center gap-2 max-[520px]:col-start-1 max-[520px]:col-end-3">
         <select
           aria-label={categorySelectLabel}
-          value={expense.categoryId}
-          onChange={(event) => onCategoryChange(expense.id, event.target.value)}
+          value={expense.categoryId ?? ""}
+          onChange={(event) =>
+            onCategoryChange(
+              expense.id,
+              event.target.value === "" ? null : event.target.value,
+            )
+          }
           className="min-h-9 min-w-0 flex-1 cursor-pointer rounded-lg border border-[#49404f] bg-[#302a37] px-2 text-[#f7f2fa] outline-offset-2 focus-visible:outline-2 focus-visible:outline-[#86afe0]"
         >
           {categoryOptions.map((category) => (
-            <option key={category.id} value={category.id}>
+            <option key={JSON.stringify(category.id)} value={category.id ?? ""}>
               {category.name}
             </option>
           ))}

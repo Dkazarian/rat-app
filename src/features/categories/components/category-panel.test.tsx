@@ -14,10 +14,8 @@ import { CategoryPanel } from "./category-panel";
 
 function CategoryPanelHarness() {
   const { t } = useLocale();
-  const [service] = useState(
-    () => new CategoryService({ createId: () => "custom-health" }),
-  );
-  const session = useCategories(service);
+  const [service] = useState(() => new CategoryService());
+  const session = useCategories("test-user", service);
 
   return (
     <CategoryPanel

@@ -34,7 +34,10 @@ export function SpendingSummary({
         </div>
         <ul className="grid list-none grid-cols-2 gap-x-4 gap-y-[10px] p-0 max-[680px]:grid-cols-1">
           {items.map((item) => (
-            <CategorySpendingItem key={item.categoryId} item={item} />
+            <CategorySpendingItem
+              key={JSON.stringify(item.categoryId)}
+              item={item}
+            />
           ))}
         </ul>
       </div>

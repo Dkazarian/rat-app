@@ -8,7 +8,7 @@ export const categoryColorTokens = [
 
 export type CategoryColorToken = (typeof categoryColorTokens)[number] | "muted";
 
-export type CategoryId = string;
+export type CategoryId = string | null;
 export type CustomCategoryName = string;
 
 type CategoryBase = Readonly<{
@@ -18,13 +18,14 @@ type CategoryBase = Readonly<{
 
 export type UnclassifiedCategory = CategoryBase &
   Readonly<{
-    id: "unclassified";
+    id: null;
     kind: "built-in";
     system: true;
   }>;
 
 export type CustomCategory = CategoryBase &
   Readonly<{
+    id: string;
     kind: "custom";
     name: CustomCategoryName;
     system: false;
@@ -36,7 +37,6 @@ export const categoryNameValidationCodes = [
   "empty",
   "too-long",
   "duplicate",
-  "reserved",
   "limit-reached",
 ] as const;
 
@@ -50,6 +50,6 @@ export type CategoryCreationResult = Readonly<{
 }>;
 export type CategoryDeletionResult = Readonly<{
   ok: true;
-  deletedCategory: Category;
+  deletedCategory?: Category;
   categories: ReadonlyArray<Category>;
 }>;

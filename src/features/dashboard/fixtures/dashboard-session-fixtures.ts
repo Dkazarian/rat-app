@@ -26,7 +26,7 @@ export const sampleCategories: ReadonlyArray<Category> = [
     system: false,
   },
   {
-    id: "unclassified",
+    id: null,
     kind: "built-in",
     color: "muted",
     system: true,
@@ -80,9 +80,7 @@ const reclassifiedExpenses = expenses.map((expense) =>
 );
 const categoryDeletedCategories = categories.filter(({ id }) => id !== "fun");
 const categoryDeletedExpenses = expenses.map((expense) =>
-  expense.categoryId === "fun"
-    ? { ...expense, categoryId: "unclassified" }
-    : expense,
+  expense.categoryId === "fun" ? { ...expense, categoryId: null } : expense,
 );
 
 export const pageSessionFixtures = {

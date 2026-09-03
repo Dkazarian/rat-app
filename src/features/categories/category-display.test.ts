@@ -14,13 +14,13 @@ describe("getCategoryDisplayName", () => {
   it("translates only Unclassified", () => {
     expect(
       getCategoryDisplayName(
-        { id: "unclassified", name: "stale fixture name" },
+        { id: null, name: "stale fixture name" },
         translate,
       ),
     ).toBe("Sin clasificar");
   });
 
-  it.each(["food", "home", "transport"])(
+  it.each(["food", "home", "transport", "unclassified", "null"])(
     "preserves custom names even when the ID is %s",
     (id) => {
       expect(
@@ -46,7 +46,7 @@ describe("getCategoryDisplayName", () => {
       canDelete: true,
     });
     expect(items.at(-1)).toMatchObject({
-      id: "unclassified",
+      id: null,
       totalMinor: 0,
       canDelete: false,
     });

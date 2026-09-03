@@ -5,41 +5,42 @@ import { CategoryValidationError } from "@/services/categories/category-errors";
 import { useCategories } from "./use-categories";
 
 describe("useCategories", () => {
-  it("delegates list, create and delete to the service without passing collections", () => {
-    const service = new CategoryService({ createId: () => "health" });
+  it("passes the user ID to list, create, and delete and keeps Unclassified last", () => {
+    const service = new CategoryService();
     const create = vi.spyOn(service, "create");
     const remove = vi.spyOn(service, "delete");
-    const { result } = renderHook(() => useCategories(service));
+    const { result } = renderHook(() => useCategories("alice", service));
+    let categoryId = "";
     act(() => {
-      expect(result.current.createCategory("Health")).toMatchObject({
-        id: "health",
-        name: "Health",
-      });
+      categoryId = result.current.createCategory("Health").id;
     });
-    expect(create).toHaveBeenCalledWith("Health");
-    expect(result.current.categories).toEqual(service.list());
+    expect(create).toHaveBeenCalledWith("alice", "Health");
+    expect(result.current.categories).toEqual(
+      service.listCategoriesForUser("alice"),
+    );
+    expect(result.current.categories.at(-1)?.id).toBeNull();
     act(() => {
-      result.current.deleteCategory("health");
+      result.current.deleteCategory(categoryId);
     });
-    expect(remove).toHaveBeenCalledWith("health");
-    expect(
-      result.current.categories.some((category) => category.id === "health"),
-    ).toBe(false);
+    expect(remove).toHaveBeenCalledWith("alice", categoryId);
+    expect(result.current.categories.map(({ id }) => id)).toEqual([null]);
   });
   it("keeps sequential operations in one event without stale data", () => {
     const service = new CategoryService();
-    const { result } = renderHook(() => useCategories(service));
+    const { result } = renderHook(() => useCategories("alice", service));
     act(() => {
       const health = result.current.createCategory("Health");
       result.current.createCategory("Books");
       result.current.deleteCategory(health.id);
     });
-    expect(result.current.categories).toEqual(service.list());
+    expect(result.current.categories).toEqual(
+      service.listCategoriesForUser("alice"),
+    );
     expect(result.current.categories).toHaveLength(2);
   });
-  it("propagates custom exceptions and preserves the displayed list", () => {
+  it("propagates validation errors and preserves the displayed snapshot", () => {
     const service = new CategoryService();
-    const { result } = renderHook(() => useCategories(service));
+    const { result } = renderHook(() => useCategories("alice", service));
     const previous = result.current.categories;
     act(() => {
       expect(() => result.current.createCategory(" ")).toThrow(
@@ -47,5 +48,31 @@ describe("useCategories", () => {
       );
     });
     expect(result.current.categories).toBe(previous);
+  });
+  it("keeps missing and system deletions harmless", () => {
+    const service = new CategoryService();
+    const { result } = renderHook(() => useCategories("alice", service));
+    act(() => {
+      result.current.deleteCategory(null);
+      result.current.deleteCategory("missing");
+    });
+    expect(result.current.categories.map(({ id }) => id)).toEqual([null]);
+  });
+  it("shows only the selected user's categories after switching users", () => {
+    const service = new CategoryService();
+    const alice = service.create("alice", "Health");
+    const bob = service.create("bob", "Books");
+    const { result, rerender } = renderHook(
+      ({ userId }) => useCategories(userId, service),
+      { initialProps: { userId: "alice" } },
+    );
+    expect(result.current.categories[0]).toBe(alice);
+    rerender({ userId: "bob" });
+    expect(result.current.categories[0]).toBe(bob);
+    act(() => {
+      result.current.deleteCategory(alice.id);
+    });
+    expect(service.exists("alice", alice.id)).toBe(true);
+    expect(result.current.categories[0]).toBe(bob);
   });
 });

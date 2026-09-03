@@ -16,17 +16,11 @@ export type Expense = Readonly<{
   categoryId: CategoryId;
 }>;
 
-export type ExpenseCandidate = Readonly<{
-  id: ExpenseId;
-  description: ExpenseDescription;
-  amountMinor: ExpenseAmountMinor;
-  categoryId?: CategoryId;
-}>;
+export type ExpenseCandidate = Readonly<Omit<Expense, "id">>;
 
 export const expenseBatchRejectionCodes = [
   "invalid-description",
   "invalid-amount",
-  "duplicate-id",
 ] as const;
 
 export type ExpenseBatchRejectionCode =

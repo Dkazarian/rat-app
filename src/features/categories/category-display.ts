@@ -1,11 +1,11 @@
 import type { TranslationKey } from "@/i18n";
 
 import type { CategoryItemData } from "@/features/categories/view-types";
-import type { Category } from "@/services/categories/types";
+import type { Category, CategoryId } from "@/services/categories/types";
 import { UNCLASSIFIED_CATEGORY_ID } from "@/services/categories/category-service";
 
 export type CategoryNameSource = Readonly<{
-  id: string;
+  id: CategoryId;
   name?: string;
 }>;
 

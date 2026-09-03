@@ -16,8 +16,16 @@ describe("DashboardPage", () => {
       <I18nProvider>
         <DashboardPage
           produceExpenseBatch={() => [
-            { id: "valid", description: "Accepted coffee", amountMinor: 450 },
-            { id: "invalid", description: "Rejected expense", amountMinor: 0 },
+            {
+              description: "Accepted coffee",
+              amountMinor: 450,
+              categoryId: null,
+            },
+            {
+              description: "Rejected expense",
+              amountMinor: 0,
+              categoryId: null,
+            },
           ]}
         />
       </I18nProvider>,
@@ -28,17 +36,21 @@ describe("DashboardPage", () => {
     expect(screen.getByText("1 expense sorted. 1 skipped.")).toBeVisible();
   });
 
-  it("uses injected identifiers for deterministic category and capture interactions", async () => {
+  it("uses service-generated category and expense IDs and the supplied user ID", async () => {
     const randomId = vi.spyOn(crypto, "randomUUID");
-    const createExpenseId = vi.fn(() => "deterministic-expense");
-    const createCategoryId = vi.fn(() => "deterministic-category");
     try {
       const { user } = renderWithProviders(
         <I18nProvider>
           <DashboardPage
-            sessionDependencies={{ createExpenseId, createCategoryId }}
+            sessionDependencies={{
+              createUserId: () => "deterministic-user",
+            }}
             produceExpenseBatch={() => [
-              { description: "Fixed expense", amountMinor: 100 },
+              {
+                description: "Fixed expense",
+                amountMinor: 100,
+                categoryId: null,
+              },
             ]}
           />
         </I18nProvider>,
@@ -50,9 +62,7 @@ describe("DashboardPage", () => {
         "Health",
       );
       await user.click(screen.getByRole("button", { name: "Add" }));
-      expect(createExpenseId).toHaveBeenCalledOnce();
-      expect(createCategoryId).toHaveBeenCalledOnce();
-      expect(randomId).not.toHaveBeenCalled();
+      expect(randomId).toHaveBeenCalledTimes(2);
     } finally {
       randomId.mockRestore();
     }
@@ -104,10 +114,7 @@ describe("DashboardPage", () => {
   it("coordinates category creation and deletion across language changes", async () => {
     const { user } = renderWithProviders(
       <I18nProvider>
-        <DashboardPage
-          initialSession={pageSessionFixtures.empty}
-          sessionDependencies={{ createCategoryId: () => "custom-health" }}
-        />
+        <DashboardPage initialSession={pageSessionFixtures.empty} />
       </I18nProvider>,
     );
     const categories = within(
@@ -212,10 +219,19 @@ describe("DashboardPage", () => {
       within(selector)
         .getAllByRole("option")
         .map((option) => option.textContent),
-    ).toEqual(["Food", "Home", "Transport", "Unclassified", "Fun"]);
-    await user.selectOptions(selector, "home");
+    ).toEqual(["Food", "Home", "Transport", "Fun", "Unclassified"]);
+    await user.selectOptions(
+      selector,
+      within(selector).getByRole("option", { name: "Home" }),
+    );
 
-    expect(selector).toHaveValue("home");
+    expect(
+      (
+        within(selector).getByRole("option", {
+          name: "Home",
+        }) as HTMLOptionElement
+      ).selected,
+    ).toBe(true);
     expect(
       screen.getByRole("img", {
         name: "Spending: Home 60%, Transport 26%, Fun 14%. total: $1284.50",
@@ -228,6 +244,26 @@ describe("DashboardPage", () => {
     expect(
       within(categories.getByText("Home").closest("li")!).getByText("$770.60"),
     ).toBeVisible();
+
+    await user.selectOptions(selector, "");
+    expect(selector).toHaveValue("");
+    expect(
+      screen.getByRole("img", {
+        name: "Spending: Home 20%, Transport 26%, Fun 14%, Unclassified 40%. total: $1284.50",
+      }),
+    ).toBeInTheDocument();
+
+    await user.selectOptions(
+      selector,
+      within(selector).getByRole("option", { name: "Food" }),
+    );
+    expect(
+      (
+        within(selector).getByRole("option", {
+          name: "Food",
+        }) as HTMLOptionElement
+      ).selected,
+    ).toBe(true);
   });
 
   it("deletes an expense immediately and synchronizes every derived result", async () => {
@@ -266,7 +302,7 @@ describe("DashboardPage", () => {
       screen.getByRole("combobox", {
         name: "Change category for Movie night",
       }),
-    ).toHaveValue("unclassified");
+    ).toHaveValue("");
     expect(screen.queryByText("Fun")).not.toBeInTheDocument();
     expect(
       screen.getByRole("img", {
@@ -314,13 +350,11 @@ describe("DashboardPage", () => {
             ...pageSessionFixtures.empty,
             expenses: [
               {
-                id: "lunch",
                 description: "Lunch",
                 amountMinor: 1_000,
                 categoryId: "food",
               },
               {
-                id: "lunch-alex",
                 description: "Lunch with Alex",
                 amountMinor: 2_000,
                 categoryId: "food",
@@ -406,8 +440,17 @@ describe("DashboardPage", () => {
       name: "Change category for Keyboard lunch",
     });
     selector.focus();
-    await user.selectOptions(selector, "home");
-    expect(selector).toHaveValue("home");
+    await user.selectOptions(
+      selector,
+      within(selector).getByRole("option", { name: "Home" }),
+    );
+    expect(
+      (
+        within(selector).getByRole("option", {
+          name: "Home",
+        }) as HTMLOptionElement
+      ).selected,
+    ).toBe(true);
 
     const deleteExpense = screen.getByRole("button", {
       name: "Delete Keyboard lunch",
@@ -425,6 +468,6 @@ describe("DashboardPage", () => {
       screen.getByRole("combobox", {
         name: "Change category for Keyboard taxi",
       }),
-    ).toHaveValue("unclassified");
+    ).toHaveValue("");
   });
 });

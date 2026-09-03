@@ -12,12 +12,9 @@ import { useCategories } from "@/features/categories/hooks/use-categories";
 import { CategoryPanel } from "./category-panel";
 
 function createStoryCategories(customNames: ReadonlyArray<string>) {
-  let nextId = 1;
-  const service = new CategoryService({
-    createId: () => "story-category-" + nextId++,
-  });
-  customNames.forEach((name) => service.create(name));
-  return service.list();
+  const service = new CategoryService();
+  customNames.forEach((name) => service.create("story-user", name));
+  return service.listCategoriesForUser("story-user");
 }
 
 function StoryFrame({ children }: Readonly<{ children: ReactNode }>) {
@@ -27,7 +24,7 @@ function StoryFrame({ children }: Readonly<{ children: ReactNode }>) {
 function InteractiveCategoryPanelStory() {
   const { t } = useLocale();
   const [service] = useState(() => new CategoryService());
-  const session = useCategories(service);
+  const session = useCategories("story-user", service);
 
   return (
     <StoryFrame>
@@ -44,10 +41,15 @@ function FixedCategoryPanelStory({
   categories,
 }: Readonly<{ categories: ReadonlyArray<Category> }>) {
   const { t } = useLocale();
-  const [service] = useState(
-    () => new CategoryService({ initialCategories: categories }),
-  );
-  const session = useCategories(service);
+  const [service] = useState(() => {
+    const service = new CategoryService();
+    categories.forEach((category) => {
+      if (category.kind === "custom")
+        service.create("story-user", category.name);
+    });
+    return service;
+  });
+  const session = useCategories("story-user", service);
 
   return (
     <StoryFrame>

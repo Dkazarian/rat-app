@@ -1,4 +1,5 @@
 import { CategoryService } from "@/services/categories/category-service";
+import { CategoryNotFoundError } from "@/services/categories/category-errors";
 import type {
   CategoryCreationResult,
   CategoryId,
@@ -9,6 +10,7 @@ import type {
   ExpenseId,
 } from "@/services/expenses/types";
 import { createBrowserId } from "@/utils/create-browser-id";
+import type { UserId } from "@/services/users/types";
 import type {
   CapturedExpenseCandidate,
   SessionCategoryDeletionResult,
@@ -17,45 +19,81 @@ import type {
 
 /** Owns one session's business workflows, independently of its React view. */
 export class SessionService {
+  readonly userId: UserId;
   private readonly categories: CategoryService;
   private readonly expenses: ExpenseService;
-  private readonly createExpenseId: () => ExpenseId;
 
   constructor(options: SessionServiceOptions = {}) {
-    this.categories = new CategoryService({
-      initialCategories: options.initialCategories,
-      createId: options.createCategoryId,
-    });
+    this.userId = options.userId ?? createBrowserId();
+    this.categories = new CategoryService();
+    const seededCategoryIds = new Map<CategoryId, CategoryId>([[null, null]]);
+    for (const category of options.initialCategories ?? []) {
+      if (category.kind === "custom") {
+        const created = this.categories.create(this.userId, category.name);
+        seededCategoryIds.set(category.id, created.id);
+      }
+    }
     this.expenses = new ExpenseService({
-      initialExpenses: options.initialExpenses,
       categories: this.categories,
     });
-    this.createExpenseId = options.createExpenseId ?? createBrowserId;
+    this.expenses.addExpenseBatch(
+      (options.initialExpenses ?? []).map((expense) => ({
+        ...expense,
+        categoryId: seededCategoryIds.get(expense.categoryId) ?? null,
+      })),
+      this.userId,
+    );
   }
 
   listCategories() {
-    return this.categories.list();
+    return this.categories.listCategoriesForUser(this.userId);
   }
 
-  listExpenses() {
-    return this.expenses.list();
+  listExpenses(sorted = false) {
+    return this.expenses.listExpensesForUser(this.userId, sorted);
+  }
+
+  totalExpensesInCategory(categoryId: CategoryId) {
+    return this.expenses.totalExpensesInCategoryForUser(
+      this.userId,
+      categoryId,
+    );
+  }
+
+  listRecentExpenses(amount: number) {
+    if (!Number.isSafeInteger(amount) || amount < 0) {
+      throw new RangeError("The expense count must be a non-negative integer.");
+    }
+    return this.listExpenses(true).slice(0, amount);
   }
 
   createCategory(name: string): CategoryCreationResult {
-    const category = this.categories.create(name);
-    return { ok: true, category, categories: this.categories.list() };
+    const category = this.categories.create(this.userId, name);
+    return { ok: true, category, categories: this.listCategories() };
   }
 
   deleteCategory(categoryId: CategoryId): SessionCategoryDeletionResult {
-    // Validate before either collection changes. All subsequent work is synchronous.
-    this.categories.assertCanDelete(categoryId);
+    const deletedCategory = this.categories.findUserCategoryById(
+      this.userId,
+      categoryId,
+    );
+    if (!deletedCategory || deletedCategory.system) {
+      return {
+        ok: true,
+        categories: this.listCategories(),
+        reassignedExpenses: [],
+      };
+    }
     const reassignedExpenses =
-      this.expenses.reassignExpensesFromCategory(categoryId);
-    const deletedCategory = this.categories.delete(categoryId);
+      this.expenses.removeCategoryFromExpensesInCategory(
+        categoryId,
+        this.userId,
+      );
+    this.categories.delete(this.userId, categoryId);
     return {
       ok: true,
       deletedCategory,
-      categories: this.categories.list(),
+      categories: this.listCategories(),
       reassignedExpenses,
     };
   }
@@ -63,23 +101,24 @@ export class SessionService {
   captureExpenses(
     candidates: ReadonlyArray<CapturedExpenseCandidate>,
   ): ExpenseBatchAdditionResult {
-    return this.expenses.addExpenseBatch(
-      candidates.map((candidate) => ({
-        ...candidate,
-        id: candidate.id ?? this.createExpenseId(),
-      })),
-    );
+    return this.expenses.addExpenseBatch(candidates, this.userId);
   }
 
   reclassifyExpense(expenseId: ExpenseId, categoryId: CategoryId) {
-    return this.expenses.reclassifyExpense(expenseId, categoryId);
+    if (!this.categories.exists(this.userId, categoryId)) {
+      throw new CategoryNotFoundError(categoryId);
+    }
+    return this.expenses.reclassifyExpense(expenseId, categoryId, this.userId);
   }
 
   deleteExpense(expenseId: ExpenseId): void {
-    this.expenses.deleteExpense(expenseId);
+    this.expenses.deleteExpense(expenseId, this.userId);
   }
 
   reassignExpensesFromCategory(categoryId: CategoryId) {
-    return this.expenses.reassignExpensesFromCategory(categoryId);
+    return this.expenses.removeCategoryFromExpensesInCategory(
+      categoryId,
+      this.userId,
+    );
   }
 }

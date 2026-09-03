@@ -43,7 +43,7 @@ Ratapp separates feature UI from framework-independent services. Features group 
 
 Use function components and Hooks for React UI. `CategoryService` and `ExpenseService` own in-memory collections in private Maps and enforce domain validation. `SessionService` coordinates their business workflows. Individual operations throw typed errors; expense batch addition returns accepted records and per-candidate errors. Selectors, display mapping, and the React snapshot reducer remain pure. This extends the [Phase 4.5 requirements](spec-phase-4-5-service-refactor/requirements.md) with a small session service; the historical specification describes the earlier Hook coordination and reciprocal service wiring.
 
-Each mounted dashboard session creates one `SessionService`, which owns a private category/expense pair. It assigns missing capture IDs and validates category deletion before reassigning expenses and deleting the category. `CategoryService` handles category-only rules without a reference to expenses; `ExpenseService` retains a one-way dependency for category lookup. `usePageSession` maintains a category rendering snapshot and an expense/input/feedback reducer, updating them from completed service results. `useCategories` remains for standalone category examples. Category and expense presentation components receive data and callbacks through props. Locale state remains in the i18n provider. Dashboard sessions never share the standalone default collections.
+Each mounted dashboard session creates one `SessionService`, which owns a private category/expense pair. It passes the resolved user ID to category and expense operations and coordinates category deletion with expense reassignment. `ExpenseService.createExpense` generates expense IDs; batches and seed candidates do not supply them. `CategoryService` handles category-only rules without a reference to expenses; `ExpenseService` retains a one-way dependency for category lookup. `usePageSession` initializes expense snapshots from accepted service records and maintains a category rendering snapshot and an expense/input/feedback reducer, updating them from completed service results. `useCategories` remains for standalone category examples. Category and expense presentation components receive data and callbacks through props. Locale state remains in the i18n provider. Dashboard sessions never share the standalone default collections.
 
 Services depend on domain contracts and framework-independent helpers, never on features, React components, or route code. Feature Hooks depend on services. Use interfaces at real external boundaries, such as the future browser classification client and server-side AI provider client. Inject service instances, initial values, and identifier factories through ordinary arguments and props. No dependency-injection container, repository hierarchy, or global-state package is needed.
 
@@ -85,7 +85,7 @@ Planned classification flow (Phase 5):
 
 1. The browser sends natural-language text, the selected locale, and the current category IDs and names to `/api/classify`.
 2. The route validates a maximum 500-character message and a maximum of ten categories, then requests structured expense output.
-3. The route validates response items independently, converts valid amounts to integer minor units, and normalizes unknown category IDs to permanent `unclassified`.
+3. The route validates response items independently, converts valid amounts to integer minor units, and normalizes unknown category IDs to `null` (Unclassified).
 4. If at least one usable item remains, the route returns it as success. The browser adds the items to the current session, clears the textarea, and reports **“Extracted X expenses.”**
 5. If no usable item remains or the provider fails, the browser adds nothing and preserves the exact textarea content for correction or retry.
 6. Totals and chart data are always derived from the same in-memory expense collection.
@@ -101,23 +101,23 @@ Minimum category fields:
 - Stable session ID
 - User-visible name
 - Accessible color token
-- System-category flag for permanent `unclassified`
+- System-category flag for permanent Unclassified, whose ID is `null`
 
-Every live session starts with permanent `unclassified` and no expenses. Unclassified is the only system category and is initialized by the category service constructor. Stories and tests may explicitly seed `food`, `home`, and `transport` as ordinary custom categories whose literal names do not change with the locale. Those names are available for user-created categories; only the English and Spanish names of Unclassified remain reserved. **Unclassified** cannot be renamed or deleted. Other initial and user-created categories may be deleted. The initial release does not support category renaming or manual recoloring.
+Every live session starts with permanent Unclassified (`id: null`) and no expenses. Unclassified is the only system category and is appended to every user's category list. Stories and tests may explicitly seed `food`, `home`, and `transport` as ordinary custom categories whose literal names do not change with the locale. Custom names may also be Unclassified or Sin clasificar; their generated IDs distinguish them from the permanent system category. **Unclassified** cannot be renamed or deleted. Other initial and user-created categories may be deleted. The initial release does not support category renaming or manual recoloring.
 
 Category rules:
 
 - A session contains at most ten categories, including **Unclassified**.
 - Names are trimmed, non-empty, case-insensitively unique, and limited to 24 characters.
 - New categories receive a color from a predefined accessible palette.
-- `SessionService.deleteCategory` validates the target, reassigns expenses to `unclassified`, and deletes the category synchronously before returning. Sessions must use this operation for cross-collection consistency. Direct `CategoryService.delete` enforces category-only rules and is suitable for standalone category examples; permanent `unclassified` cannot be deleted.
+- `SessionService.deleteCategory` looks up the target, sets affected expenses to `categoryId: null` (Unclassified), and deletes a custom category synchronously before returning. Missing categories and Unclassified are no-ops. Sessions must use this operation for cross-collection consistency. Direct `CategoryService.delete(userId, categoryId)` returns void and treats missing targets and Unclassified as no-ops.
 
 Minimum expense fields:
 
 - Stable session ID
 - Concise description
 - Currency-neutral amount represented as integer minor units at two-decimal precision
-- Category ID referencing a current category
+- Category ID referencing a current custom category, or `null` for Unclassified
 
 The initial release supports reclassification and deletion, but not description or amount editing or manual expense entry.
 
@@ -135,7 +135,7 @@ The initial release supports reclassification and deletion, but not description 
 - Return a discriminated success or error response.
 - For each valid candidate, return a concise description, positive integer minor-unit amount, and current category ID.
 - Validate candidates independently and return any non-empty usable subset as ordinary success.
-- Normalize unknown category IDs to `unclassified`.
+- Normalize unknown category IDs to `null` (Unclassified).
 - Return a recoverable error for zero usable candidates, timeouts, rate limits, malformed provider output, and provider unavailability.
 - Never return credentials, hidden prompts, raw provider output, or internal errors.
 

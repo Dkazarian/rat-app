@@ -1,289 +1,289 @@
-import { beforeEach, describe, expect, it } from "vitest";
-
-import { sampleCategories } from "@/features/dashboard/fixtures/dashboard-session-fixtures";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CategoryService } from "@/services/categories/category-service";
-import { CategoryNotFoundError } from "@/services/categories/category-errors";
-
 import { ExpenseNotFoundError, ExpenseValidationError } from "./expense-errors";
-
 import { ExpenseService } from "./expense-service";
-import type { Expense } from "./types";
+import type { Expense, ExpenseCandidate } from "./types";
 
-let categoryService: CategoryService;
-let expenseService: ExpenseService;
-beforeEach(() => {
-  categoryService = new CategoryService({
-    initialCategories: sampleCategories,
-  });
-  expenseService = new ExpenseService({ categories: categoryService });
-});
-
-const lunch: Expense = {
-  id: "expense-lunch",
+const lunch: ExpenseCandidate = {
   description: "Lunch",
-  amountMinor: 1_800,
+  amountMinor: 1800,
   categoryId: "food",
 };
-
-const coffee: Expense = {
-  id: "expense-coffee",
+const coffee: ExpenseCandidate = {
   description: "Coffee",
   amountMinor: 450,
   categoryId: "food",
 };
+let categories: CategoryService;
+let service: ExpenseService;
+beforeEach(() => {
+  categories = new CategoryService();
+  vi.spyOn(categories, "exists").mockImplementation(
+    (userId, categoryId) =>
+      ["alice", "bob"].includes(userId) &&
+      ["food", "home", null].includes(categoryId),
+  );
+  service = new ExpenseService({ categories });
+});
+afterEach(() => vi.restoreAllMocks());
+
+describe("createExpense", () => {
+  it("accepts only categories belonging to the expense's user", () => {
+    const realCategories = new CategoryService();
+    const category = realCategories.create("alice", "Food");
+    const expenses = new ExpenseService({ categories: realCategories });
+    const candidate = { ...lunch, categoryId: category.id };
+    expect(expenses.createExpense(candidate, "alice").categoryId).toBe(
+      category.id,
+    );
+    expect(expenses.createExpense(candidate, "bob").categoryId).toBeNull();
+  });
+  it("generates an ID and stores literal values without mutating the candidate", () => {
+    const candidate = Object.freeze({
+      ...coffee,
+      description: "  Café cortado  ",
+    });
+    const expense = service.createExpense(candidate, "alice");
+    expect(expense).toEqual({ ...candidate, id: expect.any(String) });
+    expect(expense.id).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+    );
+    expect(candidate).not.toHaveProperty("id");
+    expect(service.listExpensesForUser("alice")).toEqual([expense]);
+    expect(service.listExpensesForUser("bob")).toEqual([]);
+  });
+  it.each(["", "   "])("rejects description %j", (description) => {
+    expect(() =>
+      service.createExpense({ ...lunch, description }, "alice"),
+    ).toThrow(new ExpenseValidationError("invalid-description"));
+    expect(service.listExpensesForUser("alice")).toEqual([]);
+  });
+  it.each([0, -1, 1.5, Infinity, NaN, Number.MAX_SAFE_INTEGER + 1])(
+    "rejects amount %s",
+    (amountMinor) => {
+      expect(() =>
+        service.createExpense({ ...lunch, amountMinor }, "alice"),
+      ).toThrow(new ExpenseValidationError("invalid-amount"));
+      expect(service.listExpensesForUser("alice")).toEqual([]);
+    },
+  );
+  it.each([null, "missing"])(
+    "normalizes category %s to Unclassified",
+    (categoryId) => {
+      expect(
+        service.createExpense({ ...lunch, categoryId }, "alice").categoryId,
+      ).toBeNull();
+    },
+  );
+  it("uses the current category collection", () => {
+    vi.mocked(categories.exists).mockReturnValue(false);
+    expect(service.createExpense(lunch, "alice").categoryId).toBeNull();
+  });
+});
 
 describe("addExpenseBatch", () => {
-  it("rejects duplicate IDs within one batch without overwriting the first accepted item", () => {
-    const duplicate = { ...lunch, amountMinor: 999 };
-    const result = expenseService.addExpenseBatch([lunch, duplicate, coffee]);
-    expect(result.added).toEqual([lunch, coffee]);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0].candidate).toBe(duplicate);
-    expect(result.errors[0].error.code).toBe("duplicate-id");
-    expect(expenseService.list()).toEqual([lunch, coffee]);
+  it("accepts repeated candidates within and across batches with distinct generated IDs", () => {
+    const first = service.addExpenseBatch([lunch, lunch], "alice");
+    const second = service.addExpenseBatch([lunch], "alice");
+    const all = [...first.added, ...second.added];
+    expect(first.errors).toEqual([]);
+    expect(second.errors).toEqual([]);
+    expect(all).toHaveLength(3);
+    expect(new Set(all.map(({ id }) => id)).size).toBe(3);
+    expect(service.listExpensesForUser("alice")).toEqual(all);
+    expect(all).toEqual(all.map(() => ({ ...lunch, id: expect.any(String) })));
   });
-
-  it("keeps previous batches in the Map and rejects duplicate IDs without overwriting them", () => {
-    expenseService.addExpenseBatch([lunch]);
-    const result = expenseService.addExpenseBatch([
-      coffee,
-      { ...lunch, amountMinor: 999 },
-    ]);
-    expect(result.added).toEqual([coffee]);
-    expect(result.errors[0].error.code).toBe("duplicate-id");
-    expect(expenseService.list()).toEqual([lunch, coffee]);
-  });
-
-  it("returns valid candidates as added expenses and preserves literal values", () => {
-    const candidate = { ...coffee, description: "  Café cortado  " };
-    expect(expenseService.addExpenseBatch([candidate])).toEqual({
-      added: [candidate],
-      errors: [],
-    });
-  });
-
-  it("returns empty arrays for an empty batch", () => {
-    expect(expenseService.addExpenseBatch([])).toEqual({
-      added: [],
-      errors: [],
-    });
-  });
-
-  it.each(["", "   "])(
-    "skips invalid description %j without rejecting valid candidates",
-    (description) => {
-      const invalid = { ...lunch, description };
-      const result = expenseService.addExpenseBatch([invalid, coffee]);
-      expect(result.added).toEqual([coffee]);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].candidate).toBe(invalid);
-      expect(result.errors[0].error).toBeInstanceOf(ExpenseValidationError);
-      expect(result.errors[0].error.code).toBe("invalid-description");
-    },
-  );
-
-  it.each([
-    0,
-    -1,
-    1.5,
-    Number.POSITIVE_INFINITY,
-    NaN,
-    Number.MAX_SAFE_INTEGER + 1,
-  ])(
-    "skips invalid amount %s without rejecting valid candidates",
-    (amountMinor) => {
-      const invalid = { ...lunch, amountMinor };
-      const result = expenseService.addExpenseBatch([coffee, invalid]);
-      expect(result.added).toEqual([coffee]);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].candidate).toBe(invalid);
-      expect(result.errors[0].error.code).toBe("invalid-amount");
-    },
-  );
-
-  it("keeps input order for accepted candidates and rejected candidates", () => {
-    const invalidDescription = {
-      ...coffee,
-      id: "bad-description",
-      description: "",
-    };
-    const invalidAmount = { ...coffee, id: "bad-amount", amountMinor: -1 };
-    const result = expenseService.addExpenseBatch([
+  it("keeps accepted and rejected items in input order and preserves previous batches", () => {
+    const prior = service.createExpense(coffee, "alice");
+    const invalidDescription = Object.freeze({ ...lunch, description: "" });
+    const invalidAmount = Object.freeze({ ...coffee, amountMinor: 0 });
+    const batch = Object.freeze([
       invalidDescription,
       lunch,
       invalidAmount,
       coffee,
     ]);
-    expect(result.added).toEqual([lunch, coffee]);
+    const result = service.addExpenseBatch(batch, "alice");
+    expect(result.added).toEqual([
+      { ...lunch, id: expect.any(String) },
+      { ...coffee, id: expect.any(String) },
+    ]);
     expect(result.errors.map(({ candidate }) => candidate)).toEqual([
       invalidDescription,
       invalidAmount,
     ]);
-  });
-
-  it("reports one error per rejected candidate when all candidates fail", () => {
-    const invalid = { ...lunch, description: "", amountMinor: -1 };
-    const result = expenseService.addExpenseBatch([
-      invalid,
-      { ...coffee, amountMinor: 0 },
+    expect(result.errors.map(({ error }) => error.code)).toEqual([
+      "invalid-description",
+      "invalid-amount",
     ]);
+    expect(result.errors[0].candidate).toBe(invalidDescription);
+    expect(result.errors[0].error).toBeInstanceOf(ExpenseValidationError);
+    expect(service.listExpensesForUser("alice")).toEqual([
+      prior,
+      ...result.added,
+    ]);
+    expect(categories.exists).toHaveBeenCalledWith("alice", "food");
+    expect(lunch).not.toHaveProperty("id");
+  });
+  it("returns empty results for an empty batch and one error per invalid candidate", () => {
+    expect(service.addExpenseBatch([], "alice")).toEqual({
+      added: [],
+      errors: [],
+    });
+    const result = service.addExpenseBatch(
+      [
+        { ...lunch, description: "", amountMinor: -1 },
+        { ...coffee, amountMinor: 0 },
+      ],
+      "alice",
+    );
     expect(result.added).toEqual([]);
     expect(result.errors.map(({ error }) => error.code)).toEqual([
       "invalid-description",
       "invalid-amount",
     ]);
   });
-
-  it("normalizes missing and unknown categories to Unclassified", () => {
-    const result = expenseService.addExpenseBatch([
-      { id: "missing-category", description: "Mystery one", amountMinor: 100 },
-      {
-        id: "unknown-category",
-        description: "Mystery two",
-        amountMinor: 200,
-        categoryId: "not-a-category",
-      },
-    ]);
-    expect(result.added.map(({ categoryId }) => categoryId)).toEqual([
-      "unclassified",
-      "unclassified",
-    ]);
-    expect(result.errors).toEqual([]);
-  });
-
-  it("does not mutate candidates or categories while filtering", () => {
-    const batch = Object.freeze([
-      Object.freeze({ ...coffee }),
-      Object.freeze({ ...lunch, amountMinor: 0 }),
-    ]);
-    const snapshot = structuredClone(batch);
-    const categorySnapshot = structuredClone(categoryService.list());
-    expenseService.addExpenseBatch(batch);
-    expect(batch).toEqual(snapshot);
-    expect(categoryService.list()).toEqual(categorySnapshot);
+  it("propagates unexpected failures instead of treating them as validation errors", () => {
+    const failure = new Error("UUID unavailable");
+    vi.spyOn(crypto, "randomUUID").mockImplementation(() => {
+      throw failure;
+    });
+    expect(() => service.addExpenseBatch([lunch], "alice")).toThrow(failure);
+    expect(service.listExpensesForUser("alice")).toEqual([]);
   });
 });
 
-describe("reclassifyExpense", () => {
-  beforeEach(() => {
-    expenseService = new ExpenseService({
-      initialExpenses: [lunch, coffee],
-      categories: categoryService,
-    });
+describe("user expense queries", () => {
+  it("isolates totals and lists by user and category, including Unclassified and empty results", () => {
+    const alice = service.addExpenseBatch(
+      [lunch, coffee, { ...coffee, categoryId: null }],
+      "alice",
+    ).added;
+    const bob = service.createExpense({ ...lunch, amountMinor: 900 }, "bob");
+    expect(service.listExpensesForUser("alice")).toEqual(alice);
+    expect(service.listExpensesForUser("bob")).toEqual([bob]);
+    expect(service.totalExpensesInCategoryForUser("alice", "food")).toBe(2250);
+    expect(service.totalExpensesInCategoryForUser("alice", null)).toBe(450);
+    expect(service.totalExpensesInCategoryForUser("bob", "food")).toBe(900);
+    expect(service.totalExpensesInCategoryForUser("alice", "home")).toBe(0);
+    expect(service.totalExpensesInCategoryForUser("unknown", "food")).toBe(0);
+    expect(service.listExpensesForUser("unknown", true)).toEqual([]);
   });
-
-  it("looks up the expense by ID and changes only its stored category", () => {
-    const result = expenseService.reclassifyExpense(lunch.id, "transport");
-    expect(result).toEqual({ ...lunch, categoryId: "transport" });
-    expect(expenseService.list()).toEqual([result, coffee]);
-    expect(expenseService.list()[1]).toBe(coffee);
-    expect(lunch.categoryId).toBe("food");
-  });
-
-  it("can reclassify an expense added to the Map by a batch", () => {
-    const result = expenseService.addExpenseBatch([
-      { id: "new", description: "New", amountMinor: 100 },
+  it("sorts descending by ID only when requested, without changing stored order", () => {
+    vi.spyOn(crypto, "randomUUID")
+      .mockReturnValueOnce("10000000-0000-4000-8000-000000000000")
+      .mockReturnValueOnce("f0000000-0000-4000-8000-000000000000")
+      .mockReturnValueOnce("50000000-0000-4000-8000-000000000000");
+    const [first, second, third] = service.addExpenseBatch(
+      [lunch, coffee, lunch],
+      "alice",
+    ).added;
+    expect(service.listExpensesForUser("alice", true)).toEqual([
+      second,
+      third,
+      first,
     ]);
-    const updated = expenseService.reclassifyExpense(
-      result.added[0].id,
-      "home",
-    );
-    expect(updated.categoryId).toBe("home");
-    expect(expenseService.list().at(-1)).toBe(updated);
-  });
-
-  it("accepts Unclassified as a destination", () => {
-    expect(expenseService.reclassifyExpense(lunch.id, "unclassified")).toEqual({
-      ...lunch,
-      categoryId: "unclassified",
-    });
-  });
-
-  it("throws for a missing expense without changing the Map", () => {
-    expect(() => expenseService.reclassifyExpense("missing", "home")).toThrow(
-      new ExpenseNotFoundError("missing"),
-    );
-    expect(expenseService.list()).toEqual([lunch, coffee]);
-  });
-
-  it("throws for an unknown destination without changing the Map", () => {
-    expect(() => expenseService.reclassifyExpense(lunch.id, "missing")).toThrow(
-      new CategoryNotFoundError("missing"),
-    );
-    expect(expenseService.list()).toEqual([lunch, coffee]);
+    const list = service.listExpensesForUser;
+    expect(list("alice", false)).toEqual([first, second, third]);
+    (list("alice") as Expense[]).pop();
+    expect(list("alice")).toHaveLength(3);
   });
 });
 
-describe("deleteExpense", () => {
-  it("removes the expense from the Map so it cannot be reclassified later", () => {
-    const service = new ExpenseService({ initialExpenses: [lunch, coffee] });
-    expect(service.deleteExpense(lunch.id)).toBeUndefined();
-    expect(service.list()).toEqual([coffee]);
-    expect(() => service.reclassifyExpense(lunch.id, "home")).toThrow(
+describe("expense mutations", () => {
+  it("reclassifies the selected expense, preserves previous records, and accepts null", () => {
+    const [first, second] = service.addExpenseBatch(
+      [lunch, coffee],
+      "alice",
+    ).added;
+    const bob = service.createExpense(lunch, "bob");
+    const updated = service.reclassifyExpense(first.id, "home", "alice");
+    expect(updated).toEqual({ ...first, categoryId: "home" });
+    expect(service.listExpensesForUser("alice")).toEqual([updated, second]);
+    expect(service.listExpensesForUser("alice")[1]).toBe(second);
+    expect(service.listExpensesForUser("bob")).toEqual([bob]);
+    expect(first.categoryId).toBe("food");
+    expect(
+      service.reclassifyExpense(first.id, null, "alice").categoryId,
+    ).toBeNull();
+  });
+  it("assigns the provided category without validating the category collection", () => {
+    const expense = service.createExpense(lunch, "alice");
+    expect(
+      service.reclassifyExpense(expense.id, "external-category", "alice"),
+    ).toEqual({ ...expense, categoryId: "external-category" });
+  });
+  it("throws for missing expenses and expenses owned by another user", () => {
+    const expense = service.createExpense(lunch, "alice");
+    for (const id of ["missing", expense.id]) {
+      expect(() => service.reclassifyExpense(id, "home", "bob")).toThrow(
+        new ExpenseNotFoundError(id),
+      );
+      expect(() => service.deleteExpense(id, "bob")).toThrow(
+        new ExpenseNotFoundError(id),
+      );
+    }
+    expect(service.listExpensesForUser("alice")).toEqual([expense]);
+    expect(service.listExpensesForUser("bob")).toEqual([]);
+  });
+  it("deletes only the selected expense and rejects subsequent mutations", () => {
+    const [first, second] = service.addExpenseBatch(
+      [lunch, coffee],
+      "alice",
+    ).added;
+    expect(service.deleteExpense(first.id, "alice")).toBeUndefined();
+    expect(service.listExpensesForUser("alice")).toEqual([second]);
+    expect(() => service.deleteExpense(first.id, "alice")).toThrow(
+      ExpenseNotFoundError,
+    );
+    expect(() => service.reclassifyExpense(first.id, "home", "alice")).toThrow(
       ExpenseNotFoundError,
     );
   });
-
-  it("throws for a missing expense without changing the Map", () => {
-    const service = new ExpenseService({
-      initialExpenses: [lunch],
-      categories: categoryService,
-    });
-    expect(() => service.deleteExpense("missing")).toThrow(
-      new ExpenseNotFoundError("missing"),
-    );
-    expect(service.list()).toEqual([lunch]);
-  });
 });
 
-describe("reassignExpensesFromCategory", () => {
-  it("returns all affected expenses in order without including other categories", () => {
-    const unrelated: Expense = {
-      id: "taxi",
-      description: "Taxi",
-      amountMinor: 300,
-      categoryId: "transport",
-    };
-    const service = new ExpenseService({
-      initialExpenses: [lunch, unrelated, coffee],
-      categories: categoryService,
-    });
-    const changed = service.reassignExpensesFromCategory("food");
-    expect(changed).toEqual([
-      { ...lunch, categoryId: "unclassified" },
-      { ...coffee, categoryId: "unclassified" },
-    ]);
-    expect(service.list()).toEqual([changed[0], unrelated, changed[1]]);
-    expect(service.list()[1]).toBe(unrelated);
-    expect(lunch.categoryId).toBe("food");
-    expect(coffee.categoryId).toBe("food");
-  });
-
-  it("throws for an unknown category without changing stored expenses", () => {
-    const service = new ExpenseService({
-      initialExpenses: [lunch, coffee],
-      categories: categoryService,
-    });
-    expect(() => service.reassignExpensesFromCategory("missing")).toThrow(
-      new CategoryNotFoundError("missing"),
+describe("removeCategoryFromExpensesInCategory", () => {
+  it("returns affected records in order and leaves other categories and users untouched", () => {
+    const [first, unrelated, last] = service.addExpenseBatch(
+      [lunch, { ...coffee, categoryId: "home" }, coffee],
+      "alice",
+    ).added;
+    const bob = service.createExpense(lunch, "bob");
+    const changed = service.removeCategoryFromExpensesInCategory(
+      "food",
+      "alice",
     );
-    expect(service.list()).toEqual([lunch, coffee]);
-    expect(service.list()[0]).toBe(lunch);
-    expect(service.list()[1]).toBe(coffee);
+    expect(changed).toEqual([
+      { ...first, categoryId: null },
+      { ...last, categoryId: null },
+    ]);
+    expect(service.listExpensesForUser("alice")).toEqual([
+      changed[0],
+      unrelated,
+      changed[1],
+    ]);
+    expect(service.listExpensesForUser("alice")[1]).toBe(unrelated);
+    expect(service.listExpensesForUser("bob")).toEqual([bob]);
+    expect(first.categoryId).toBe("food");
+    expect(last.categoryId).toBe("food");
+    expect(service.totalExpensesInCategoryForUser("alice", "food")).toBe(0);
+    expect(service.totalExpensesInCategoryForUser("alice", null)).toBe(2250);
   });
-
-  it("returns only changed expenses and leaves unrelated records untouched", () => {
-    const unrelated = { ...coffee, categoryId: "home" };
-    const service = new ExpenseService({
-      initialExpenses: [lunch, unrelated],
-      categories: categoryService,
-    });
-    const changed = service.reassignExpensesFromCategory("food");
-    expect(changed).toEqual([{ ...lunch, categoryId: "unclassified" }]);
-    expect(service.list()).toEqual([changed[0], unrelated]);
-    expect(service.list()[1]).toBe(unrelated);
-    expect(service.reassignExpensesFromCategory("food")).toEqual([]);
-    expect(service.reassignExpensesFromCategory("unclassified")).toEqual([]);
-    expect(service.list()[0]).toBe(changed[0]);
+  it("returns no changes for null, unknown, empty, and already-cleared categories", () => {
+    const expense = service.createExpense(lunch, "alice");
+    expect(service.removeCategoryFromExpensesInCategory(null, "alice")).toEqual(
+      [],
+    );
+    expect(
+      service.removeCategoryFromExpensesInCategory("missing", "alice"),
+    ).toEqual([]);
+    expect(
+      service.removeCategoryFromExpensesInCategory("food", "unknown"),
+    ).toEqual([]);
+    expect(service.listExpensesForUser("alice")[0]).toBe(expense);
+    service.removeCategoryFromExpensesInCategory("food", "alice");
+    expect(
+      service.removeCategoryFromExpensesInCategory("food", "alice"),
+    ).toEqual([]);
   });
 });

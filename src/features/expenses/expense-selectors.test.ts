@@ -50,7 +50,7 @@ describe("selectExpenseSummary", () => {
         expenseIds: ["taxi"],
         totalMinor: 1_200,
       },
-      { categoryId: "unclassified", expenseIds: [], totalMinor: 0 },
+      { categoryId: null, expenseIds: [], totalMinor: 0 },
     ]);
   });
 
@@ -61,7 +61,7 @@ describe("selectExpenseSummary", () => {
       "food",
       "home",
       "transport",
-      "unclassified",
+      null,
     ]);
     expect(summary.groups.every(({ totalMinor }) => totalMinor === 0)).toBe(
       true,
@@ -72,7 +72,7 @@ describe("selectExpenseSummary", () => {
     const categoriesWithoutFood = categories.filter(({ id }) => id !== "food");
     const reassigned = expenses.map((expense) =>
       expense.categoryId === "food"
-        ? { ...expense, categoryId: "unclassified" }
+        ? { ...expense, categoryId: null }
         : expense,
     );
     const summary = selectExpenseSummary(categoriesWithoutFood, reassigned);
@@ -81,7 +81,7 @@ describe("selectExpenseSummary", () => {
       false,
     );
     expect(
-      summary.groups.find(({ category }) => category.id === "unclassified"),
+      summary.groups.find(({ category }) => category.id === null),
     ).toMatchObject({ totalMinor: 2_250 });
     expect(summary.totalMinor).toBe(3_450);
   });
@@ -95,7 +95,7 @@ describe("selectExpenseSummary", () => {
       ["food", 65],
       ["home", 0],
       ["transport", 35],
-      ["unclassified", 0],
+      [null, 0],
     ]);
     expect(summary.chartSlices).toEqual(
       summary.groups.map(({ category, totalMinor, percent }) => ({
@@ -125,7 +125,7 @@ describe("selectExpenseSummary", () => {
     ]);
 
     expect(
-      summary.groups.find(({ category }) => category.id === "unclassified"),
+      summary.groups.find(({ category }) => category.id === null),
     ).toMatchObject({ totalMinor: 1_800 });
   });
 

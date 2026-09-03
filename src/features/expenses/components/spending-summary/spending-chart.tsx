@@ -39,7 +39,7 @@ export function SpendingChart({
           >
             {chartItems.map((item) => (
               <Cell
-                key={item.categoryId}
+                key={JSON.stringify(item.categoryId)}
                 fill={categoryColorValues[item.color]}
               />
             ))}

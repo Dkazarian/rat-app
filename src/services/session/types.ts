@@ -1,22 +1,16 @@
 import type {
   Category,
   CategoryDeletionResult,
-  CategoryId,
 } from "@/services/categories/types";
-import type {
-  Expense,
-  ExpenseCandidate,
-  ExpenseId,
-} from "@/services/expenses/types";
+import type { Expense, ExpenseCandidate } from "@/services/expenses/types";
+import type { UserId } from "@/services/users/types";
 
-export type CapturedExpenseCandidate = Omit<ExpenseCandidate, "id"> &
-  Readonly<{ id?: ExpenseId }>;
+export type CapturedExpenseCandidate = ExpenseCandidate;
 
 export type SessionServiceOptions = Readonly<{
+  userId?: UserId;
   initialCategories?: ReadonlyArray<Category>;
-  initialExpenses?: ReadonlyArray<Expense>;
-  createCategoryId?: () => CategoryId;
-  createExpenseId?: () => ExpenseId;
+  initialExpenses?: ReadonlyArray<ExpenseCandidate>;
 }>;
 
 export type SessionCategoryDeletionResult = CategoryDeletionResult &

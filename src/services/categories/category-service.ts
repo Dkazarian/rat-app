@@ -1,112 +1,87 @@
 import { createBrowserId } from "@/utils/create-browser-id";
 import {
   CategoryValidationError,
-  CategoryNotFoundError,
-  ProtectedCategoryError,
   DuplicateCategoryIdError,
 } from "./category-errors";
 import type { Category, CategoryId, CustomCategory } from "./types";
 import { categoryColorTokens } from "./types";
+import type { UserId } from "@/services/users/types";
+import CategoryStore from "./category-store";
 
 export const CATEGORY_NAME_MAX_LENGTH = 24;
 export const CATEGORY_LIMIT = 10;
-export const UNCLASSIFIED_CATEGORY_ID = "unclassified";
+export const UNCLASSIFIED_CATEGORY_ID = null;
 
+const UNCLASSIFIED_CATEGORY: Category = {
+  id: UNCLASSIFIED_CATEGORY_ID,
+  kind: "built-in",
+  color: "muted",
+  system: true,
+};
 export class CategoryService {
-  private readonly categories: Map<CategoryId, Category>;
-  private readonly createId: () => CategoryId;
+  private readonly categoryStore = new CategoryStore();
 
-  constructor(
-    options: {
-      initialCategories?: ReadonlyArray<Category>;
-      createId?: () => CategoryId;
-    } = {},
-  ) {
-    this.categories = new Map(
-      (options.initialCategories ?? []).map((category) => [
-        category.id,
-        category,
-      ]),
-    );
-    this.categories.set(UNCLASSIFIED_CATEGORY_ID, {
-      id: UNCLASSIFIED_CATEGORY_ID,
-      kind: "built-in",
-      color: "muted",
-      system: true,
-    });
-    this.createId = options.createId ?? createBrowserId;
+  listCategoriesForUser(userId: UserId): ReadonlyArray<Category> {
+    return [
+      ...this.categoryStore.listCategoriesForUser(userId),
+      UNCLASSIFIED_CATEGORY,
+    ];
   }
 
-  list(): ReadonlyArray<Category> {
-    return [...this.categories.values()];
+  findUserCategoryById(
+    userId: UserId,
+    categoryId: CategoryId,
+  ): Category | undefined {
+    return categoryId === UNCLASSIFIED_CATEGORY_ID
+      ? UNCLASSIFIED_CATEGORY
+      : this.categoryStore.findUserCategoryById(userId, categoryId);
   }
 
-  find(categoryId: CategoryId): Category {
-    const category = this.categories.get(categoryId);
-    if (!category) throw new CategoryNotFoundError(categoryId);
-    return category;
+  exists(userId: UserId, categoryId: CategoryId): boolean {
+    return this.findUserCategoryById(userId, categoryId) !== undefined;
   }
 
-  create(candidateName: string): CustomCategory {
-    const name = this._validateCategoryName(candidateName);
-    const category: CustomCategory = {
-      id: this.createId(),
-      kind: "custom",
-      name,
-      color: this._selectCategoryColor(),
-      system: false,
-    };
-    if (this.categories.has(category.id))
-      throw new DuplicateCategoryIdError(category.id);
-    this.categories.set(category.id, category);
-    return category;
-  }
-
-  assertCanDelete(categoryId: CategoryId): Category {
-    const category = this.find(categoryId);
-    if (category.id === UNCLASSIFIED_CATEGORY_ID || category.system)
-      throw new ProtectedCategoryError(categoryId);
-    return category;
-  }
-
-  // Sessions must coordinate expense reassignment through SessionService.
-  delete(categoryId: CategoryId): Category {
-    const category = this.assertCanDelete(categoryId);
-    this.categories.delete(categoryId);
-    return category;
-  }
-
-  private _validateCategoryName(candidateName: string): string {
+  create(userId: UserId, candidateName: string): CustomCategory {
     const name = candidateName.trim();
     if (!name) throw new CategoryValidationError("empty");
     if (name.length > CATEGORY_NAME_MAX_LENGTH)
       throw new CategoryValidationError("too-long");
-    const comparableName = normalizeForComparison(name);
+
+    const categories = this.listCategoriesForUser(userId);
+    if (categories.length >= CATEGORY_LIMIT) {
+      throw new CategoryValidationError("limit-reached");
+    }
+
     if (
-      comparableName === "unclassified" ||
-      comparableName === "sin clasificar"
-    )
-      throw new CategoryValidationError("reserved");
-    if (
-      this.list().some(
+      categories.some(
         (category) =>
           category.kind === "custom" &&
-          normalizeForComparison(category.name) === comparableName,
+          category.name.toLocaleLowerCase("en-US") ===
+            name.toLocaleLowerCase("en-US"),
       )
-    )
+    ) {
       throw new CategoryValidationError("duplicate");
-    if (this.categories.size >= CATEGORY_LIMIT)
-      throw new CategoryValidationError("limit-reached");
-    return name;
+    }
+    const category: CustomCategory = {
+      id: createBrowserId(),
+      kind: "custom",
+      name,
+      color:
+        categoryColorTokens[categories.length % categoryColorTokens.length],
+      system: false,
+    };
+
+    if (this.exists(userId, category.id))
+      throw new DuplicateCategoryIdError(category.id);
+
+    this.categoryStore.create(userId, category);
+    return category;
   }
 
-  private _selectCategoryColor(): (typeof categoryColorTokens)[number] {
-    const count = this.list().length - 1; // Exclude the unclassified category from the count
-    return categoryColorTokens[count % categoryColorTokens.length];
+  delete(userId: UserId, categoryId: CategoryId) {
+    if (categoryId === null) return;
+    this.categoryStore.delete(userId, categoryId);
   }
 }
 
 export const categoryService = new CategoryService();
-function normalizeForComparison(name: string): string {
-  return name.trim().toLocaleLowerCase("en-US");
-}

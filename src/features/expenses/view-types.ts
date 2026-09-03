@@ -7,7 +7,7 @@ import type { ExpenseId } from "@/services/expenses/types";
 export type ExpenseListItemData = Readonly<{
   id: ExpenseId;
   description: string;
-  categoryId: string;
+  categoryId: CategoryId;
   categoryName: string;
   color: CategoryColorToken;
   amountMinor: number;
@@ -19,7 +19,7 @@ export type ExpenseCategoryOption = Readonly<{
 }>;
 
 export type CategorySpendingItemData = Readonly<{
-  categoryId: string;
+  categoryId: CategoryId;
   name: string;
   color: CategoryColorToken;
   percent: number;

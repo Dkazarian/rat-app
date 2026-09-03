@@ -23,7 +23,7 @@ function LocalizedExpenseList({ expenses }: StoryProps) {
           id,
           name,
         })),
-        { id: "unclassified", name: t("unclassified") },
+        { id: null, name: t("unclassified") },
       ]}
       emptyMessage={t("noExpenses")}
       getCategorySelectLabel={(expense) =>

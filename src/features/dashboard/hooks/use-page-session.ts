@@ -8,6 +8,7 @@ import type {
 
 import { useCallback, useMemo, useReducer, useState } from "react";
 import { SessionService } from "@/services/session/session-service";
+import { UserStore } from "@/features/dashboard/user-store";
 import type {
   CategoryDeletionResult,
   CategoryId,
@@ -20,7 +21,8 @@ import type {
   ExpenseReclassificationResult,
 } from "@/services/expenses/types";
 
-type PageSessionState = Omit<PageSessionSeed, "categories">;
+type PageSessionState = Omit<PageSessionSeed, "categories" | "expenses"> &
+  Readonly<{ expenses: ReadonlyArray<Expense> }>;
 
 type PageSessionAction =
   | Readonly<{ type: "input-changed"; value: string }>
@@ -95,13 +97,19 @@ export function usePageSession(
   seed?: PageSessionSeed,
   dependencies: PageSessionDependencies = {},
 ): PageSession {
+  const [userStore] = useState(
+    () =>
+      new UserStore({
+        userId: seed?.userId,
+        createId: dependencies.createUserId,
+      }),
+  );
   const [sessionService] = useState(
     () =>
       new SessionService({
+        userId: userStore.getOrCreateUserId(),
         initialCategories: seed?.categories,
         initialExpenses: seed?.expenses,
-        createCategoryId: dependencies.createCategoryId,
-        createExpenseId: dependencies.createExpenseId,
       }),
   );
   const [categories, setCategories] = useState(() =>
@@ -111,7 +119,7 @@ export function usePageSession(
     pageSessionReducer,
     seed,
     (initialSeed): PageSessionState => ({
-      expenses: initialSeed?.expenses ?? [],
+      expenses: sessionService.listExpenses(),
       inputValue: initialSeed?.inputValue ?? "",
       feedback: initialSeed?.feedback ?? { state: "empty" },
     }),

@@ -40,7 +40,6 @@ export function CategoryPanel({
     empty: t("categoryValidationEmpty"),
     "too-long": t("categoryValidationTooLong"),
     duplicate: t("categoryValidationDuplicate"),
-    reserved: t("categoryValidationReserved"),
     "limit-reached": t("categoryValidationLimit"),
   };
 
@@ -114,7 +113,7 @@ export function CategoryPanel({
       <ul className="grid list-none gap-2 p-0">
         {categories.map((category) => (
           <CategoryItem
-            key={category.id}
+            key={JSON.stringify(category.id)}
             category={category}
             deleteLabel={t("deleteCategory", { name: category.name })}
             onDelete={onDeleteCategory}

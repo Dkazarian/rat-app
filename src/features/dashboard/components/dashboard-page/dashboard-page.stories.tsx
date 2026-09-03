@@ -1,27 +1,13 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import { useState } from "react";
 
 import { pageSessionFixtures } from "@/features/dashboard/fixtures/dashboard-session-fixtures";
 import { produceMockExpenseBatch } from "@/features/dashboard/mock-expense-capture";
 
-import { DashboardPage, type DashboardPageProps } from "./dashboard-page";
-
-function DeterministicDashboard(props: DashboardPageProps) {
-  const [sessionDependencies] = useState(() => {
-    let expenseId = 0;
-    let categoryId = 0;
-    return {
-      createExpenseId: () => `story-expense-${++expenseId}`,
-      createCategoryId: () => `story-category-${++categoryId}`,
-    };
-  });
-  return <DashboardPage {...props} sessionDependencies={sessionDependencies} />;
-}
+import { DashboardPage } from "./dashboard-page";
 
 const meta = {
   title: "Pages/Dashboard",
   component: DashboardPage,
-  render: (args) => <DeterministicDashboard {...args} />,
   parameters: { layout: "fullscreen" },
   args: { initialSession: pageSessionFixtures.success },
 } satisfies Meta<typeof DashboardPage>;

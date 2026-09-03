@@ -61,7 +61,7 @@ export const ExpenseListItem: Story = {
               id: fixture.expenses[0].categoryId,
               name: fixture.expenses[0].categoryName,
             },
-            { id: "unclassified", name: t("unclassified") },
+            { id: null, name: t("unclassified") },
           ]}
           categorySelectLabel={t("reclassifyExpense", {
             description: fixture.expenses[0].description,

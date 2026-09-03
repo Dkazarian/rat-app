@@ -12,6 +12,7 @@ import type {
   ExpenseSummary,
 } from "@/services/expenses/types";
 import type { CapturedExpenseCandidate } from "@/services/session/types";
+import type { UserId } from "@/services/users/types";
 export type { CapturedExpenseCandidate } from "@/services/session/types";
 
 export type PageFeedbackState =
@@ -26,15 +27,15 @@ export type PageFeedbackState =
   | Readonly<{ state: "provider-error" }>;
 
 export type PageSessionSeed = Readonly<{
+  userId?: UserId;
   categories: ReadonlyArray<Category>;
-  expenses: ReadonlyArray<Expense>;
+  expenses: ReadonlyArray<CapturedExpenseCandidate>;
   inputValue: string;
   feedback: PageFeedbackState;
 }>;
 
 export type PageSessionDependencies = Readonly<{
-  createCategoryId?: () => CategoryId;
-  createExpenseId?: () => ExpenseId;
+  createUserId?: () => UserId;
 }>;
 
 export type PageSession = Readonly<{
