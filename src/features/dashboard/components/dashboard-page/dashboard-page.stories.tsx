@@ -62,10 +62,6 @@ const populatedApi: SessionApi = {
   }),
   deleteCategory: async () => undefined,
   getExpenses: async () => expenses,
-  updateExpenseCategory: async (_sessionId, expenseId, categoryId) => ({
-    expense: { ...expenses.expenses[0], id: expenseId, categoryId },
-  }),
-  deleteExpense: async () => undefined,
   submitPrompt: async () => ({ expenses: [], rejectedCount: 0 }),
 };
 const emptyApi: SessionApi = {

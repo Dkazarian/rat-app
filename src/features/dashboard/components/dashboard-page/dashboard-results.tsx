@@ -57,9 +57,6 @@ function ApiExpenseList({
   sessionId,
   refreshCounter,
   categories,
-  isMutating,
-  runMutation,
-  onDataChanged,
   onSessionExpired,
 }: Props & Readonly<{ categories: ReadonlyArray<CategoryItemData> }>) {
   const { t, locale } = useLocale();
@@ -94,39 +91,17 @@ function ApiExpenseList({
       id: expense.id,
       description: expense.description,
       amountMinor: expense.amountMinor,
-      categoryId: category.id,
       categoryName: category.name,
       color: category.color,
     };
   });
-
-  const mutate = async (operation: () => Promise<unknown>) => {
-    await runMutation(operation);
-    onDataChanged();
-  };
 
   return (
     <ExpenseList
       title={t("recentExpenses")}
       periodLabel={t("today")}
       expenses={expenses}
-      categoryOptions={categories.map(({ id, name }) => ({ id, name }))}
       emptyMessage={t("noExpenses")}
-      disabled={isMutating}
-      getCategorySelectLabel={(expense) =>
-        t("reclassifyExpense", { description: expense.description })
-      }
-      getDeleteLabel={(expense) =>
-        t("deleteExpense", { description: expense.description })
-      }
-      onCategoryChange={(expenseId, categoryId) => {
-        void mutate(() =>
-          api.updateExpenseCategory(sessionId, expenseId, categoryId),
-        );
-      }}
-      onDeleteExpense={(expenseId) => {
-        void mutate(() => api.deleteExpense(sessionId, expenseId));
-      }}
     />
   );
 }

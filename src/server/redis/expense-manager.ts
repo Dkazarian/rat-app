@@ -72,7 +72,7 @@ export class ExpenseManager {
     });
   }
 
-  async replaceExpensesForSeed(
+  async upsertSeedExpenses(
     sessionId: string,
     fixture: ReadonlyArray<StoredExpense>,
   ): Promise<void> {
@@ -95,66 +95,17 @@ export class ExpenseManager {
       ) {
         throw applicationErrors.invalidRequest();
       }
-      await this.redis.del(keys.expenses);
-      if (validated.length === 0) return;
       const transaction = this.redis.multi();
-      for (const expense of validated) {
-        transaction.hset(keys.expenses, {
-          [expense.id]: encodeRecord(expense),
-        });
+      if (validated.length > 0) {
+        transaction.hset(
+          keys.expenses,
+          Object.fromEntries(
+            validated.map((expense) => [expense.id, encodeRecord(expense)]),
+          ),
+        );
       }
       transaction.expire(keys.expenses, this.config.sessionTtlSeconds);
       await transaction.exec();
-    });
-  }
-
-  async updateExpenseCategory(
-    sessionId: string,
-    unsafeExpenseId: string,
-    unsafeCategoryId: string | null,
-  ): Promise<ExpenseDto> {
-    return repositoryOperation(this.config, sessionId, async (keys) => {
-      const expenseId = parseId(unsafeExpenseId);
-      const categoryId =
-        unsafeCategoryId === null ? null : parseId(unsafeCategoryId);
-      const [categories, expenses] = await Promise.all([
-        readCategories(this.redis, keys),
-        readExpenses(this.redis, keys),
-      ]);
-      const expense = expenses.find(({ id }) => id === expenseId);
-      if (!expense) throw applicationErrors.expenseNotFound();
-      if (
-        categoryId !== null &&
-        !categories.some(({ id }) => id === categoryId)
-      ) {
-        throw applicationErrors.categoryNotFound();
-      }
-
-      const updated = { ...expense, categoryId };
-      await this.redis
-        .multi()
-        .hset(keys.expenses, { [expense.id]: encodeRecord(updated) })
-        .expire(keys.expenses, this.config.sessionTtlSeconds)
-        .exec();
-      return updated;
-    });
-  }
-
-  async deleteExpense(
-    sessionId: string,
-    unsafeExpenseId: string,
-  ): Promise<void> {
-    await repositoryOperation(this.config, sessionId, async (keys) => {
-      const expenseId = parseId(unsafeExpenseId);
-      const expenses = await readExpenses(this.redis, keys);
-      if (!expenses.some(({ id }) => id === expenseId)) {
-        throw applicationErrors.expenseNotFound();
-      }
-      await this.redis
-        .multi()
-        .hdel(keys.expenses, expenseId)
-        .expire(keys.expenses, this.config.sessionTtlSeconds)
-        .exec();
     });
   }
 }

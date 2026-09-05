@@ -56,21 +56,6 @@ export const ExpenseListItem: Story = {
             ...fixture.expenses[0],
             description: t("lunch"),
           }}
-          categoryOptions={[
-            {
-              id: fixture.expenses[0].categoryId,
-              name: fixture.expenses[0].categoryName,
-            },
-            { id: null, name: t("unclassified") },
-          ]}
-          categorySelectLabel={t("reclassifyExpense", {
-            description: fixture.expenses[0].description,
-          })}
-          deleteLabel={t("deleteExpense", {
-            description: fixture.expenses[0].description,
-          })}
-          onCategoryChange={() => undefined}
-          onDelete={() => undefined}
         />
       </ul>
     );

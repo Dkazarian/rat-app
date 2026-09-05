@@ -21,7 +21,7 @@ src/
 - `features/dashboard/api/` is the browser HTTP boundary. It uses same-origin credentials and stable error envelopes and never reads Redis configuration.
 - `usePageSession` owns only session readiness, retry, a page-wide one-at-a-time mutation gate, and a refresh signal.
 - `DashboardResults` owns the categories query used by Category Panel and Spending Summary. Its nested expense section independently owns the expenses query. Both protect against aborted and stale responses.
-- Category and expense writes run through the shared mutation gate and refresh server-authoritative data after success. No browser domain service or page-wide mutable snapshot remains.
+- Category and prompt writes run through the shared mutation gate and refresh server-authoritative data after success. Expenses are read-only in the initial release. No browser domain service or page-wide mutable snapshot remains.
 
 ## Runtime state and fixtures
 
@@ -29,6 +29,6 @@ Production sessions start with no real categories and no expenses. Unclassified 
 
 The browser obtains or resumes an anonymous session through `POST /session`. Redis keys are scoped by environment prefix and session UUID, expire after the configured TTL, and are never exposed to the browser. The Phase 5 prompt route intentionally returns `501 classification_unavailable`; Phase 6 will replace that endpoint behavior.
 
-Run `npm run seed:redis` to load `.env.development.local`, replace one exact non-production session family with deterministic backend fixtures, verify it through the repositories, and register it as the active seeded session. Pass a fixed ID with `npm run seed:redis -- --session-id <uuid>`. Production seeding is refused.
+For a manual test, first create a normal session through `POST /session`, then run `npm run seed:redis -- --session-id <uuid>` with its returned ID. The command loads `.env.development.local`, verifies that the session already exists, upserts deterministic category and expense fixtures, renews the configured TTL, and verifies the data through the repositories. It never creates or registers a session, and production seeding is refused.
 
-Storybook uses injected API-shaped fixtures and does not require Redis, cookies, or Upstash credentials. Tests and stories remain colocated with the code they cover; Redis integration tests use a unique prefix and exact-key cleanup.
+Storybook uses injected API-shaped fixtures and does not require Redis, cookies, or Upstash credentials. Tests and stories remain colocated with the code they cover; Redis tests use an in-memory mock and never contact Upstash.

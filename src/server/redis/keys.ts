@@ -18,7 +18,3 @@ export function createSessionKeys(
     expenses: `${root}:expenses`,
   };
 }
-
-export function createActiveSeedKey(prefix: string): string {
-  return `${prefix}:seed:v1:active-session`;
-}

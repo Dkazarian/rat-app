@@ -14,7 +14,6 @@ export async function POST(request: NextRequest) {
     const config = getServerConfig();
     const resolved = await resolveSession(
       getSessionRepository(),
-      config,
       request.cookies.get(SESSION_COOKIE_NAME)?.value,
     );
     const response = noStoreJson<SessionResponse>(

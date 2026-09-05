@@ -16,8 +16,8 @@ Status: complete. Groups 1–10 are implemented and verified.
 
 - [x] Add shared TypeScript wire types for `CategoryDto`, `CategoriesResponse`, `ExpenseDto`, `ExpensesResponse`, mutation responses, and `ApiErrorResponse` without importing deleted service types. (Query object contracts, Error contract)
 - [x] Add Zod schemas for route parameters, request bodies, stored Redis records, environment configuration, and response-shaping boundaries. (API contract, Server safety)
-- [x] Add server-only configuration for `KV_REST_API_URL`, `KV_REST_API_TOKEN`, `RATAPP_REDIS_KEY_PREFIX`, `RATAPP_SESSION_TTL_SECONDS`, `RATAPP_MAX_EXPENSES_PER_SESSION`, and `RATAPP_USE_SEEDED_SESSION`. (Redis store)
-- [x] Default the TTL to 86400 seconds and the expense cap to 100; reject unsafe, missing, malformed, or production seed-mode configuration at startup/use boundaries. (Redis store, Seeder)
+- [x] Add server-only configuration for `KV_REST_API_URL`, `KV_REST_API_TOKEN`, `RATAPP_REDIS_KEY_PREFIX`, `RATAPP_SESSION_TTL_SECONDS`, and `RATAPP_MAX_EXPENSES_PER_SESSION`. (Redis store)
+- [x] Default the TTL to 172800 seconds and the expense cap to 100; reject unsafe, missing, or malformed configuration at startup/use boundaries. (Redis store, Seeder)
 - [x] Document safe placeholders and development values in `.env.example` while retaining real local values only in `.env.development.local`. (Redis store)
 - [x] Add server-only UUID helpers using `crypto.randomUUID()` and strict canonical UUID validation for session, category, and expense IDs. (Session transport, Server safety)
 - [x] Add one response helper that applies the stable error envelope and `Cache-Control: no-store` to all session responses. (Error contract, API contract)
@@ -46,13 +46,13 @@ Status: complete. Groups 1–10 are implemented and verified.
 - [x] Use an atomic Upstash transaction for category deletion. No concurrent-writer resolution is added. (Redis atomicity, No concurrency)
 - [x] Implement query shaping that reads Redis values, validates stored data, calculates category totals, and applies the required client-independent ordering. (Query contracts)
 - [x] Return the stable `service_unavailable` response for safe operational Redis failures and keep provider details server-only. (Error contract)
-- [x] Add integration coverage against the configured Upstash development/test database for TTL, multi-key atomicity, environment prefix isolation, stored-schema rejection, and repository round trips. (Redis verification)
+- [x] Add mock-backed coverage for TTL behavior, multi-key transactions, environment prefix isolation, stored-schema rejection, and repository round trips without contacting Upstash. (Redis verification)
 
 ## Group 4 — Implement session identity and HTTP route boundaries
 
 - [x] Add `POST /session` at `src/app/session/route.ts`. Resume a valid cookie-backed session or create a new empty session, return its UUID, and set the `ratapp_session` browser-session cookie. (Session transport)
-- [x] In non-production seed mode, resolve the active seed pointer, verify the seeded session, return it with `200 OK`, and set the matching cookie instead of creating a new session. (Seeder session mode)
-- [x] Reject seed mode in production and return `seed_session_unavailable` when the configured non-production seed pointer is missing or expired. (Seeder safety)
+- [x] Keep `POST /session` independent of manual seeding; it always resumes a cookie-backed session or creates a normal empty session. (Session transport)
+- [x] Remove seeded-session mode, its active pointer, environment flag, and seed-specific API error. (Seeder safety)
 - [x] Add a small helper that validates the path UUID and checks that its Redis session exists. The cookie is used only by `POST /session` for resume behavior. (Session lookup)
 - [x] Ensure all session routes return `Cache-Control: no-store`, safe JSON errors, bounded bodies, and no identifiers or raw input in logs. (HTTP safety)
 
@@ -72,11 +72,11 @@ Status: complete. Groups 1–10 are implemented and verified.
 - [x] Add a repository-level `npm run seed:redis` command and TypeScript entry point that loads `.env.development.local` safely. (Seeder command)
 - [x] Create a deterministic backend fixture with several ordinary categories, multiple categorized expenses, one zero-total category, at least one `categoryId: null` expense, and fixed server-style timestamps below the 100-expense cap. (Seeder fixture)
 - [x] Seed categories before expenses and resolve seeded expense references to the generated/fixture category UUIDs. (Seeder referential integrity)
-- [x] Replace only the selected session family, renew its TTL, and register `<prefix>:seed:v1:active-session` with the same TTL. (Seeder persistence)
-- [x] Support an optional validated `--session-id <uuid>` and otherwise generate a UUID. Never delete by a broad prefix or touch another environment's keys. (Seeder safety)
+- [x] Require the selected session to exist, renew its metadata TTL, and upsert deterministic category and expense fields with the configured TTL without creating or registering a session. (Seeder persistence)
+- [x] Require a validated `--session-id <uuid>` for explicit manual seeding. Never delete by a broad prefix or touch another environment's keys. (Seeder safety)
 - [x] Refuse production, reject unsafe prefixes/configuration, and avoid printing credentials or fixture expense text. (Seeder safety)
 - [x] Read the seeded session back through the repository and fail if totals, nullable/category references, timestamps, count, or overall total differ from the fixture. (Seeder verification)
-- [x] Test deterministic replacement, pointer registration/expiry, environment refusal, exact-session scoping, and successful reads through both query routes. (Seeder tests)
+- [x] Test deterministic upserts, existing-session enforcement, TTL renewal, environment refusal, exact-session scoping, and successful reads through both query routes. (Seeder tests)
 
 ## Group 7 — Add browser API clients and focused Hooks
 
@@ -116,7 +116,7 @@ Status: complete. Groups 1–10 are implemented and verified.
 - [x] Cover empty production, seeded populated, category creation, populated-category cascade, expense reclassification/deletion, prompt unavailable, session expired, Redis unavailable, English, Spanish, desktop, and narrow states. (Component coverage)
 - [x] Verify alphabetical category ordering in both locales, localized Unclassified presentation, zero totals, 100-expense cap feedback, timestamp ordering, and stable UUID-based actions. (Contract coverage)
 - [x] Verify keyboard operation, global mutation disabling, focus restoration, live-region feedback, chart text, contrast, and narrow layouts. (Accessibility)
-- [x] Run an end-to-end seeded workflow: seed Redis, start in seeded-session mode, obtain the seeded cookie/ID through `POST /session`, query both resources, mutate all supported resources, refresh, and confirm the session resumes. (Seeded E2E)
+- [x] Run an end-to-end seeded workflow: create a normal session through `POST /session`, seed fixture data into its ID, query both resources, mutate all supported resources, refresh, and confirm the session resumes. (Seeded E2E)
 - [x] Verify a normal non-seeded session starts empty and cannot see or mutate the seeded session or another session's identifiers. (Isolation E2E)
 - [x] Verify closing/clearing the session cookie and Redis expiry behavior return the application to a new empty session with recoverable feedback. (Lifecycle E2E)
 
@@ -137,10 +137,10 @@ The IDs below are traceability labels; automated test names should describe beha
 | RD5-009 | Repository | Create or write a Redis record.                              | The affected key receives the configured 24-hour TTL without read-time renewal.                                                            |
 | RD5-010 | Repository | Create/reclassify/delete an expense.                         | Expense fields change and the next category query recalculates consistent totals.                                                          |
 | RD5-011 | Repository | Delete a populated category.                                 | Expenses become `categoryId: null`, the real category disappears atomically, and the query reports the transferred amount as Unclassified. |
-| RD5-012 | Repository | Use distinct development/test prefixes.                      | Reads, writes, seed pointers, and cleanup remain isolated.                                                                                 |
+| RD5-012 | Repository | Use distinct environment prefixes.                           | Reads and writes remain isolated, while automated tests use only in-memory fakes.                                                          |
 | RD5-013 | Route      | Create and resume a normal session.                          | `201` creates empty state; `200` resumes it; both return UUID, cookie, and no-store headers.                                               |
-| RD5-014 | Route      | Resolve a configured seeded session.                         | `POST /session` returns the active seed with `200` and binds its cookie.                                                                   |
-| RD5-015 | Route      | Enable seed mode with missing/expired seed or in production. | Non-production returns `seed_session_unavailable`; production refuses the configuration.                                                   |
+| RD5-014 | Seeder     | Seed fixture data into an existing session.                  | The manual command requires a session ID, renews its TTL, and upserts categories and expenses.                                             |
+| RD5-015 | Seeder     | Seed a missing/expired session or run in production.         | The command refuses before writing fixture data.                                                                                           |
 | RD5-016 | Route      | Use a missing or expired session ID.                         | The route returns `401 session_not_found`.                                                                                                 |
 | RD5-017 | Route      | Query categories and expenses.                               | Responses match exact DTO envelopes, totals, ordering, nullable fallback, and no-store rules.                                              |
 | RD5-018 | Route      | Create and delete a category.                                | Creation returns one zero-total DTO; deletion returns 204 and completes the cascade.                                                       |
@@ -164,8 +164,8 @@ The IDs below are traceability labels; automated test names should describe beha
 
 ## Group 11 — Validate and hand off
 
-- [x] Run formatting, lint, strict TypeScript, unit/component/integration tests, Storybook build, and production build.
-- [x] Run the Upstash-backed repository/route suite with a unique test prefix and verify cleanup is scoped to that prefix.
+- [x] Run formatting, lint, strict TypeScript, unit/component/mock-backed repository tests, Storybook build, and production build.
+- [x] Run the Redis repository/route suite against mocks and verify no test loads credentials or contacts Upstash.
 - [x] Complete bilingual desktop and narrow browser review for empty and seeded sessions, every mutation, loading/error states, keyboard flow, and prompt-unavailable recovery.
 - [x] Audit response headers, cookies, UUID validation, error safety, environment isolation, Redis TTLs, and absence of client-visible credentials.
 - [x] Audit Redis data after representative mutations to confirm no Unclassified category record, dangling reference, stale total, broad seed key, or unbounded session exists.

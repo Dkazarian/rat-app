@@ -48,7 +48,6 @@ const expenses = [
   {
     id: "expense-lunch",
     description: "Lunch",
-    categoryId: "food",
     categoryName: "Food",
     color: "coral",
     amountMinor: 1_800,
@@ -56,7 +55,6 @@ const expenses = [
   {
     id: "expense-coffee",
     description: "Coffee",
-    categoryId: "food",
     categoryName: "Food",
     color: "coral",
     amountMinor: 450,
@@ -64,7 +62,6 @@ const expenses = [
   {
     id: "expense-taxi",
     description: "Taxi",
-    categoryId: "transport",
     categoryName: "Transport",
     color: "purple",
     amountMinor: 1_200,

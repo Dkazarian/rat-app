@@ -1,10 +1,5 @@
 import { z } from "zod";
 
-const booleanString = z
-  .enum(["true", "false"])
-  .default("false")
-  .transform((value) => value === "true");
-
 const positiveIntegerString = (fallback: number) =>
   z
     .string()
@@ -13,31 +8,20 @@ const positiveIntegerString = (fallback: number) =>
     .transform(Number)
     .pipe(z.number().int().positive().safe());
 
-const environmentSchema = z
-  .object({
-    KV_REST_API_URL: z.url().startsWith("https://"),
-    KV_REST_API_TOKEN: z.string().min(1),
-    RATAPP_REDIS_KEY_PREFIX: z
-      .string()
-      .min(1)
-      .max(128)
-      .regex(/^[A-Za-z0-9][A-Za-z0-9:_-]*$/),
-    RATAPP_SESSION_TTL_SECONDS: positiveIntegerString(86_400),
-    RATAPP_MAX_EXPENSES_PER_SESSION: positiveIntegerString(100),
-    RATAPP_USE_SEEDED_SESSION: booleanString,
-    NODE_ENV: z
-      .enum(["development", "test", "production"])
-      .default("development"),
-  })
-  .superRefine((value, context) => {
-    if (value.NODE_ENV === "production" && value.RATAPP_USE_SEEDED_SESSION) {
-      context.addIssue({
-        code: "custom",
-        path: ["RATAPP_USE_SEEDED_SESSION"],
-        message: "Seeded-session mode is forbidden in production",
-      });
-    }
-  });
+const environmentSchema = z.object({
+  KV_REST_API_URL: z.url().startsWith("https://"),
+  KV_REST_API_TOKEN: z.string().min(1),
+  RATAPP_REDIS_KEY_PREFIX: z
+    .string()
+    .min(1)
+    .max(128)
+    .regex(/^[A-Za-z0-9][A-Za-z0-9:_-]*$/),
+  RATAPP_SESSION_TTL_SECONDS: positiveIntegerString(172_800),
+  RATAPP_MAX_EXPENSES_PER_SESSION: positiveIntegerString(100),
+  NODE_ENV: z
+    .enum(["development", "test", "production"])
+    .default("development"),
+});
 
 export type ServerConfig = Readonly<{
   redisUrl: string;
@@ -45,7 +29,6 @@ export type ServerConfig = Readonly<{
   redisKeyPrefix: string;
   sessionTtlSeconds: number;
   maxExpensesPerSession: number;
-  useSeededSession: boolean;
   environment: "development" | "test" | "production";
 }>;
 
@@ -71,7 +54,6 @@ export function parseServerConfig(
     redisKeyPrefix: value.RATAPP_REDIS_KEY_PREFIX,
     sessionTtlSeconds: value.RATAPP_SESSION_TTL_SECONDS,
     maxExpensesPerSession: value.RATAPP_MAX_EXPENSES_PER_SESSION,
-    useSeededSession: value.RATAPP_USE_SEEDED_SESSION,
     environment: value.NODE_ENV,
   };
 }

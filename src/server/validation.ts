@@ -28,10 +28,6 @@ export const categoryNameBodySchema = z.object({
   name: z.string(),
 });
 
-export const expenseCategoryBodySchema = z.object({
-  categoryId: canonicalUuidSchema.nullable(),
-});
-
 export const promptBodySchema = z.object({
   prompt: z.string().trim().min(1).max(500),
   locale: z.enum(["en", "es"]),

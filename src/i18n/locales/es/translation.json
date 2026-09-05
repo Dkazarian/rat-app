@@ -27,8 +27,6 @@
   "thisMonth": "Este mes",
   "recentExpenses": "Gastos recientes",
   "noExpenses": "Todavía no hay gastos.",
-  "reclassifyExpense": "Cambiar categoría de {{description}}",
-  "deleteExpense": "Eliminar {{description}}",
   "today": "Hoy",
   "lunch": "Almuerzo",
   "coffee": "Café",

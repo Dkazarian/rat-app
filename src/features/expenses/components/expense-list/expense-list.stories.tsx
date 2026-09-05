@@ -18,22 +18,7 @@ function LocalizedExpenseList({ expenses }: StoryProps) {
       title={t("recentExpenses")}
       periodLabel={t("today")}
       expenses={expenses}
-      categoryOptions={[
-        ...dashboardFixtures.success.categories.map(({ id, name }) => ({
-          id,
-          name,
-        })),
-        { id: null, name: t("unclassified") },
-      ]}
       emptyMessage={t("noExpenses")}
-      getCategorySelectLabel={(expense) =>
-        t("reclassifyExpense", { description: expense.description })
-      }
-      getDeleteLabel={(expense) =>
-        t("deleteExpense", { description: expense.description })
-      }
-      onCategoryChange={() => undefined}
-      onDeleteExpense={() => undefined}
     />
   );
 }

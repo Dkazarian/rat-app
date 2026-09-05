@@ -27,8 +27,6 @@
   "thisMonth": "This month",
   "recentExpenses": "Recent expenses",
   "noExpenses": "No expenses yet.",
-  "reclassifyExpense": "Change category for {{description}}",
-  "deleteExpense": "Delete {{description}}",
   "today": "Today",
   "lunch": "Lunch",
   "coffee": "Coffee",

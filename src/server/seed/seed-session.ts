@@ -6,7 +6,7 @@ import { ExpenseManager } from "@/server/redis/expense-manager";
 import { UpstashSessionRepository } from "@/server/redis/session-repository";
 import { seedCategories, seedExpenses, seedTotalMinor } from "./fixture";
 
-export async function seedSession(
+export async function seedExistingSession(
   redis: Redis,
   config: ServerConfig,
   unsafeSessionId: string,
@@ -18,10 +18,11 @@ export async function seedSession(
   const sessions = new UpstashSessionRepository(redis, config);
   const categoryManager = new CategoryManager(redis, config);
   const expenseManager = new ExpenseManager(redis, config);
-  await sessions.replaceSessionId(sessionId, 1_750_000_000_000);
-  await categoryManager.replaceCategoriesForSeed(sessionId, seedCategories);
-  await expenseManager.replaceExpensesForSeed(sessionId, seedExpenses);
-  await sessions.setActiveSeedSessionId(sessionId);
+  if (!(await sessions.renewSessionTtl(sessionId))) {
+    throw new Error("Cannot seed a missing or expired session.");
+  }
+  await categoryManager.upsertSeedCategories(sessionId, seedCategories);
+  await expenseManager.upsertSeedExpenses(sessionId, seedExpenses);
 
   const [categories, expenses] = await Promise.all([
     categoryManager.getCategories(sessionId),

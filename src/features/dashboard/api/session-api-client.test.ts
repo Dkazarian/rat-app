@@ -6,26 +6,22 @@ afterEach(() => vi.unstubAllGlobals());
 describe("browserSessionApi", () => {
   it("encodes identifiers, includes same-origin credentials, and sends JSON", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ expense: { id: "expense" } }), {
+      new Response(JSON.stringify({ category: { id: "category" } }), {
         status: 200,
         headers: { "Content-Type": "application/json" },
       }),
     );
     vi.stubGlobal("fetch", fetchMock);
 
-    await browserSessionApi.updateExpenseCategory(
-      "session/id",
-      "expense id",
-      null,
-    );
+    await browserSessionApi.createCategory("session/id", " Health ");
 
     expect(fetchMock).toHaveBeenCalledWith(
-      "/session/session%2Fid/expenses/expense%20id/category",
+      "/session/session%2Fid/categories",
       expect.objectContaining({
-        method: "PUT",
+        method: "POST",
         credentials: "same-origin",
         cache: "no-store",
-        body: JSON.stringify({ categoryId: null }),
+        body: JSON.stringify({ name: " Health " }),
       }),
     );
   });

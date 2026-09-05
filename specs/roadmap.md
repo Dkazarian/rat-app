@@ -2,7 +2,7 @@
 
 ## Intended initial release
 
-A responsive, publicly hosted classification demo in which a visitor adjusts session-only categories, describes one or more expenses naturally, reviews and corrects AI classifications, and sees cumulative categorized results and a synchronized spending chart in English or Spanish.
+A responsive, publicly hosted classification demo in which a visitor adjusts session-only categories, describes one or more expenses naturally, reviews AI classifications, and sees cumulative categorized results and a synchronized spending chart in English or Spanish. Anonymous session data expires after 48 hours.
 
 The roadmap remains outcome-oriented. Implementation details and decisions are documented in that phase's specification folder when the phase begins, and each phase ends with an observable review point.
 
@@ -65,11 +65,12 @@ Validated on 2026-09-03: all six automated gates, 106 tests, and bilingual deskt
 ## Phase 5 — Redesign
 
 - Replace browser-owned category and expense services with a server API as the source of truth
+- Remove remains of deferred expense reclassification and deletion features
 - Create a short-lived Redis-backed anonymous session and associate subsequent requests with it
 - Start production sessions without category records; treat Unclassified as an implicit fallback bucket
 - Load category totals and expenses from the API
 - Submit expense prompts through the session API, ready for the Phase 6 AI implementation
-- Create and delete categories, reclassify expenses, and delete expenses through API operations
+- Create and delete categories through API operations
 - Replace the current service-oriented Hooks with section-owned queries and mutations plus a small refresh coordinator
 - Simplify dashboard composition by removing feature-specific rendered-element layout props
 - Rewrite domain rules in the backend and remove the current client-side category, expense, and session services
@@ -87,6 +88,7 @@ Validated on 2026-09-03: unit/component and Upstash integration suites, lint, st
 - Validated results with unknown classifications assigned to **Unclassified**
 - Cumulative success and recoverable failure behavior
 - Server-only provider credentials and safe error responses
+- Category names as the only custom-category context supplied to the AI
 
 ## Phase 7 — Public demo release
 
@@ -95,12 +97,20 @@ Validated on 2026-09-03: unit/component and Upstash integration suites, lint, st
 - Complete automated checks and project documentation
 - Vercel deployment with protected server configuration
 - Production workflow verification
+- Review-only expense results, without reclassification or deletion controls
+
+## Phase 8 — Post-release expense controls
+
+- Reclassify an expense into another category or **Unclassified**
+- Delete an expense from the active session
+- Keep lists, totals, and the spending chart synchronized after either action
+- Add bilingual, accessible controls and regression coverage
 
 ---
 
 ## Deferred beyond the initial release
 
-Category renaming, manual category colors, AI-facing category descriptions, expense editing, manual expense entry, accounts, persistence, synchronization, financial integrations, budgets, recurring expenses, currency conversion, additional languages, model training, and native applications remain outside the initial release until explicitly promoted.
+Custom-category descriptions supplied to the AI remain a future idea. Category renaming, manual category colors, other expense editing, and manual expense entry also remain outside the initial release until explicitly promoted.
 
 ## Mission trace
 
@@ -108,9 +118,10 @@ Category renaming, manual category colors, AI-facing category descriptions, expe
 | --- | --- |
 | Faithful React and Storybook migration | Phases 1–2 |
 | Session-only category controls | Phase 3 |
-| Cumulative results, correction, totals, and chart | Phases 4, 4.5, and 5 |
+| Cumulative results, totals, and chart | Phases 4, 4.5, and 5 |
 | Server-backed anonymous session | Phase 5 |
 | Multi-expense bilingual AI classification | Phase 6 |
 | Clear success and recoverable failure behavior | Phase 6 |
 | Accessible English and Spanish experience | Phases 2–7 |
 | Safe publicly hosted demo | Phase 7 |
+| Expense reclassification and deletion | Phase 8 |

@@ -38,17 +38,15 @@ export type ApiErrorCode =
   | "invalid_category_name"
   | "session_not_found"
   | "category_not_found"
-  | "expense_not_found"
   | "category_name_duplicate"
   | "category_limit_reached"
   | "expense_limit_reached"
   | "no_expenses_extracted"
   | "classification_unavailable"
-  | "seed_session_unavailable"
   | "service_unavailable"
   | "internal_error";
 
-export type ApiErrorField = "name" | "prompt" | "categoryId";
+export type ApiErrorField = "name" | "prompt";
 
 export type ApiErrorResponse = Readonly<{
   error: Readonly<{
@@ -60,7 +58,6 @@ export type ApiErrorResponse = Readonly<{
 
 export type SessionResponse = Readonly<{ sessionId: string }>;
 export type CategoryMutationResponse = Readonly<{ category: CategoryDto }>;
-export type ExpenseMutationResponse = Readonly<{ expense: ExpenseDto }>;
 export type PromptMutationResponse = Readonly<{
   expenses: ReadonlyArray<ExpenseDto>;
   rejectedCount: number;

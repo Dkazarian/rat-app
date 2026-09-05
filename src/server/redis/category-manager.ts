@@ -47,7 +47,7 @@ export class CategoryManager {
     });
   }
 
-  async replaceCategoriesForSeed(
+  async upsertSeedCategories(
     sessionId: string,
     fixture: ReadonlyArray<StoredCategory>,
   ): Promise<void> {
@@ -62,13 +62,14 @@ export class CategoryManager {
           throw new Error("Invalid seed category color");
         return [...categories, category];
       }, []);
-      await this.redis.del(keys.categories);
-      if (validated.length === 0) return;
       const transaction = this.redis.multi();
-      for (const category of validated) {
-        transaction.hset(keys.categories, {
-          [category.id]: encodeRecord(category),
-        });
+      if (validated.length > 0) {
+        transaction.hset(
+          keys.categories,
+          Object.fromEntries(
+            validated.map((category) => [category.id, encodeRecord(category)]),
+          ),
+        );
       }
       transaction.expire(keys.categories, this.config.sessionTtlSeconds);
       await transaction.exec();

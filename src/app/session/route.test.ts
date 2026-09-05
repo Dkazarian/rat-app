@@ -11,13 +11,11 @@ const mocks = vi.hoisted(() => ({
     redisKeyPrefix: "ratapp:test",
     sessionTtlSeconds: 86_400,
     maxExpensesPerSession: 100,
-    useSeededSession: false,
     environment: "test",
   } satisfies ServerConfig,
   repository: {
     saveSessionId: vi.fn(),
     getSessionId: vi.fn(),
-    getActiveSeedSessionId: vi.fn(),
   } satisfies SessionIdStore,
 }));
 
@@ -32,7 +30,6 @@ describe("POST /session", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.repository.getSessionId.mockResolvedValue(null);
-    mocks.repository.getActiveSeedSessionId.mockResolvedValue(null);
   });
 
   it("creates an empty session and sends a protected browser-session cookie", async () => {

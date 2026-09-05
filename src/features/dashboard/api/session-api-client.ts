@@ -2,7 +2,6 @@ import type {
   ApiErrorResponse,
   CategoriesResponse,
   CategoryMutationResponse,
-  ExpenseMutationResponse,
   ExpensesResponse,
   PromptMutationResponse,
   SessionResponse,
@@ -20,7 +19,7 @@ export class SessionApiError extends Error {
 }
 
 type RequestOptions = Readonly<{
-  method?: "GET" | "POST" | "PUT" | "DELETE";
+  method?: "GET" | "POST" | "DELETE";
   body?: unknown;
   signal?: AbortSignal;
 }>;
@@ -73,12 +72,6 @@ export type SessionApi = Readonly<{
     sessionId: string,
     signal?: AbortSignal,
   ) => Promise<ExpensesResponse>;
-  updateExpenseCategory: (
-    sessionId: string,
-    expenseId: string,
-    categoryId: string | null,
-  ) => Promise<ExpenseMutationResponse>;
-  deleteExpense: (sessionId: string, expenseId: string) => Promise<void>;
   submitPrompt: (
     sessionId: string,
     prompt: string,
@@ -102,16 +95,6 @@ export const browserSessionApi: SessionApi = {
     ),
   getExpenses: (sessionId, signal) =>
     request(`${sessionPath(sessionId)}/expenses`, { signal }),
-  updateExpenseCategory: (sessionId, expenseId, categoryId) =>
-    request(
-      `${sessionPath(sessionId)}/expenses/${encodeURIComponent(expenseId)}/category`,
-      { method: "PUT", body: { categoryId } },
-    ),
-  deleteExpense: (sessionId, expenseId) =>
-    request(
-      `${sessionPath(sessionId)}/expenses/${encodeURIComponent(expenseId)}`,
-      { method: "DELETE" },
-    ),
   submitPrompt: (sessionId, prompt, locale) =>
     request(`${sessionPath(sessionId)}/expenses/prompt`, {
       method: "POST",

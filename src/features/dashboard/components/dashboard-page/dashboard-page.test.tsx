@@ -56,17 +56,6 @@ function createApi() {
       );
     }),
     getExpenses: vi.fn(async () => ({ expenses })),
-    updateExpenseCategory: vi.fn(async (_sessionId, id, categoryId) => {
-      const expense = {
-        ...expenses.find((item) => item.id === id)!,
-        categoryId,
-      };
-      expenses = expenses.map((item) => (item.id === id ? expense : item));
-      return { expense };
-    }),
-    deleteExpense: vi.fn(async (_sessionId, id) => {
-      expenses = expenses.filter((expense) => expense.id !== id);
-    }),
     submitPrompt: vi.fn(async () => {
       throw new SessionApiError(
         "classification_unavailable",
@@ -131,8 +120,10 @@ describe("DashboardPage API composition", () => {
     await user.click(panel.getByRole("button", { name: "Delete Food" }));
     await waitFor(() =>
       expect(
-        screen.getByRole("combobox", { name: "Change category for Lunch" }),
-      ).toHaveValue(""),
+        within(
+          screen.getByRole("region", { name: "Recent expenses" }),
+        ).getByText("Unclassified"),
+      ).toBeVisible(),
     );
     expect(api.getCategories).toHaveBeenCalledTimes(2);
     expect(api.getExpenses).toHaveBeenCalledTimes(2);

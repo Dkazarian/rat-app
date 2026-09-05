@@ -61,22 +61,10 @@ export const applicationErrors = {
       404,
       "The category was not found.",
     ),
-  expenseNotFound: () =>
-    new ApplicationError(
-      "expense_not_found",
-      404,
-      "The expense was not found.",
-    ),
   classificationUnavailable: () =>
     new ApplicationError(
       "classification_unavailable",
       501,
       "Expense classification is not available yet.",
-    ),
-  seedUnavailable: () =>
-    new ApplicationError(
-      "seed_session_unavailable",
-      503,
-      "The seeded development session is unavailable.",
     ),
 };
