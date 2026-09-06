@@ -1,14 +1,63 @@
 # Phase 5 Plan Review
 
-The completed Phase 5 plan remains a historical record. The product scope changed afterward, so the following work should be handled as a separate alignment pass.
+The completed Phase 5 plan remains a historical record. The product scope changed afterward, so the pending work below should be handled as a separate alignment pass.
 
-## Changes to make
+## Completed historical changes
 
 - [x] Change the anonymous session TTL from 24 hours (`86400` seconds) to 48 hours (`172800` seconds) in configuration, `.env.example`, Redis behavior, tests, and supporting documentation.
 - [x] Remove expense reclassification and deletion from the initial-release implementation.
 - [x] Remove their route handlers, browser API methods, UI controls, domain entry points, response types used only by those operations, and dedicated tests and stories.
-- [x] Keep `GET /session/:sessionId/expenses`; initial-release visitors still need to review extracted expenses.
 - [x] Keep category deletion and its atomic cascade, which sets affected expenses to `categoryId: null` (**Unclassified**).
 - [x] Update Phase 5 `requirements.md` so it no longer requires expense reclassification or deletion.
 - [x] Keep the deferred endpoints documented under the post-release expense-controls phase.
-- [x] Re-run formatting, lint, type checking, tests, Storybook, and the production build after the changes.
+- [x] Re-run formatting, lint, type checking, tests, Storybook, and the production build after the completed changes.
+
+## Pending alignment pass
+
+### Implementation constraints
+
+- Keep this as a small, single-project Next.js application. Browser-facing Route Handlers must call server modules directly; do not add self-referential HTTP fetches, `BACKEND_URL`, shared backend secrets, middleware/Proxy authentication, or a second internal API layer.
+- Treat `/api/v1` as the application's browser transport, not as a private or supported third-party API. Its requests are necessarily observable and replayable; session isolation is required, but preventing someone from scripting their own anonymous session is outside this release. Do not add authentication, API keys, CORS machinery, bot protection, or rate-limiting infrastructure as part of this alignment pass.
+- Prefer direct exported functions and existing framework features. Do not introduce dependency-injection containers, factories whose only purpose is testing, new manager or service classes, generic repository layers, or production reset hooks for tests.
+- Validate each concern once at its appropriate authoritative boundary. Keep Zod request-shape checks and genuine business/data-integrity rules, mirror only the shared category-name and expense-prompt field limits in the browser for immediate feedback, and do not add duplicate identifier parsing, custom raw-body readers, or defensive validation of developer-owned seed fixtures.
+- Keep frontend state local to the nearest common owner. Use the existing locale context inside feature-specific leaf components, pass explicit props through the shallow component tree, and do not add a dashboard context, state-management library, query library, or generic fetching/mutation hook for this alignment pass.
+- Extract code only when it fixes an identified ownership problem or removes existing duplication. Do not create wrapper components, helper layers, configuration objects, or types that merely rename a single operation.
+- Do not add dependencies or broaden product behavior. Preserve the current UI, accessibility behavior, anonymous-session model, category behavior, and expense-reading behavior except where a pending item explicitly changes their wiring or ownership.
+
+### API and session boundary
+
+- [ ] Move the browser-facing API to `/api/v1`: use `POST /api/v1/session` for anonymous session initialization, `GET` and `POST /api/v1/categories`, `DELETE /api/v1/categories/:categoryId`, `GET /api/v1/expenses`, and `POST /api/v1/expenses/prompt`. Delete the replaced `/session/:sessionId/...` route tree and relocate or rewrite its tests instead of leaving compatibility endpoints.
+- [ ] Make the HttpOnly `ratapp_session` cookie the sole source of anonymous session identity. Have `POST /api/v1/session` create or reuse the cookie-backed session, return `204` with no session payload, and have every other handler require an existing cookie-backed session without silently creating one. Set the cookie's `Max-Age` to the same 48-hour TTL as Redis and preserve `HttpOnly`, `SameSite=Lax`, `Secure` in production, and `Path=/`; test these attributes. Remove `sessionId` and `SessionResponse` from browser-visible URLs, response contracts, client state, and API method parameters, preserve the expense-reading capability at its new route, and add route tests proving that callers cannot select another session by supplying an identifier.
+- [ ] Remove repetitive UUID parsing and `unsafeSessionId` / `unsafeCategoryId` handling after establishing the cookie boundary. Pass the cookie-derived session ID and typed category route parameter through directly, make session and category lookups responsible for their not-found checks, stop reparsing IDs in persistence operations and Redis key construction, and remove `parseId()` if it has no remaining callers. Retain request-body, business-rule, relationship, limit, and stored-record validation.
+- [ ] Remove the `noStoreJson()`, `noStoreEmpty()`, and `readBoundedJson()` wrappers. Configure `Cache-Control: no-store` once for `/api/v1/:path*`, use standard `Response.json()` and empty responses, and parse request JSON directly with the existing Zod schemas. Remove route-level `dynamic = "force-dynamic"` and `runtime = "nodejs"` declarations where cookie access and the default Node.js runtime make them redundant. Keep the category-name and expense-prompt field limits, recognizing that these are the only small user-controlled request bodies and leaving raw request-size enforcement to the hosting platform.
+- [ ] Define the 24-character category-name limit and 500-character expense-prompt limit as shared contract constants used by both frontend and backend validation. Add matching `maxLength` attributes to the category input and expense textarea, reject empty or over-limit values in the UI before calling `browserSessionApi`, show localized field feedback while retaining focus, and keep the backend checks authoritative. Let `CategoryPanel` own category validation state and `DashboardPage` own prompt validation state; let `CategoryForm` and `ExpenseInput` own their translated labels and field attributes while rendering the validation state supplied by those owners. Validate a prompt's trimmed value for emptiness but send its original text; trim a category name before validating and submitting it.
+
+### Persistence and seeding
+
+- [ ] Simplify the developer-owned seeding path and remove `upsertSeedCategories()` and `upsertSeedExpenses()` from the production managers. Have seed code obtain the concrete Redis client and configuration directly and write the trusted category and expense fixtures itself; remove duplicate UUID parsing, application domain and limit validation, color, timestamp, and category-reference checks, and extensive post-write verification. Retain only the production-environment guard, the existing-session check, Redis encoding, and TTL updates.
+- [ ] Replace `CategoryManager`, `ExpenseManager`, and `UpstashSessionRepository` with concrete function-based Redis modules that resolve the client and configuration directly. Remove constructor injection, the injection-only `SessionIdStore` and `SessionLookup` interfaces, repository arguments such as `resolveSession(repository, cookieId)`, cached persistence instances, `getSessionRepository()` / `getCategoryManager()` / `getExpenseManager()`, and the now-unused `clearPersistenceForTests()` helper. Delete `persistence.ts` once it has no responsibility. Remove the generalized `repositoryOperation()` wrapper; retain only shared helpers that still perform meaningful encoding, decoding, data reads, or Redis-error translation. Keep Redis commands encapsulated under `src/server/redis`, update routes to import functions directly, and mock `getRedisClient()` and `getServerConfig()` in tests instead of shaping production APIs around test injection.
+- [ ] Review the currently unused `clearServerConfigCacheForTests()`, `clearRedisClientForTests()`, and `storedSessionMetaSchema`; remove each one if the new tests and persistence modules provide no concrete caller.
+
+### Frontend session and orchestration
+
+- [ ] Update `SessionApi` and `browserSessionApi` for the cookie-scoped `/api/v1` contract: make session initialization return `Promise<void>` for the `204` response and remove `sessionId` arguments from category and expense methods. Update their tests, dashboard fakes, and Storybook APIs accordingly.
+- [ ] Narrow `usePageSession` to anonymous cookie-session initialization and recovery, rename it to `useSessionBootstrap`, and expose only readiness, initialization error, and retry state. Move the unrelated mutation lock (`isMutating` / `runMutation`) and category/expense refresh coordination (`refreshCounter` / `notifyDataChanged`) into `DashboardPage`, which owns the cross-feature workflow.
+- [ ] Handle an expired cookie session consistently for reads and mutations. Any `session_not_found` response must trigger `useSessionBootstrap.retry()`; category submission must consume only known category-validation errors locally and must not misclassify session, service, or internal failures as name-validation errors. Route other failures to the existing localized error presentation without adding a global error framework.
+
+### Frontend component ownership
+
+- [ ] Move capture presentation and translation ownership out of `DashboardPage`. Pass `CapturePanel` only semantic feedback, input state, disabled state, and behavior callbacks; make `Mascot` select its image and translated alt text from the state key, make `RatDialogue` accept a discriminated feedback value and derive its announcement mode, translated title, and static or count/error-dependent detail internally, and make `ExpenseInput` obtain its own label, placeholder, and action label from `useLocale()`. Remove the parent-built `dialogue` / `input` view-model objects and duplicated mascot-state mappings from dashboard fixtures.
+- [ ] Move feature-specific category translations into their owning components: have `CategoryForm` obtain its label, placeholder, add/cancel labels, and validation messages from `useLocale()`, and have `CategoryItem` derive its translated delete label instead of receiving these strings from `CategoryPanel`.
+- [ ] Move the `ApiExpenseList` container from `dashboard-results.tsx` into the expenses feature and give it a narrow prop type instead of forwarding `<ApiExpenseList {...props}>`. Pass only its category data, API dependency, refresh trigger, and session-recovery callback explicitly. Keep ordinary one-level composition as props and do not introduce a dashboard React Context for this shallow tree.
+- [ ] Move expense-result presentation strings into `SpendingSummary`, `SpendingChart`, and `ExpenseList`, including titles, period and total labels, the empty message, and the chart accessibility description, rather than constructing and passing them from `DashboardResults`.
+- [ ] Stop passing `locale` into `useCategoryQuery()` and refetching categories when the language changes. Keep the query hook responsible only for fetching, then perform locale-aware sorting as derived presentation data.
+- [ ] Move `buildCategorySpendingItems()` and related spending transformation logic out of the fixtures directory into a normal view-model module, and reuse it in both `DashboardResults` and dashboard fixtures instead of maintaining duplicate live and fixture calculations.
+- [ ] Consolidate API error localization into the main i18n resources: map API error codes to translation keys and translate them through `t()` instead of maintaining a separate English/Spanish message table in `getApiErrorMessage()`. Use the existing localized `retry` key in `QueryState` instead of its hardcoded English label.
+- [ ] Remove `CategoryPanel`'s brittle inspection of English server error text. Handle empty and over-limit names through the shared client-side constraints, map any remaining `invalid_category_name` response (such as a reserved name) to one localized generic invalid-name message, retain the existing duplicate and limit error codes, and do not expand the API error-code taxonomy or duplicate database-dependent rules in the client.
+- [ ] Replace `key={JSON.stringify(category.id)}` and equivalent category-key expressions with a direct stable key such as `category.id ?? "unclassified"`.
+- [ ] Review the story-only `MascotCard` component, test, and story. Remove them if they are confirmed to be unused legacy UI rather than part of the current component catalog; do not replace them with another abstraction.
+
+### Documentation and verification
+
+- [ ] Update Phase 5 requirements, API documentation, and supporting documentation to reflect the cookie-scoped `/api/v1` contract and simplified internal architecture.
+- [ ] Re-run formatting, lint, type checking, unit and integration tests, Storybook, the Storybook production build, and the application production build after the alignment pass.

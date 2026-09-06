@@ -93,7 +93,7 @@ Validated on 2026-09-03: unit/component and Upstash integration suites, lint, st
 ## Phase 7 — Public demo release
 
 - Responsive, bilingual, accessibility, privacy, and failure-recovery review
-- Public API safeguards and privacy-conscious operations
+- Public API safeguards
 - Complete automated checks and project documentation
 - Vercel deployment with protected server configuration
 - Production workflow verification
