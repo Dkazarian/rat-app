@@ -10,7 +10,3 @@ export function getRedisClient(): Redis {
   }
   return redis;
 }
-
-export function clearRedisClientForTests(): void {
-  redis = undefined;
-}

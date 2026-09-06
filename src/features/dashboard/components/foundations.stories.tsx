@@ -24,50 +24,21 @@ export const LanguageControl: Story = {
   render: () => <LanguageControlComponent />,
 };
 export const Mascot: Story = {
-  render: function LocalizedMascot() {
-    const { t } = useLocale();
-    return (
-      <MascotComponent
-        src="/assets/rat-mascot.png"
-        alt={t("successMascotAlt")}
-      />
-    );
-  },
+  render: () => <MascotComponent state="success" />,
 };
 export const AwaitingMascot: Story = {
-  render: function LocalizedAwaitingMascot() {
-    const { t } = useLocale();
-    return (
-      <MascotComponent
-        src="/assets/rat-mascot-awaiting.png"
-        alt={t("emptyMascotAlt")}
-      />
-    );
-  },
+  render: () => <MascotComponent state="empty" />,
 };
 export const RatDialogue: Story = {
-  render: function LocalizedRatDialogue() {
-    const { t } = useLocale();
-    return (
-      <RatDialogueComponent
-        state="success"
-        announcement="polite"
-        title={t("successTitle")}
-        detail={t("successDetail")}
-      />
-    );
-  },
+  render: () => (
+    <RatDialogueComponent
+      feedback={{ state: "success", extractedCount: 3, rejectedCount: 0 }}
+    />
+  ),
 };
 export const ExpenseInput: Story = {
   render: function LocalizedExpenseInput() {
     const { t } = useLocale();
-    return (
-      <ExpenseInputComponent
-        label={t("inputLabel")}
-        placeholder={t("inputPlaceholder")}
-        actionLabel={t("sortAction")}
-        value={t("sampleInput")}
-      />
-    );
+    return <ExpenseInputComponent value={t("sampleInput")} />;
   },
 };

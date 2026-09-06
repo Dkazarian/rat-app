@@ -1,23 +1,43 @@
+import type { Ref } from "react";
 import { ExpenseInput } from "./expense-input";
-import type { ExpenseInputProps } from "./expense-input";
 import { Mascot } from "./mascot";
 import { RatDialogue } from "./rat-dialogue";
-import type { RatDialogueProps } from "./rat-dialogue";
+import type { RatDialogueFeedback } from "./rat-dialogue";
 
 export type CapturePanelProps = Readonly<{
-  dialogue: RatDialogueProps;
-  input: ExpenseInputProps;
+  feedback: RatDialogueFeedback;
+  inputValue: string;
+  inputRef?: Ref<HTMLTextAreaElement>;
+  validationCode?: "empty" | "too-long";
+  disabled?: boolean;
+  onInputChange?: (value: string) => void;
+  onSubmit?: () => void;
 }>;
 
-export function CapturePanel({ dialogue, input }: CapturePanelProps) {
+export function CapturePanel({
+  feedback,
+  inputValue,
+  inputRef,
+  validationCode,
+  disabled,
+  onInputChange,
+  onSubmit,
+}: CapturePanelProps) {
   return (
     <section className="grid grid-cols-[270px_minmax(0,1fr)] items-center gap-5 rounded-[20px] border border-[#49404f] bg-[#26222d] p-[18px] max-[680px]:grid-cols-1 max-[680px]:items-stretch">
       <div className="col-start-1 row-start-1 grid min-h-28 grid-cols-[108px_minmax(0,1fr)] items-end gap-2 max-[680px]:min-h-0 max-[680px]:grid-cols-[82px_minmax(0,1fr)]">
-        <Mascot src={dialogue.mascotSrc} alt={dialogue.mascotAlt} priority />
-        <RatDialogue {...dialogue} />
+        <Mascot state={feedback.state} priority />
+        <RatDialogue feedback={feedback} />
       </div>
       <div className="col-start-2 row-start-1 min-w-0 max-[680px]:col-start-1 max-[680px]:row-start-2">
-        <ExpenseInput {...input} />
+        <ExpenseInput
+          value={inputValue}
+          inputRef={inputRef}
+          validationCode={validationCode}
+          disabled={disabled}
+          onValueChange={onInputChange}
+          onSubmit={onSubmit}
+        />
       </div>
     </section>
   );

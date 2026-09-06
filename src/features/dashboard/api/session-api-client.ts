@@ -4,7 +4,6 @@ import type {
   CategoryMutationResponse,
   ExpensesResponse,
   PromptMutationResponse,
-  SessionResponse,
 } from "@/contracts/session-api";
 
 export class SessionApiError extends Error {
@@ -54,49 +53,34 @@ async function request<T>(
   return payload as T;
 }
 
-const sessionPath = (sessionId: string) =>
-  `/session/${encodeURIComponent(sessionId)}`;
-
 export type SessionApi = Readonly<{
-  createSession: (signal?: AbortSignal) => Promise<SessionResponse>;
-  getCategories: (
-    sessionId: string,
-    signal?: AbortSignal,
-  ) => Promise<CategoriesResponse>;
-  createCategory: (
-    sessionId: string,
-    name: string,
-  ) => Promise<CategoryMutationResponse>;
-  deleteCategory: (sessionId: string, categoryId: string) => Promise<void>;
-  getExpenses: (
-    sessionId: string,
-    signal?: AbortSignal,
-  ) => Promise<ExpensesResponse>;
+  createSession: (signal?: AbortSignal) => Promise<void>;
+  getCategories: (signal?: AbortSignal) => Promise<CategoriesResponse>;
+  createCategory: (name: string) => Promise<CategoryMutationResponse>;
+  deleteCategory: (categoryId: string) => Promise<void>;
+  getExpenses: (signal?: AbortSignal) => Promise<ExpensesResponse>;
   submitPrompt: (
-    sessionId: string,
     prompt: string,
     locale: "en" | "es",
   ) => Promise<PromptMutationResponse>;
 }>;
 
 export const browserSessionApi: SessionApi = {
-  createSession: (signal) => request("/session", { method: "POST", signal }),
-  getCategories: (sessionId, signal) =>
-    request(`${sessionPath(sessionId)}/categories`, { signal }),
-  createCategory: (sessionId, name) =>
-    request(`${sessionPath(sessionId)}/categories`, {
+  createSession: (signal) =>
+    request("/api/v1/session", { method: "POST", signal }),
+  getCategories: (signal) => request("/api/v1/categories", { signal }),
+  createCategory: (name) =>
+    request("/api/v1/categories", {
       method: "POST",
       body: { name },
     }),
-  deleteCategory: (sessionId, categoryId) =>
-    request(
-      `${sessionPath(sessionId)}/categories/${encodeURIComponent(categoryId)}`,
-      { method: "DELETE" },
-    ),
-  getExpenses: (sessionId, signal) =>
-    request(`${sessionPath(sessionId)}/expenses`, { signal }),
-  submitPrompt: (sessionId, prompt, locale) =>
-    request(`${sessionPath(sessionId)}/expenses/prompt`, {
+  deleteCategory: (categoryId) =>
+    request(`/api/v1/categories/${encodeURIComponent(categoryId)}`, {
+      method: "DELETE",
+    }),
+  getExpenses: (signal) => request("/api/v1/expenses", { signal }),
+  submitPrompt: (prompt, locale) =>
+    request("/api/v1/expenses/prompt", {
       method: "POST",
       body: { prompt, locale },
     }),

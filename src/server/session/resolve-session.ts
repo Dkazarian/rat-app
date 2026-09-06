@@ -1,9 +1,9 @@
 import { createId, isCanonicalId } from "@/server/ids";
-
-export type SessionIdStore = Readonly<{
-  getSessionId(sessionId: string): Promise<string | null>;
-  saveSessionId(sessionId: string): Promise<void>;
-}>;
+import {
+  getSessionId,
+  renewSessionTtl,
+  saveSessionId,
+} from "@/server/redis/session-repository";
 
 export type ResolvedSession = Readonly<{
   sessionId: string;
@@ -11,17 +11,14 @@ export type ResolvedSession = Readonly<{
 }>;
 
 export async function resolveSession(
-  repository: SessionIdStore,
   cookieSessionId: string | undefined,
 ): Promise<ResolvedSession> {
-  if (
-    isCanonicalId(cookieSessionId) &&
-    (await repository.getSessionId(cookieSessionId))
-  ) {
+  if (isCanonicalId(cookieSessionId) && (await getSessionId(cookieSessionId))) {
+    await renewSessionTtl(cookieSessionId);
     return { sessionId: cookieSessionId, created: false };
   }
 
   const sessionId = createId();
-  await repository.saveSessionId(sessionId);
+  await saveSessionId(sessionId);
   return { sessionId, created: true };
 }

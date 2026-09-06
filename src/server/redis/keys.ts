@@ -1,5 +1,3 @@
-import { parseId } from "@/server/ids";
-
 export type SessionKeys = Readonly<{
   meta: string;
   categories: string;
@@ -8,9 +6,8 @@ export type SessionKeys = Readonly<{
 
 export function createSessionKeys(
   prefix: string,
-  unsafeSessionId: unknown,
+  sessionId: string,
 ): SessionKeys {
-  const sessionId = parseId(unsafeSessionId);
   const root = `${prefix}:session:v1:{${sessionId}}`;
   return {
     meta: `${root}:meta`,

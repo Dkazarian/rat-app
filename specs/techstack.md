@@ -19,8 +19,8 @@ Exact dependency versions live in `package.json` and the lockfile.
 ## Architecture
 
 ```text
-Browser UI -> Next.js session API -> server domain rules -> Upstash Redis
-                                \-> OpenRouter (classification)
+Browser UI -> /api/v1 Route Handlers -> server functions -> Upstash Redis
+                                      \-> OpenRouter (Phase 6 classification)
 ```
 
 - `src/app` contains pages and thin HTTP route handlers.
@@ -28,12 +28,14 @@ Browser UI -> Next.js session API -> server domain rules -> Upstash Redis
 - `src/contracts` defines browser/server wire types.
 - `src/server` owns validation, domain rules, session identity, Redis access, and AI integration.
 - Server Components are the default; client boundaries stay as narrow as practical.
-- Route handlers translate HTTP concerns and delegate reusable behavior.
+- Route handlers translate HTTP concerns and call reusable server functions directly. Redis access stays in concrete function-based modules rather than repository or manager classes.
 - Browser code calls the same-origin API and never imports server modules or credentials.
+- `/api/v1` is the application's browser transport, not a private or supported third-party API. It has no self-referential HTTP layer, backend shared secret, CORS infrastructure, or middleware authentication tier.
 
 ## State and data
 
-- `POST /session` creates or resumes an anonymous session identified by an HTTP-only, same-site cookie.
+- `POST /api/v1/session` creates or resumes an anonymous session, returns `204 No Content`, and sets the `HttpOnly`, `SameSite=Lax` `ratapp_session` cookie. The cookie is `Secure` in production, uses `Path=/`, and has the same 48-hour `Max-Age` as Redis.
+- The cookie is the sole browser-facing session identity. Resource routes require it and never accept a browser-supplied session ID in a URL, query, or body.
 - Redis is authoritative. Session keys, including explicitly seeded manual-test sessions, are environment-scoped, bounded, and expire after a configurable TTL.
 - Production sessions start with no categories or expenses.
 - **Unclassified** is represented by `categoryId: null`; it has no stored category record.
@@ -45,19 +47,19 @@ Browser UI -> Next.js session API -> server domain rules -> Upstash Redis
 
 Initial release:
 
-- `POST /session` — create or resume an anonymous session
-- `GET /session/:sessionId/categories` — list categories and authoritative totals
-- `POST /session/:sessionId/categories` — create a category
-- `DELETE /session/:sessionId/categories/:categoryId` — delete a category and move its expenses to **Unclassified**
-- `GET /session/:sessionId/expenses` — list extracted expenses
-- `POST /session/:sessionId/expenses/prompt` — classify and persist expenses from a natural-language prompt
+- `POST /api/v1/session` — create or resume the cookie-scoped anonymous session
+- `GET /api/v1/categories` — list categories and authoritative totals
+- `POST /api/v1/categories` — create a category
+- `DELETE /api/v1/categories/:categoryId` — delete a category and move its expenses to **Unclassified**
+- `GET /api/v1/expenses` — list extracted expenses
+- `POST /api/v1/expenses/prompt` — classify and persist expenses from a natural-language prompt
 
 Post-release expense controls:
 
-- `PUT /session/:sessionId/expenses/:expenseId/category` — reclassify an expense
-- `DELETE /session/:sessionId/expenses/:expenseId` — delete an expense
+- `PUT /api/v1/expenses/:expenseId/category` — reclassify an expense
+- `DELETE /api/v1/expenses/:expenseId` — delete an expense
 
-All endpoints use JSON except successful deletes, which return no body. Error responses use the shared safe error envelope defined in `src/contracts/session-api.ts`.
+All endpoints use JSON except session initialization and successful deletes, which return no body. `Cache-Control: no-store` is configured for `/api/v1/:path*`. Error responses use the shared safe error envelope defined in `src/contracts/session-api.ts`.
 
 ## Classification boundary
 
@@ -65,7 +67,7 @@ The prompt endpoint accepts a bounded message and locale, loads the session's cu
 
 Initial-release category context contains category names only. AI-facing custom-category descriptions, expense reclassification, and expense deletion are post-release features.
 
-Provider credentials remain server-only. Public routes use bounded input, anonymous rate limiting, safe errors, and logging that excludes raw prompts and session identifiers.
+Provider credentials remain server-only. The category-name and expense-prompt limits are shared by browser and server validation; request-shape and business rules remain authoritative on the server. Routes use safe errors and logging that excludes raw prompts and session identifiers. Bot protection and rate-limiting infrastructure are outside the initial release.
 
 ## Engineering rules
 

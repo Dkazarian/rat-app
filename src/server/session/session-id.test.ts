@@ -1,17 +1,22 @@
 import { randomUUID } from "node:crypto";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const sessions = vi.hoisted(() => ({ getSessionId: vi.fn() }));
+vi.mock("@/server/redis/session-repository", () => sessions);
 import { requireSessionId } from "./session-id";
 
 describe("requireSessionId", () => {
-  it("accepts an existing path session without a cookie", async () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("accepts an existing cookie session", async () => {
     const sessionId = randomUUID();
-    const store = { getSessionId: vi.fn().mockResolvedValue(sessionId) };
-    await expect(requireSessionId(sessionId, store)).resolves.toBe(sessionId);
+    sessions.getSessionId.mockResolvedValue(sessionId);
+    await expect(requireSessionId(sessionId)).resolves.toBe(sessionId);
   });
 
   it("rejects a missing session", async () => {
-    const store = { getSessionId: vi.fn().mockResolvedValue(null) };
-    await expect(requireSessionId(randomUUID(), store)).rejects.toMatchObject({
+    sessions.getSessionId.mockResolvedValue(null);
+    await expect(requireSessionId(randomUUID())).rejects.toMatchObject({
       code: "session_not_found",
     });
   });

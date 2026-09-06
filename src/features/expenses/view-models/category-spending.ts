@@ -1,5 +1,5 @@
-import type { CategorySpendingItemData } from "@/features/expenses/view-types";
 import type { CategoryItemData } from "@/features/categories/view-types";
+import type { CategorySpendingItemData } from "@/features/expenses/view-types";
 
 export function sumCategorySpending(
   categories: ReadonlyArray<CategoryItemData>,
@@ -9,9 +9,8 @@ export function sumCategorySpending(
 
 export function buildCategorySpendingItems(
   categories: ReadonlyArray<CategoryItemData>,
+  totalMinor = sumCategorySpending(categories),
 ): ReadonlyArray<CategorySpendingItemData> {
-  const totalMinor = sumCategorySpending(categories);
-
   return categories.map(({ id, name, color, totalMinor: categoryTotal }) => ({
     categoryId: id,
     name,

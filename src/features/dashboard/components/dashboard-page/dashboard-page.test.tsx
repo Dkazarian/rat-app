@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { CategoryDto, ExpenseDto } from "@/contracts/session-api";
 import {
@@ -28,7 +28,7 @@ function createApi() {
     },
   ];
   const api: SessionApi = {
-    createSession: vi.fn().mockResolvedValue({ sessionId: "session-id" }),
+    createSession: vi.fn().mockResolvedValue(undefined),
     getCategories: vi.fn(async () => ({
       categories,
       unclassifiedTotalMinor: expenses
@@ -39,7 +39,7 @@ function createApi() {
         0,
       ),
     })),
-    createCategory: vi.fn(async (_sessionId, name) => {
+    createCategory: vi.fn(async (name) => {
       const category: CategoryDto = {
         id: "10000000-0000-4000-8000-000000000002",
         name: name.trim(),
@@ -49,7 +49,7 @@ function createApi() {
       categories = [...categories, category];
       return { category };
     }),
-    deleteCategory: vi.fn(async (_sessionId, id) => {
+    deleteCategory: vi.fn(async (id) => {
       categories = categories.filter((category) => category.id !== id);
       expenses = expenses.map((expense) =>
         expense.categoryId === id ? { ...expense, categoryId: null } : expense,
@@ -76,20 +76,62 @@ function renderDashboard(api: SessionApi) {
 }
 
 describe("DashboardPage API composition", () => {
+  it("validates empty prompts locally and retains textarea focus", async () => {
+    const api = createApi();
+    const { user } = renderDashboard(api);
+    const input = await screen.findByRole("textbox", {
+      name: "What did you spend?",
+    });
+
+    expect(input).toHaveAttribute("maxLength", "500");
+    await user.click(screen.getByRole("button", { name: "Sort it" }));
+
+    expect(screen.getByText("Enter an expense to sort.")).toBeVisible();
+    expect(input).toHaveFocus();
+    expect(api.submitPrompt).not.toHaveBeenCalled();
+  });
+
+  it("trims and validates category names before calling the API", async () => {
+    const api = createApi();
+    const { user } = renderDashboard(api);
+    const panel = within(
+      await screen.findByRole("complementary", { name: "Categories" }),
+    );
+    await user.click(panel.getByRole("button", { name: "New" }));
+    const input = panel.getByRole("textbox", { name: "Category name" });
+
+    expect(input).toHaveAttribute("maxLength", "24");
+    await user.click(panel.getByRole("button", { name: "Add" }));
+    expect(panel.getByText("Enter a category name.")).toBeVisible();
+    expect(input).toHaveFocus();
+    expect(api.createCategory).not.toHaveBeenCalled();
+
+    await user.type(input, "  Health  ");
+    await user.click(panel.getByRole("button", { name: "Add" }));
+    await waitFor(() =>
+      expect(api.createCategory).toHaveBeenCalledWith("Health"),
+    );
+  });
+
   it("loads independent category and expense resources", async () => {
     const api = createApi();
     renderDashboard(api);
     expect(await screen.findByText("Lunch")).toBeVisible();
     expect(screen.getAllByText("Food")[0]).toBeVisible();
     expect(screen.getAllByText("Unclassified")[0]).toBeVisible();
-    expect(api.getCategories).toHaveBeenCalledWith(
-      "session-id",
-      expect.any(AbortSignal),
-    );
-    expect(api.getExpenses).toHaveBeenCalledWith(
-      "session-id",
-      expect.any(AbortSignal),
-    );
+    expect(api.getCategories).toHaveBeenCalledWith(expect.any(AbortSignal));
+    expect(api.getExpenses).toHaveBeenCalledWith(expect.any(AbortSignal));
+  });
+
+  it("translates and re-sorts categories without refetching them", async () => {
+    const api = createApi();
+    const { user } = renderDashboard(api);
+    await screen.findByText("Lunch");
+
+    await user.click(screen.getByRole("button", { name: "Español" }));
+
+    expect(await screen.findByText("Categorías")).toBeVisible();
+    expect(api.getCategories).toHaveBeenCalledTimes(1);
   });
 
   it("preserves exact prompt text when Phase 5 classification is unavailable", async () => {
@@ -102,7 +144,7 @@ describe("DashboardPage API composition", () => {
     await user.type(input, exact);
     await user.click(screen.getByRole("button", { name: "Sort it" }));
     await waitFor(() =>
-      expect(api.submitPrompt).toHaveBeenCalledWith("session-id", exact, "en"),
+      expect(api.submitPrompt).toHaveBeenCalledWith(exact, "en"),
     );
     expect(input).toHaveValue(exact);
     expect(screen.getByRole("alert")).toHaveTextContent(
@@ -127,5 +169,110 @@ describe("DashboardPage API composition", () => {
     );
     expect(api.getCategories).toHaveBeenCalledTimes(2);
     expect(api.getExpenses).toHaveBeenCalledTimes(2);
+  });
+
+  it("bootstraps a new session when a read reports an expired session", async () => {
+    const api = createApi();
+    let finishBootstrap!: () => void;
+    vi.mocked(api.createSession)
+      .mockResolvedValueOnce(undefined)
+      .mockImplementationOnce(
+        () => new Promise<void>((resolve) => (finishBootstrap = resolve)),
+      );
+    vi.mocked(api.getCategories)
+      .mockRejectedValueOnce(
+        new SessionApiError(
+          "session_not_found",
+          "The anonymous session was not found.",
+        ),
+      )
+      .mockResolvedValue({
+        categories: [],
+        unclassifiedTotalMinor: 0,
+        totalMinor: 0,
+      });
+
+    renderDashboard(api);
+
+    await waitFor(() => expect(api.createSession).toHaveBeenCalledTimes(2));
+    expect(screen.getByText("Starting your anonymous session…")).toBeVisible();
+    await act(async () => finishBootstrap());
+    await waitFor(() => expect(api.getCategories).toHaveBeenCalledTimes(2));
+    expect(await screen.findByText("Lunch")).toBeVisible();
+  });
+
+  it("bootstraps a new session when a prompt mutation reports expiration", async () => {
+    const api = createApi();
+    vi.mocked(api.submitPrompt).mockRejectedValueOnce(
+      new SessionApiError(
+        "session_not_found",
+        "The anonymous session was not found.",
+      ),
+    );
+    const { user } = renderDashboard(api);
+    const input = await screen.findByRole("textbox", {
+      name: "What did you spend?",
+    });
+    await user.type(input, "coffee $4");
+
+    await user.click(screen.getByRole("button", { name: "Sort it" }));
+
+    await waitFor(() => expect(api.createSession).toHaveBeenCalledTimes(2));
+    expect(input).toHaveValue("coffee $4");
+  });
+
+  it("routes non-validation category failures to localized feedback", async () => {
+    const api = createApi();
+    vi.mocked(api.createCategory).mockRejectedValueOnce(
+      new SessionApiError(
+        "service_unavailable",
+        "The service is temporarily unavailable.",
+      ),
+    );
+    const { user } = renderDashboard(api);
+    const panel = within(
+      await screen.findByRole("complementary", { name: "Categories" }),
+    );
+    await user.click(panel.getByRole("button", { name: "New" }));
+    await user.type(
+      panel.getByRole("textbox", { name: "Category name" }),
+      "Health",
+    );
+
+    await user.click(panel.getByRole("button", { name: "Add" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "The service is temporarily unavailable. Try again.",
+    );
+    expect(panel.getByRole("textbox", { name: "Category name" })).toHaveValue(
+      "Health",
+    );
+  });
+
+  it("shows generic localized feedback for server-side invalid names", async () => {
+    const api = createApi();
+    vi.mocked(api.createCategory).mockRejectedValueOnce(
+      new SessionApiError(
+        "invalid_category_name",
+        "This English server detail must not be inspected.",
+        "name",
+      ),
+    );
+    const { user } = renderDashboard(api);
+    const panel = within(
+      await screen.findByRole("complementary", { name: "Categories" }),
+    );
+    await user.click(panel.getByRole("button", { name: "New" }));
+    await user.type(
+      panel.getByRole("textbox", { name: "Category name" }),
+      "Reserved",
+    );
+
+    await user.click(panel.getByRole("button", { name: "Add" }));
+
+    expect(await panel.findByRole("alert")).toHaveTextContent(
+      "Enter a valid category name.",
+    );
+    expect(panel.getByRole("alert")).not.toHaveTextContent("English server");
   });
 });

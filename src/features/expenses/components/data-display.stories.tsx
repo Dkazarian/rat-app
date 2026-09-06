@@ -22,18 +22,12 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const SpendingChart: Story = {
-  render: function LocalizedSpendingChart() {
-    const { t } = useLocale();
-
-    return (
-      <SpendingChartComponent
-        label={t("chartLabel")}
-        totalLabel={t("total")}
-        totalMinor={fixture.categorySpending.totalMinor}
-        items={fixture.categorySpending.items}
-      />
-    );
-  },
+  render: () => (
+    <SpendingChartComponent
+      totalMinor={fixture.categorySpending.totalMinor}
+      items={fixture.categorySpending.items}
+    />
+  ),
 };
 export const CategorySpendingItem: Story = {
   render: function LocalizedCategorySpendingItem() {

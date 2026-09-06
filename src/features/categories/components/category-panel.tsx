@@ -8,18 +8,21 @@ import type { CategoryNameValidationCode } from "./category-form";
 import { CategoryItem } from "./category-item";
 import type { CategoryItemData } from "@/features/categories/view-types";
 import { SessionApiError } from "@/features/dashboard/api/session-api-client";
+import { CATEGORY_NAME_MAX_LENGTH } from "@/contracts/session-api";
 
 export type CategoryPanelProps = Readonly<{
   categories: ReadonlyArray<CategoryItemData>;
   disabled?: boolean;
   onCreateCategory: (name: string) => Promise<void>;
   onDeleteCategory: (categoryId: string) => Promise<void>;
+  onOperationError: (error: unknown) => void;
 }>;
 
 export function CategoryPanel({
   categories,
   onCreateCategory,
   onDeleteCategory,
+  onOperationError,
   disabled = false,
 }: CategoryPanelProps) {
   const { t } = useLocale();
@@ -31,16 +34,6 @@ export function CategoryPanel({
   const [draft, setDraft] = useState("");
   const [validationCode, setValidationCode] =
     useState<CategoryNameValidationCode>();
-  const validationMessages: Readonly<
-    Record<CategoryNameValidationCode, string>
-  > = {
-    empty: t("categoryValidationEmpty"),
-    "too-long": t("categoryValidationTooLong"),
-    duplicate: t("categoryValidationDuplicate"),
-    reserved: t("categoryValidationReserved"),
-    "limit-reached": t("categoryValidationLimit"),
-  };
-
   useEffect(() => {
     if (isCreating) {
       nameInputRef.current?.focus();
@@ -56,21 +49,30 @@ export function CategoryPanel({
   };
 
   const submitDraft = async () => {
+    const name = draft.trim();
+    if (!name || name.length > CATEGORY_NAME_MAX_LENGTH) {
+      setValidationCode(!name ? "empty" : "too-long");
+      nameInputRef.current?.focus();
+      return;
+    }
     try {
-      await onCreateCategory(draft);
+      await onCreateCategory(name);
       closeForm();
     } catch (error) {
-      if (!(error instanceof SessionApiError)) throw error;
-      const code: CategoryNameValidationCode =
-        error.code === "category_name_duplicate"
-          ? "duplicate"
-          : error.code === "category_limit_reached"
-            ? "limit-reached"
-            : error.message.toLowerCase().includes("reserved")
-              ? "reserved"
-              : draft.trim().length === 0
-                ? "empty"
-                : "too-long";
+      const code: CategoryNameValidationCode | undefined =
+        error instanceof SessionApiError
+          ? error.code === "category_name_duplicate"
+            ? "duplicate"
+            : error.code === "category_limit_reached"
+              ? "limit-reached"
+              : error.code === "invalid_category_name"
+                ? "invalid"
+                : undefined
+          : undefined;
+      if (!code) {
+        onOperationError(error);
+        return;
+      }
       setValidationCode(code);
       nameInputRef.current?.focus();
     }
@@ -104,12 +106,7 @@ export function CategoryPanel({
       {isCreating ? (
         <CategoryForm
           draft={draft}
-          label={t("categoryNameLabel")}
-          placeholder={t("categoryNamePlaceholder")}
-          addLabel={t("addCategory")}
-          cancelLabel={t("cancelCategory")}
           validationCode={validationCode}
-          validationMessages={validationMessages}
           inputRef={nameInputRef}
           onDraftChange={(nextDraft) => {
             setDraft(nextDraft);
@@ -122,10 +119,15 @@ export function CategoryPanel({
       <ul className="grid list-none gap-2 p-0">
         {categories.map((category) => (
           <CategoryItem
-            key={JSON.stringify(category.id)}
+            key={category.id ?? "unclassified"}
             category={category}
-            deleteLabel={t("deleteCategory", { name: category.name })}
-            onDelete={onDeleteCategory}
+            onDelete={async (categoryId) => {
+              try {
+                await onDeleteCategory(categoryId);
+              } catch (error) {
+                onOperationError(error);
+              }
+            }}
             disabled={disabled}
           />
         ))}

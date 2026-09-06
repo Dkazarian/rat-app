@@ -1,40 +1,13 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import { useLocale } from "@/i18n/locale-context";
-
 import { dashboardFixtures } from "@/features/dashboard/fixtures/dashboard-view-fixtures";
-
 import { SpendingSummary } from "./spending-summary";
-import type { CategorySpendingItemData } from "@/features/expenses/view-types";
-
-const fixture = dashboardFixtures.success;
-
-type StoryProps = Readonly<{
-  totalMinor: number;
-  items: ReadonlyArray<CategorySpendingItemData>;
-  empty?: boolean;
-}>;
-
-function LocalizedSpendingSummary({ totalMinor, items, empty }: StoryProps) {
-  const { t } = useLocale();
-
-  return (
-    <SpendingSummary
-      title={t("spending")}
-      periodLabel={t("thisMonth")}
-      totalLabel={t("total")}
-      totalMinor={totalMinor}
-      chartLabel={empty ? t("noSpending") : t("chartLabel")}
-      items={items}
-    />
-  );
-}
 
 const meta = {
   title: "Components/SpendingSummary",
-  component: LocalizedSpendingSummary,
+  component: SpendingSummary,
   args: {
-    totalMinor: fixture.categorySpending.totalMinor,
-    items: fixture.categorySpending.items,
+    totalMinor: dashboardFixtures.success.categorySpending.totalMinor,
+    items: dashboardFixtures.success.categorySpending.items,
   },
   decorators: [
     (Story) => (
@@ -43,7 +16,7 @@ const meta = {
       </main>
     ),
   ],
-} satisfies Meta<typeof LocalizedSpendingSummary>;
+} satisfies Meta<typeof SpendingSummary>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
@@ -53,6 +26,5 @@ export const Empty: Story = {
   args: {
     totalMinor: 0,
     items: dashboardFixtures.empty.categorySpending.items,
-    empty: true,
   },
 };

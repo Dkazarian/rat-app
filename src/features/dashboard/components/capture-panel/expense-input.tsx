@@ -1,31 +1,37 @@
 "use client";
 
 import { useId } from "react";
-import type { FormEvent } from "react";
+import type { FormEvent, Ref } from "react";
+import { EXPENSE_PROMPT_MAX_LENGTH } from "@/contracts/session-api";
+import { useLocale } from "@/i18n/locale-context";
 
 export type ExpenseInputProps = Readonly<{
-  label: string;
-  placeholder: string;
-  actionLabel: string;
   value: string;
+  inputRef?: Ref<HTMLTextAreaElement>;
   disabled?: boolean;
-  validationMessage?: string;
+  validationCode?: "empty" | "too-long";
   onValueChange?: (value: string) => void;
   onSubmit?: () => void;
 }>;
 
 export function ExpenseInput({
-  label,
-  placeholder,
-  actionLabel,
   value,
+  inputRef,
   disabled = false,
-  validationMessage,
+  validationCode,
   onValueChange,
   onSubmit,
 }: ExpenseInputProps) {
   const inputId = useId();
-  const validationId = validationMessage ? `${inputId}-validation` : undefined;
+  const { t } = useLocale();
+  const validationId = validationCode ? `${inputId}-validation` : undefined;
+  const validationMessage = validationCode
+    ? t(
+        validationCode === "empty"
+          ? "promptValidationEmpty"
+          : "promptValidationTooLong",
+      )
+    : undefined;
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -35,13 +41,15 @@ export function ExpenseInput({
   return (
     <form onSubmit={handleSubmit} className="min-w-0">
       <label htmlFor={inputId} className="mb-[9px] block font-medium">
-        {label}
+        {t("inputLabel")}
       </label>
       <div className="flex items-stretch gap-[10px] max-[680px]:flex-col">
         <textarea
+          ref={inputRef}
           id={inputId}
           value={value}
-          placeholder={placeholder}
+          placeholder={t("inputPlaceholder")}
+          maxLength={EXPENSE_PROMPT_MAX_LENGTH}
           disabled={disabled}
           aria-describedby={validationId}
           aria-invalid={validationMessage ? true : undefined}
@@ -53,7 +61,7 @@ export function ExpenseInput({
           disabled={disabled}
           className="min-w-24 cursor-pointer rounded-[14px] border-0 bg-[#efe7f2] px-4 font-medium text-[#26222d] outline-offset-2 focus-visible:outline-2 focus-visible:outline-[#86afe0] disabled:cursor-not-allowed disabled:opacity-60 max-[680px]:min-h-[46px]"
         >
-          {actionLabel}
+          {t("sortAction")}
         </button>
       </div>
       {validationMessage ? (

@@ -1,12 +1,23 @@
 import { randomUUID } from "node:crypto";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { Redis } from "@upstash/redis";
 import type { ServerConfig } from "@/server/config";
-import { CategoryManager } from "@/server/redis/category-manager";
-import { ExpenseManager } from "@/server/redis/expense-manager";
 import { createSessionKeys } from "@/server/redis/keys";
-import { UpstashSessionRepository } from "@/server/redis/session-repository";
 import { InMemoryRedis } from "@/test/in-memory-redis";
-import { seedCategories, seedExpenses, seedTotalMinor } from "./fixture";
+import { seedCategories, seedExpenses } from "./fixture";
+
+const dependencies = vi.hoisted(() => ({
+  config: undefined as ServerConfig | undefined,
+  client: undefined as Redis | undefined,
+}));
+
+vi.mock("@/server/config", () => ({
+  getServerConfig: () => dependencies.config!,
+}));
+vi.mock("@/server/redis/client", () => ({
+  getRedisClient: () => dependencies.client!,
+}));
+
 import { seedExistingSession } from "./seed-session";
 
 const createConfig = (environment: ServerConfig["environment"] = "test") =>
@@ -20,17 +31,22 @@ const createConfig = (environment: ServerConfig["environment"] = "test") =>
   }) satisfies ServerConfig;
 
 describe("Redis session seeder", () => {
-  it("upserts expiring seed records without touching another session", async () => {
+  let redis: InMemoryRedis;
+
+  beforeEach(() => {
+    redis = new InMemoryRedis();
+    dependencies.client = redis.asClient();
+    dependencies.config = createConfig();
+  });
+
+  it("upserts encoded, expiring fixtures without touching another session", async () => {
     const sessionId = randomUUID();
     const otherSessionId = randomUUID();
-    const config = createConfig();
-    const redis = new InMemoryRedis();
-    const client = redis.asClient();
+    const config = dependencies.config!;
     const keys = createSessionKeys(config.redisKeyPrefix, sessionId);
     const otherKeys = createSessionKeys(config.redisKeyPrefix, otherSessionId);
 
-    await new UpstashSessionRepository(client, config).saveSessionId(sessionId);
-
+    await redis.hset(keys.meta, { schemaVersion: "1", createdAt: "1" });
     await redis.hset(keys.categories, {
       [seedCategories[0].id]: JSON.stringify({
         ...seedCategories[0],
@@ -43,12 +59,10 @@ describe("Redis session seeder", () => {
         amountMinor: 1,
       }),
     });
-    await redis.expire(keys.categories, 300);
-    await redis.expire(keys.expenses, 300);
     await redis.hset(otherKeys.meta, { preserved: "true" });
 
-    await seedExistingSession(client, config, sessionId);
-    await seedExistingSession(client, config, sessionId);
+    await seedExistingSession(sessionId);
+    await seedExistingSession(sessionId);
 
     expect(await redis.exists(otherKeys.meta)).toBe(1);
     for (const key of Object.values(keys)) {
@@ -57,44 +71,42 @@ describe("Redis session seeder", () => {
         config.sessionTtlSeconds,
       );
     }
-    expect(
-      await new CategoryManager(client, config).getCategories(sessionId),
-    ).toMatchObject({
-      categories: expect.arrayContaining(
-        seedCategories.map((category) => ({
-          ...category,
-          totalMinor: expect.any(Number),
-        })),
-      ),
-      totalMinor: seedTotalMinor,
-    });
-    expect(
-      (await new ExpenseManager(client, config).getExpenses(sessionId))
-        .expenses,
-    ).toHaveLength(seedExpenses.length);
+    const categories = await redis.hgetall<Record<string, string>>(
+      keys.categories,
+    );
+    const expenses = await redis.hgetall<Record<string, string>>(keys.expenses);
+    for (const fixture of seedCategories) {
+      expect(JSON.parse(categories![fixture.id])).toEqual(fixture);
+    }
+    for (const fixture of seedExpenses) {
+      expect(JSON.parse(expenses![fixture.id])).toEqual(fixture);
+    }
   });
 
   it("refuses production before touching Redis", async () => {
-    const redis = new InMemoryRedis();
-    const config = createConfig("production");
+    dependencies.config = createConfig("production");
     const sessionId = randomUUID();
-    const keys = createSessionKeys(config.redisKeyPrefix, sessionId);
+    const keys = createSessionKeys(
+      dependencies.config.redisKeyPrefix,
+      sessionId,
+    );
 
-    await expect(
-      seedExistingSession(redis.asClient(), config, sessionId),
-    ).rejects.toThrow("forbidden in production");
+    await expect(seedExistingSession(sessionId)).rejects.toThrow(
+      "forbidden in production",
+    );
     expect(await redis.exists(keys.meta)).toBe(0);
   });
 
   it("refuses to seed a missing session", async () => {
-    const redis = new InMemoryRedis();
-    const config = createConfig();
     const sessionId = randomUUID();
-    const keys = createSessionKeys(config.redisKeyPrefix, sessionId);
+    const keys = createSessionKeys(
+      dependencies.config!.redisKeyPrefix,
+      sessionId,
+    );
 
-    await expect(
-      seedExistingSession(redis.asClient(), config, sessionId),
-    ).rejects.toThrow("missing or expired session");
+    await expect(seedExistingSession(sessionId)).rejects.toThrow(
+      "missing or expired session",
+    );
     expect(await redis.exists(keys.categories)).toBe(0);
     expect(await redis.exists(keys.expenses)).toBe(0);
   });

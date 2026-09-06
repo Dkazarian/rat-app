@@ -16,13 +16,13 @@ describe("dashboardFixtures", () => {
     ).toEqual([40, 26, 20, 14]);
   });
 
-  it("uses a distinct awaiting mascot before any input is submitted", () => {
-    expect(dashboardFixtures.empty.feedback.mascotSrc).toBe(
-      "/assets/rat-mascot-awaiting.png",
-    );
-    expect(dashboardFixtures.empty.feedback.mascotSrc).not.toBe(
-      dashboardFixtures.success.feedback.mascotSrc,
-    );
+  it("stores semantic feedback without duplicating presentation data", () => {
+    expect(dashboardFixtures.empty.feedback).toEqual({ state: "empty" });
+    expect(dashboardFixtures.success.feedback).toEqual({
+      state: "success",
+      extractedCount: 3,
+      rejectedCount: 0,
+    });
   });
 
   it("preserves submitted input in recoverable states", () => {

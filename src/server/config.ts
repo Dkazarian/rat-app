@@ -70,7 +70,3 @@ export function getServerConfig(): ServerConfig {
   }
   return cachedConfig;
 }
-
-export function clearServerConfigCacheForTests(): void {
-  cachedConfig = undefined;
-}

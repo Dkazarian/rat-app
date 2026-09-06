@@ -1,31 +1,36 @@
 import { randomUUID } from "node:crypto";
-import { describe, expect, it, vi } from "vitest";
-import { resolveSession, type SessionIdStore } from "./resolve-session";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-function repositoryStub(): SessionIdStore {
-  return {
-    saveSessionId: vi.fn(),
-    getSessionId: vi.fn().mockResolvedValue(null),
-  };
-}
+const sessions = vi.hoisted(() => ({
+  saveSessionId: vi.fn(),
+  getSessionId: vi.fn(),
+  renewSessionTtl: vi.fn(),
+}));
+vi.mock("@/server/redis/session-repository", () => sessions);
+import { resolveSession } from "./resolve-session";
 
 describe("resolveSession", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    sessions.getSessionId.mockResolvedValue(null);
+    sessions.renewSessionTtl.mockResolvedValue(true);
+  });
+
   it("resumes a live cookie session", async () => {
     const sessionId = randomUUID();
-    const repository = repositoryStub();
-    vi.mocked(repository.getSessionId).mockResolvedValue(sessionId);
-    await expect(resolveSession(repository, sessionId)).resolves.toEqual({
+    sessions.getSessionId.mockResolvedValue(sessionId);
+    await expect(resolveSession(sessionId)).resolves.toEqual({
       sessionId,
       created: false,
     });
-    expect(repository.saveSessionId).not.toHaveBeenCalled();
+    expect(sessions.saveSessionId).not.toHaveBeenCalled();
+    expect(sessions.renewSessionTtl).toHaveBeenCalledWith(sessionId);
   });
 
   it("creates an empty replacement for an invalid or expired cookie", async () => {
-    const repository = repositoryStub();
-    const result = await resolveSession(repository, "invalid");
+    const result = await resolveSession("invalid");
     expect(result.created).toBe(true);
     expect(result.sessionId).toMatch(/^[0-9a-f-]{36}$/);
-    expect(repository.saveSessionId).toHaveBeenCalledWith(result.sessionId);
+    expect(sessions.saveSessionId).toHaveBeenCalledWith(result.sessionId);
   });
 });

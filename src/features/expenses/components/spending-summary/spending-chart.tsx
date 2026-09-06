@@ -1,26 +1,26 @@
 "use client";
 
 import { Cell, Pie, PieChart } from "recharts";
-
 import type { CategorySpendingItemData } from "@/features/expenses/view-types";
 import { categoryColorValues } from "@/features/categories/category-color";
+import { useLocale } from "@/i18n/locale-context";
 import { formatAmount } from "@/utils/format-amount";
 
 export type SpendingChartProps = Readonly<{
-  label: string;
-  totalLabel: string;
   totalMinor: number;
   items: ReadonlyArray<CategorySpendingItemData>;
 }>;
 
-export function SpendingChart({
-  label,
-  totalLabel,
-  totalMinor,
-  items,
-}: SpendingChartProps) {
+export function SpendingChart({ totalMinor, items }: SpendingChartProps) {
+  const { t } = useLocale();
   const chartItems =
     items.length < 2 ? items : [items[0], ...items.slice(1).reverse()];
+  const nonZero = items.filter(({ percent }) => percent > 0);
+  const label = `${t("spending")}: ${
+    nonZero.length === 0
+      ? t("noSpending")
+      : nonZero.map(({ name, percent }) => `${name} ${percent}%`).join(", ")
+  }. ${t("total")}: ${formatAmount(totalMinor)}`;
 
   return (
     <div className="grid min-h-[170px] place-items-center">
@@ -39,7 +39,7 @@ export function SpendingChart({
           >
             {chartItems.map((item) => (
               <Cell
-                key={JSON.stringify(item.categoryId)}
+                key={item.categoryId ?? "unclassified"}
                 fill={categoryColorValues[item.color]}
               />
             ))}
@@ -49,7 +49,7 @@ export function SpendingChart({
           <strong className="font-medium tabular-nums">
             {formatAmount(totalMinor)}
           </strong>
-          <span className="text-[#bbb1c1]">{totalLabel}</span>
+          <span className="text-[#bbb1c1]">{t("total")}</span>
         </span>
       </div>
     </div>

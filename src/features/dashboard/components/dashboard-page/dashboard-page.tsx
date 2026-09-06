@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
+import { EXPENSE_PROMPT_MAX_LENGTH } from "@/contracts/session-api";
 import { AppShell } from "@/components/layout/app-shell";
 import { Footer } from "@/components/layout/footer";
 import { Header } from "@/components/layout/header/header";
 import { CapturePanel } from "@/features/dashboard/components/capture-panel/capture-panel";
-import type { RatDialogueState } from "@/features/dashboard/components/capture-panel/rat-dialogue";
+import type { RatDialogueFeedback } from "@/features/dashboard/components/capture-panel/rat-dialogue";
 import { DashboardResults } from "./dashboard-results";
 import {
   browserSessionApi,
@@ -13,87 +14,76 @@ import {
   type SessionApi,
 } from "@/features/dashboard/api/session-api-client";
 import { getApiErrorMessage } from "@/features/dashboard/api/error-messages";
-import { usePageSession } from "@/features/dashboard/hooks/use-page-session";
-import type { TranslationKey } from "@/i18n";
+import { useSessionBootstrap } from "@/features/dashboard/hooks/use-session-bootstrap";
 import { useLocale } from "@/i18n/locale-context";
-
-const feedbackKeys = {
-  empty: ["emptyTitle", "emptyDetail", "emptyMascotAlt"],
-  loading: ["loadingTitle", "loadingDetail", "loadingMascotAlt"],
-  success: ["successTitle", "successDetail", "successMascotAlt"],
-  "extraction-failure": [
-    "extractionFailureTitle",
-    "extractionFailureDetail",
-    "extractionFailureMascotAlt",
-  ],
-  "provider-error": [
-    "providerErrorTitle",
-    "providerErrorDetail",
-    "providerErrorMascotAlt",
-  ],
-} as const satisfies Record<
-  RatDialogueState,
-  readonly [TranslationKey, TranslationKey, TranslationKey]
->;
-
-const feedbackData = {
-  empty: {
-    announcement: "polite",
-    mascotSrc: "/assets/rat-mascot-awaiting.png",
-  },
-  loading: {
-    announcement: "polite",
-    mascotSrc: "/assets/rat-mascot-sniffing.png",
-  },
-  success: { announcement: "polite", mascotSrc: "/assets/rat-mascot.png" },
-  "extraction-failure": {
-    announcement: "assertive",
-    mascotSrc: "/assets/rat-mascot-confused.png",
-  },
-  "provider-error": {
-    announcement: "assertive",
-    mascotSrc: "/assets/rat-mascot-error.png",
-  },
-} as const;
-
-type Feedback = Readonly<{
-  state: RatDialogueState;
-  extractedCount?: number;
-  rejectedCount?: number;
-  error?: unknown;
-}>;
 
 export type DashboardPageProps = Readonly<{ api?: SessionApi }>;
 
 export function DashboardPage({ api = browserSessionApi }: DashboardPageProps) {
   const { t, locale } = useLocale();
-  const session = usePageSession(api);
+  const {
+    isReady: isSessionReady,
+    error: sessionError,
+    retry: retrySession,
+  } = useSessionBootstrap(api);
   const [inputValue, setInputValue] = useState("");
-  const [feedback, setFeedback] = useState<Feedback>({ state: "empty" });
-  const [titleKey, detailKey, mascotAltKey] = feedbackKeys[feedback.state];
-  const dialogueData = feedbackData[feedback.state];
-  const detail =
-    (feedback.error ? getApiErrorMessage(feedback.error, locale) : undefined) ??
-    (feedback.state === "success"
-      ? t(
-          feedback.extractedCount === 1
-            ? "successDetailOne"
-            : "successDetailMany",
-          {
-            count: feedback.extractedCount,
-          },
-        ) +
-        (feedback.rejectedCount
-          ? ` ${t("skippedExpenses", { count: feedback.rejectedCount })}`
-          : "")
-      : t(detailKey));
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const [promptValidation, setPromptValidation] = useState<
+    "empty" | "too-long"
+  >();
+  const [feedback, setFeedback] = useState<RatDialogueFeedback>({
+    state: "empty",
+  });
+  const [refreshCounter, setRefreshCounter] = useState(0);
+  const [isMutating, setIsMutating] = useState(false);
+  const mutationActive = useRef(false);
+
+  const notifyDataChanged = useCallback(
+    () => setRefreshCounter((value) => value + 1),
+    [],
+  );
+  const runMutation = useCallback(
+    async <T,>(mutation: () => Promise<T>): Promise<T> => {
+      if (mutationActive.current) {
+        throw new Error("A mutation is already in progress.");
+      }
+      mutationActive.current = true;
+      setIsMutating(true);
+      try {
+        return await mutation();
+      } finally {
+        mutationActive.current = false;
+        setIsMutating(false);
+      }
+    },
+    [],
+  );
+  const handleOperationError = useCallback(
+    (error: unknown) => {
+      if (
+        error instanceof SessionApiError &&
+        error.code === "session_not_found"
+      ) {
+        retrySession();
+        return;
+      }
+      setFeedback({ state: "provider-error", error });
+    },
+    [retrySession],
+  );
 
   const submitPrompt = async () => {
-    if (!session.sessionId || session.isMutating) return;
+    if (!isSessionReady || isMutating) return;
+    const trimmed = inputValue.trim();
+    if (!trimmed || inputValue.length > EXPENSE_PROMPT_MAX_LENGTH) {
+      setPromptValidation(!trimmed ? "empty" : "too-long");
+      inputRef.current?.focus();
+      return;
+    }
     setFeedback({ state: "loading" });
     try {
-      const result = await session.runMutation(() =>
-        api.submitPrompt(session.sessionId!, inputValue, locale),
+      const result = await runMutation(() =>
+        api.submitPrompt(inputValue, locale),
       );
       if (result.expenses.length === 0) {
         setFeedback({ state: "extraction-failure" });
@@ -105,8 +95,15 @@ export function DashboardPage({ api = browserSessionApi }: DashboardPageProps) {
         extractedCount: result.expenses.length,
         rejectedCount: result.rejectedCount,
       });
-      session.notifyDataChanged();
+      notifyDataChanged();
     } catch (error) {
+      if (
+        error instanceof SessionApiError &&
+        error.code === "session_not_found"
+      ) {
+        retrySession();
+        return;
+      }
       setFeedback({
         state:
           error instanceof SessionApiError &&
@@ -126,47 +123,41 @@ export function DashboardPage({ api = browserSessionApi }: DashboardPageProps) {
           <main className="p-[22px] max-[680px]:p-[15px]">
             <div className="mb-[22px]">
               <CapturePanel
-                dialogue={{
-                  state: feedback.state,
-                  ...dialogueData,
-                  title: t(titleKey),
-                  detail,
-                  mascotAlt: t(mascotAltKey),
+                feedback={feedback}
+                inputValue={inputValue}
+                inputRef={inputRef}
+                validationCode={promptValidation}
+                disabled={!isSessionReady || isMutating}
+                onInputChange={(value) => {
+                  setInputValue(value);
+                  setPromptValidation(undefined);
                 }}
-                input={{
-                  label: t("inputLabel"),
-                  placeholder: t("inputPlaceholder"),
-                  actionLabel: t("sortAction"),
-                  value: inputValue,
-                  disabled: !session.isReady || session.isMutating,
-                  onValueChange: setInputValue,
-                  onSubmit: () => void submitPrompt(),
-                }}
+                onSubmit={() => void submitPrompt()}
               />
             </div>
-            {session.error ? (
+            {sessionError ? (
               <div
                 role="alert"
                 className="rounded-[20px] border border-[#49404f] bg-[#26222d] p-5"
               >
-                <p>{getApiErrorMessage(session.error, locale)}</p>
+                <p>{getApiErrorMessage(sessionError, t)}</p>
                 <button
                   type="button"
-                  onClick={session.retry}
+                  onClick={retrySession}
                   className="mt-3 rounded-[10px] border border-[#49404f] px-3 py-2"
                 >
                   {t("retry")}
                 </button>
               </div>
-            ) : session.sessionId ? (
+            ) : isSessionReady ? (
               <DashboardResults
                 api={api}
-                sessionId={session.sessionId}
-                refreshCounter={session.refreshCounter}
-                isMutating={session.isMutating}
-                runMutation={session.runMutation}
-                onDataChanged={session.notifyDataChanged}
-                onSessionExpired={session.retry}
+                refreshCounter={refreshCounter}
+                isMutating={isMutating}
+                runMutation={runMutation}
+                onDataChanged={notifyDataChanged}
+                onSessionExpired={retrySession}
+                onOperationError={handleOperationError}
               />
             ) : (
               <p role="status" className="text-[#bbb1c1]">

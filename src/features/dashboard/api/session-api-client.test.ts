@@ -4,7 +4,7 @@ import { browserSessionApi, SessionApiError } from "./session-api-client";
 afterEach(() => vi.unstubAllGlobals());
 
 describe("browserSessionApi", () => {
-  it("encodes identifiers, includes same-origin credentials, and sends JSON", async () => {
+  it("uses the cookie-scoped API, includes credentials, and sends JSON", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(JSON.stringify({ category: { id: "category" } }), {
         status: 200,
@@ -13,10 +13,10 @@ describe("browserSessionApi", () => {
     );
     vi.stubGlobal("fetch", fetchMock);
 
-    await browserSessionApi.createCategory("session/id", " Health ");
+    await browserSessionApi.createCategory(" Health ");
 
     expect(fetchMock).toHaveBeenCalledWith(
-      "/session/session%2Fid/categories",
+      "/api/v1/categories",
       expect.objectContaining({
         method: "POST",
         credentials: "same-origin",
@@ -44,13 +44,26 @@ describe("browserSessionApi", () => {
     );
 
     await expect(
-      browserSessionApi.submitPrompt("session", " exact ", "en"),
+      browserSessionApi.submitPrompt(" exact ", "en"),
     ).rejects.toEqual(
       new SessionApiError(
         "classification_unavailable",
         "Unavailable",
         "prompt",
       ),
+    );
+  });
+
+  it("accepts the empty 204 session response", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(new Response(null, { status: 204 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(browserSessionApi.createSession()).resolves.toBeUndefined();
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/v1/session",
+      expect.objectContaining({ method: "POST", credentials: "same-origin" }),
     );
   });
 });

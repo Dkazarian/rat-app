@@ -47,8 +47,3 @@ export const seedExpenses = [
     createdAt: 1_750_000_002_000,
   },
 ] as const satisfies ReadonlyArray<StoredExpense>;
-
-export const seedTotalMinor = seedExpenses.reduce(
-  (total, expense) => total + expense.amountMinor,
-  0,
-);

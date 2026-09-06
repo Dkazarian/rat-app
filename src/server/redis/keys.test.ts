@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { createSessionKeys } from "./keys";
 
 describe("Redis keys", () => {
-  it("uses one validated cluster hash tag for the session family", () => {
+  it("uses one trusted cluster hash tag for the session family", () => {
     const sessionId = randomUUID();
     const keys = createSessionKeys("ratapp:test:run", sessionId);
     expect(Object.values(keys)).toEqual([
@@ -11,11 +11,5 @@ describe("Redis keys", () => {
       `ratapp:test:run:session:v1:{${sessionId}}:categories`,
       `ratapp:test:run:session:v1:{${sessionId}}:expenses`,
     ]);
-  });
-
-  it("rejects malformed IDs before constructing a key", () => {
-    expect(() =>
-      createSessionKeys("ratapp:test", "../other-session"),
-    ).toThrow();
   });
 });

@@ -1,4 +1,7 @@
-import { categoryColors } from "@/contracts/session-api";
+import {
+  CATEGORY_NAME_MAX_LENGTH,
+  categoryColors,
+} from "@/contracts/session-api";
 import type {
   CategoriesResponse,
   CategoryColor,
@@ -8,7 +11,6 @@ import type {
 import { applicationErrors } from "./errors";
 
 export const CATEGORY_LIMIT = 10;
-export const CATEGORY_NAME_MAX_LENGTH = 24;
 const RESERVED_CATEGORY_NAMES = new Set(["unclassified", "sin clasificar"]);
 
 export type StoredCategory = Readonly<{

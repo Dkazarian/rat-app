@@ -1,6 +1,6 @@
 import type { CategoryItemData } from "@/features/categories/view-types";
 import type {
-  RatDialogueData,
+  RatDialogueFeedback,
   RatDialogueState,
 } from "@/features/dashboard/components/capture-panel/rat-dialogue";
 import { ratDialogueStates } from "@/features/dashboard/components/capture-panel/rat-dialogue";
@@ -10,7 +10,7 @@ import type { Locale } from "@/i18n";
 import {
   buildCategorySpendingItems,
   sumCategorySpending,
-} from "@/features/dashboard/fixtures/category-spending";
+} from "@/features/expenses/view-models/category-spending";
 
 export const dashboardStates = ratDialogueStates;
 
@@ -18,7 +18,7 @@ export type DashboardFixture = Readonly<{
   id: RatDialogueState;
   locale: Locale;
   inputValue: string;
-  feedback: RatDialogueData;
+  feedback: RatDialogueFeedback;
   categories: ReadonlyArray<CategoryItemData>;
   categorySpending: Readonly<{
     totalMinor: number;
@@ -69,32 +69,16 @@ const expenses = [
 ] as const satisfies ReadonlyArray<ExpenseListItemData>;
 
 const feedbackByState = {
-  empty: {
-    state: "empty",
-    announcement: "polite",
-    mascotSrc: "/assets/rat-mascot-awaiting.png",
-  },
-  loading: {
-    state: "loading",
-    announcement: "polite",
-    mascotSrc: "/assets/rat-mascot-sniffing.png",
-  },
+  empty: { state: "empty" },
+  loading: { state: "loading" },
   success: {
     state: "success",
-    announcement: "polite",
-    mascotSrc: "/assets/rat-mascot.png",
+    extractedCount: 3,
+    rejectedCount: 0,
   },
-  "extraction-failure": {
-    state: "extraction-failure",
-    announcement: "assertive",
-    mascotSrc: "/assets/rat-mascot-confused.png",
-  },
-  "provider-error": {
-    state: "provider-error",
-    announcement: "assertive",
-    mascotSrc: "/assets/rat-mascot-error.png",
-  },
-} as const satisfies Record<RatDialogueState, RatDialogueData>;
+  "extraction-failure": { state: "extraction-failure" },
+  "provider-error": { state: "provider-error" },
+} as const satisfies Record<RatDialogueState, RatDialogueFeedback>;
 
 const submittedInput = "Lunch $18, coffee $4.50 and taxi $12";
 

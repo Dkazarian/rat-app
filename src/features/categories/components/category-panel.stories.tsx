@@ -52,6 +52,7 @@ function StoryPanel() {
             value.filter((category) => category.id !== id),
           )
         }
+        onOperationError={() => undefined}
       />
     </div>
   );

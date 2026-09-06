@@ -1,16 +1,33 @@
 import { randomUUID } from "node:crypto";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { Redis } from "@upstash/redis";
 import type { ServerConfig } from "@/server/config";
 import { InMemoryRedis } from "@/test/in-memory-redis";
-import { CategoryManager } from "./category-manager";
-import { ExpenseManager } from "./expense-manager";
+
+const dependencies = vi.hoisted(() => ({
+  config: undefined as ServerConfig | undefined,
+  client: undefined as Redis | undefined,
+}));
+
+vi.mock("@/server/config", () => ({
+  getServerConfig: () => dependencies.config!,
+}));
+vi.mock("@/server/redis/client", () => ({
+  getRedisClient: () => dependencies.client!,
+}));
+
+import { createCategory, deleteCategory, getCategories } from "./categories";
+import { createExpenses, getExpenses } from "./expenses";
 import { createSessionKeys } from "./keys";
-import { UpstashSessionRepository } from "./session-repository";
+import { getSessionId, saveSessionId } from "./session-repository";
 
 describe("Redis persistence", () => {
-  it("round-trips split resources and keeps cascades and TTLs consistent", async () => {
-    const sessionId = randomUUID();
-    const config: ServerConfig = {
+  let redis: InMemoryRedis;
+
+  beforeEach(() => {
+    redis = new InMemoryRedis();
+    dependencies.client = redis.asClient();
+    dependencies.config = {
       redisUrl: "https://redis.test",
       redisToken: "mock-token",
       redisKeyPrefix: `ratapp:test:${randomUUID()}`,
@@ -18,34 +35,25 @@ describe("Redis persistence", () => {
       maxExpensesPerSession: 100,
       environment: "test",
     };
-    const redis = new InMemoryRedis();
-    const client = redis.asClient();
-    const sessions = new UpstashSessionRepository(client, config);
-    const categories = new CategoryManager(client, config);
-    const expenses = new ExpenseManager(client, config);
-    const keys = createSessionKeys(config.redisKeyPrefix, sessionId);
-    const isolatedConfig = {
-      ...config,
-      redisKeyPrefix: `${config.redisKeyPrefix}:isolated`,
-    };
-    const isolatedSessions = new UpstashSessionRepository(
-      client,
-      isolatedConfig,
-    );
-    const isolatedCategories = new CategoryManager(client, isolatedConfig);
+  });
 
-    await sessions.saveSessionId(sessionId, 1_000);
-    expect(await sessions.getSessionId(sessionId)).toBe(sessionId);
-    expect(await categories.getCategories(sessionId)).toEqual({
+  it("round-trips split resources and keeps cascades and TTLs consistent", async () => {
+    const sessionId = randomUUID();
+    const config = dependencies.config!;
+    const keys = createSessionKeys(config.redisKeyPrefix, sessionId);
+
+    await saveSessionId(sessionId, 1_000);
+    expect(await getSessionId(sessionId)).toBe(sessionId);
+    expect(await getCategories(sessionId)).toEqual({
       categories: [],
       unclassifiedTotalMinor: 0,
       totalMinor: 0,
     });
-    expect(await expenses.getExpenses(sessionId)).toEqual({ expenses: [] });
+    expect(await getExpenses(sessionId)).toEqual({ expenses: [] });
 
-    const food = await categories.createCategory(sessionId, "Food");
-    const unused = await categories.createCategory(sessionId, "Unused");
-    const [categorized, unclassified] = await expenses.createExpenses(
+    const food = await createCategory(sessionId, "Food");
+    const unused = await createCategory(sessionId, "Unused");
+    const [categorized, unclassified] = await createExpenses(
       sessionId,
       [
         { description: "Lunch", amountMinor: 125, categoryId: food.id },
@@ -53,7 +61,7 @@ describe("Redis persistence", () => {
       ],
       2_000,
     );
-    expect(await categories.getCategories(sessionId)).toEqual({
+    expect(await getCategories(sessionId)).toEqual({
       categories: expect.arrayContaining([
         { ...food, totalMinor: 125 },
         unused,
@@ -62,7 +70,7 @@ describe("Redis persistence", () => {
       totalMinor: 425,
     });
     await expect(
-      expenses.createExpenses(
+      createExpenses(
         sessionId,
         Array.from({ length: 99 }, (_, index) => ({
           description: `Overflow ${index}`,
@@ -72,24 +80,27 @@ describe("Redis persistence", () => {
       ),
     ).rejects.toMatchObject({ code: "expense_limit_reached" });
 
-    await categories.deleteCategory(sessionId, food.id);
-    expect(await categories.getCategories(sessionId)).toEqual({
+    await deleteCategory(sessionId, food.id);
+    expect(await getCategories(sessionId)).toEqual({
       categories: [unused],
       unclassifiedTotalMinor: 425,
       totalMinor: 425,
     });
-    expect((await expenses.getExpenses(sessionId)).expenses).toEqual(
+    expect((await getExpenses(sessionId)).expenses).toEqual(
       expect.arrayContaining([
         { ...categorized, categoryId: null },
         { ...unclassified, categoryId: null },
       ]),
     );
 
-    await isolatedSessions.saveSessionId(sessionId);
-    await isolatedCategories.createCategory(sessionId, "Only isolated");
-    expect((await categories.getCategories(sessionId)).categories).toEqual([
-      unused,
-    ]);
+    dependencies.config = {
+      ...config,
+      redisKeyPrefix: `${config.redisKeyPrefix}:isolated`,
+    };
+    await saveSessionId(sessionId);
+    await createCategory(sessionId, "Only isolated");
+    dependencies.config = config;
+    expect((await getCategories(sessionId)).categories).toEqual([unused]);
 
     for (const key of Object.values(keys)) {
       expect(await redis.ttl(key)).toBeGreaterThan(0);
@@ -100,12 +111,9 @@ describe("Redis persistence", () => {
 
     const corruptExpenseId = randomUUID();
     await redis.hset(keys.expenses, {
-      [corruptExpenseId]: JSON.stringify({
-        id: corruptExpenseId,
-        bad: true,
-      }),
+      [corruptExpenseId]: JSON.stringify({ id: corruptExpenseId, bad: true }),
     });
-    await expect(expenses.getExpenses(sessionId)).rejects.toMatchObject({
+    await expect(getExpenses(sessionId)).rejects.toMatchObject({
       name: "RepositoryUnavailableError",
     });
   });

@@ -2,7 +2,7 @@
 
 Ratapp is a bilingual expense-classification demo built with Next.js, React, and TypeScript. It supports session-only category management, expense capture, and a synchronized spending summary in English and Spanish.
 
-The current implementation is the Phase 5 Redis-backed redesign. The browser creates or resumes an expiring anonymous session, loads categories and expenses from the API, and performs category mutations server-side. Expenses are read-only in the initial release. The prompt endpoint intentionally returns `classification_unavailable`; live AI extraction is planned for Phase 6.
+The current implementation is the Phase 5 Redis-backed redesign. The browser creates or resumes an expiring, cookie-scoped anonymous session through `/api/v1`, loads categories and expenses from that same-origin API, and performs category mutations server-side. Session IDs are never exposed through browser API URLs or response bodies. Expenses are read-only in the initial release. The prompt endpoint intentionally returns `classification_unavailable`; live AI extraction is planned for Phase 6.
 
 ## Project map
 
@@ -65,6 +65,6 @@ npm test
 npm run test:redis
 ```
 
-`test:redis` runs the Redis persistence and deterministic-seeder suites against an in-memory mock; tests never contact Upstash or consume its command quota. For an explicit manual test, seed a non-production demo session with `npm run seed:redis -- --session-id <uuid>`.
+`test:redis` runs the Redis persistence and deterministic-seeder suites against an in-memory mock; tests never contact Upstash or consume its command quota. For an explicit manual test, initialize a non-production session through the app, inspect its development-only `ratapp_session` cookie in browser developer tools, and seed it with `npm run seed:redis -- --session-id <uuid>`.
 
 The formatting check, lint, type-check, tests, Storybook build, and Next.js build all run non-interactively and are suitable for CI.

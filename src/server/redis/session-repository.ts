@@ -1,38 +1,47 @@
-import type { Redis } from "@upstash/redis";
-import type { ServerConfig } from "@/server/config";
-import { repositoryOperation } from "./repository-helpers";
+import { getServerConfig } from "@/server/config";
+import { getRedisClient } from "./client";
+import { createSessionKeys } from "./keys";
+import { redisOperation } from "./repository-helpers";
 
-export class UpstashSessionRepository {
-  constructor(
-    private readonly redis: Redis,
-    private readonly config: ServerConfig,
-  ) {}
+export async function getSessionId(sessionId: string): Promise<string | null> {
+  const config = getServerConfig();
+  const redis = getRedisClient();
+  const keys = createSessionKeys(config.redisKeyPrefix, sessionId);
+  return redisOperation(async () =>
+    (await redis.exists(keys.meta)) === 1 ? sessionId : null,
+  );
+}
 
-  async getSessionId(sessionId: string): Promise<string | null> {
-    return repositoryOperation(this.config, sessionId, async (keys) => {
-      return (await this.redis.exists(keys.meta)) === 1 ? sessionId : null;
-    });
-  }
+export async function saveSessionId(
+  sessionId: string,
+  now = Date.now(),
+): Promise<void> {
+  const config = getServerConfig();
+  const redis = getRedisClient();
+  const keys = createSessionKeys(config.redisKeyPrefix, sessionId);
+  await redisOperation(async () => {
+    await redis
+      .multi()
+      .hset(keys.meta, {
+        schemaVersion: "1",
+        createdAt: String(now),
+      })
+      .expire(keys.meta, config.sessionTtlSeconds)
+      .exec();
+  });
+}
 
-  async saveSessionId(sessionId: string, now = Date.now()): Promise<void> {
-    await repositoryOperation(this.config, sessionId, async (keys) => {
-      await this.redis
-        .multi()
-        .hset(keys.meta, {
-          schemaVersion: "1",
-          createdAt: String(now),
-        })
-        .expire(keys.meta, this.config.sessionTtlSeconds)
-        .exec();
-    });
-  }
-
-  async renewSessionTtl(sessionId: string): Promise<boolean> {
-    return repositoryOperation(this.config, sessionId, async (keys) => {
-      return (
-        (await this.redis.expire(keys.meta, this.config.sessionTtlSeconds)) ===
-        1
-      );
-    });
-  }
+export async function renewSessionTtl(sessionId: string): Promise<boolean> {
+  const config = getServerConfig();
+  const redis = getRedisClient();
+  const keys = createSessionKeys(config.redisKeyPrefix, sessionId);
+  return redisOperation(async () => {
+    const result = await redis
+      .multi()
+      .expire(keys.meta, config.sessionTtlSeconds)
+      .expire(keys.categories, config.sessionTtlSeconds)
+      .expire(keys.expenses, config.sessionTtlSeconds)
+      .exec();
+    return result[0] === 1;
+  });
 }

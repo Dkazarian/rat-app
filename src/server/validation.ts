@@ -1,12 +1,16 @@
 import { z } from "zod";
-import { categoryColors } from "@/contracts/session-api";
+import {
+  CATEGORY_NAME_MAX_LENGTH,
+  EXPENSE_PROMPT_MAX_LENGTH,
+  categoryColors,
+} from "@/contracts/session-api";
 
 export const canonicalUuidSchema = z.uuid();
 export const safeMinorAmountSchema = z.number().int().safe().nonnegative();
 
 export const storedCategorySchema = z.object({
   id: canonicalUuidSchema,
-  name: z.string().min(1).max(24),
+  name: z.string().min(1).max(CATEGORY_NAME_MAX_LENGTH),
   color: z.enum(categoryColors),
 });
 
@@ -18,17 +22,11 @@ export const storedExpenseSchema = z.object({
   createdAt: safeMinorAmountSchema,
 });
 
-export const storedSessionMetaSchema = z.object({
-  schemaVersion: z.literal("1"),
-  createdAt: z.coerce.number().int().safe().nonnegative(),
-  updatedAt: z.coerce.number().int().safe().nonnegative(),
-});
-
 export const categoryNameBodySchema = z.object({
   name: z.string(),
 });
 
 export const promptBodySchema = z.object({
-  prompt: z.string().trim().min(1).max(500),
+  prompt: z.string().trim().min(1).max(EXPENSE_PROMPT_MAX_LENGTH),
   locale: z.enum(["en", "es"]),
 });

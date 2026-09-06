@@ -4,11 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { ExpensesResponse } from "@/contracts/session-api";
 import type { SessionApi } from "@/features/dashboard/api/session-api-client";
 
-export function useExpenseQuery(
-  api: SessionApi,
-  sessionId: string,
-  refreshCounter: number,
-) {
+export function useExpenseQuery(api: SessionApi, refreshCounter: number) {
   const [data, setData] = useState<ExpensesResponse>();
   const [error, setError] = useState<unknown>();
   const [retryCounter, setRetryCounter] = useState(0);
@@ -17,7 +13,7 @@ export function useExpenseQuery(
   useEffect(() => {
     const controller = new AbortController();
     const requestSequence = ++sequence.current;
-    api.getExpenses(sessionId, controller.signal).then(
+    api.getExpenses(controller.signal).then(
       (response) => {
         if (requestSequence === sequence.current) {
           setData(response);
@@ -34,7 +30,7 @@ export function useExpenseQuery(
       },
     );
     return () => controller.abort();
-  }, [api, sessionId, refreshCounter, retryCounter]);
+  }, [api, refreshCounter, retryCounter]);
 
   return {
     data,

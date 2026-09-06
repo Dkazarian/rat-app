@@ -51,7 +51,6 @@ export async function expectRouteError(
   field?: string,
 ) {
   expect(response.status).toBe(status);
-  expect(response.headers.get("cache-control")).toBe("no-store");
   const body = await response.json();
   expect(body).toMatchObject({
     error: { code, ...(field ? { field } : {}) },

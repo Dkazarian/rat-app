@@ -6,6 +6,9 @@ export const categoryColors = [
   "blue",
 ] as const;
 
+export const CATEGORY_NAME_MAX_LENGTH = 24;
+export const EXPENSE_PROMPT_MAX_LENGTH = 500;
+
 export type CategoryColor = (typeof categoryColors)[number];
 
 export type CategoryDto = Readonly<{
@@ -56,7 +59,6 @@ export type ApiErrorResponse = Readonly<{
   }>;
 }>;
 
-export type SessionResponse = Readonly<{ sessionId: string }>;
 export type CategoryMutationResponse = Readonly<{ category: CategoryDto }>;
 export type PromptMutationResponse = Readonly<{
   expenses: ReadonlyArray<ExpenseDto>;

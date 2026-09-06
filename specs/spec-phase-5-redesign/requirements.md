@@ -8,11 +8,11 @@ This phase establishes the session and category/expense API, including the HTTP 
 
 ## Session transport decision
 
-`POST /session` resolves the anonymous session. When its `HttpOnly`, `SameSite=Lax` `ratapp_session` cookie identifies a live session, it returns that existing opaque session identifier with `200 OK`. Otherwise it creates a new session, sets the cookie (`Secure` in production), and returns the new identifier with `201 Created`. The cookie uses `Path=/` and no `Max-Age` or persistent expiry, so it is a browser-session cookie.
+`POST /api/v1/session` resolves the anonymous session. When its `HttpOnly`, `SameSite=Lax` `ratapp_session` cookie identifies a live session, it reuses that session; otherwise it creates a fresh one. In both cases it sets or renews the cookie and returns `204 No Content`. The cookie uses `Path=/`, is `Secure` in production, and has the same 48-hour `Max-Age` as the Redis session TTL.
 
-`usePageSession` keeps the returned identifier in React memory and exposes it to the dashboard sections. Those sections include it in the canonical `/session/:sessionId/...` routes below. The cookie exists only to resume the session after reload; components do not need to read it. For this demo, the opaque path identifier selects the Redis session directly and is not an authentication mechanism.
+The cookie is the sole browser-facing source of session identity. `useSessionBootstrap` exposes only readiness, initialization error, and retry state; the browser never receives, stores, or sends a `sessionId` in an API URL or payload. All other `/api/v1` handlers require the cookie to identify an existing session and return `401 Unauthorized` when it is absent, invalid, or expired. The transport is an application-internal browser API, not a supported third-party API or a mechanism for preventing visitors from scripting their own anonymous sessions.
 
-Session, category, and expense IDs are UUIDs generated server-side with `crypto.randomUUID()`. Validate their canonical UUID form and length before using them in a repository operation or constructing a Redis key. URL-encode session IDs when constructing a route and omit them from application logs. The cookie expires when the browser session ends. Redis keys use a simple 48-hour TTL (`RATAPP_SESSION_TTL_SECONDS=172800`); the demo does not implement accounts or durable spending history.
+Session, category, and expense IDs are UUIDs generated server-side with `crypto.randomUUID()`. The session boundary validates cookie identity once before Redis key construction. Category route parameters are passed to the category operation, whose lookup supplies the not-found check; persistence functions do not repeatedly parse identifiers. Session IDs are omitted from application logs. Redis keys and the browser cookie share a 48-hour lifetime (`RATAPP_SESSION_TTL_SECONDS=172800`); the demo does not implement accounts or durable spending history.
 
 ## Redis session store
 
@@ -30,37 +30,36 @@ Session, category, and expense IDs are UUIDs generated server-side with `crypto.
 
 - Do not store Unclassified in the categories hash: it is a fallback classification bucket, not a category. Expenses in that bucket use `categoryId: null`.
 - Keep category and expense records independently writable. Do not serialize the complete session as one growing JSON value or rewrite every expense for an unrelated mutation.
-- Do not persist category totals. `GET /session/:sessionId/categories` calculates real-category, Unclassified, and overall totals from the bounded expense hash when requested. The browser still treats the returned totals as authoritative and does not calculate a competing result.
+- Do not persist category totals. `GET /api/v1/categories` calculates real-category, Unclassified, and overall totals from the bounded expense hash when requested. The browser still treats the returned totals as authoritative and does not calculate a competing result.
 - Redis does not maintain expense or category display order. The expense endpoint sorts by its server-assigned timestamp newest first and then expense ID ascending. The browser sorts real categories alphabetically for the active locale.
-- Apply the 172800-second `RATAPP_SESSION_TTL_SECONDS` default when each Redis key is created or written, including keys written by the manual seeder. Do not implement sliding renewal on reads. The `meta` hash determines whether the session exists; expired sessions produce `401 Unauthorized` until `POST /session` creates a replacement session.
+- Apply the 172800-second `RATAPP_SESSION_TTL_SECONDS` default when each Redis key is created or written, including keys written by the manual seeder. Do not implement sliding renewal on reads. The `meta` hash determines whether the session exists; expired sessions produce `401 Unauthorized` until `POST /api/v1/session` creates a replacement session.
 - Make category deletion atomic with an Upstash Redis transaction or script: find matching expense fields, set their category IDs to `null`, and remove the category as one operation.
 - The Phase 5 client sends at most one mutation at a time for a session. The backend does not implement optimistic revisions, compare-and-set retries, or concurrent-write conflict resolution; atomic Redis mutations protect against partial writes, not competing writers.
 - Scanning the bounded expense hash during category deletion is acceptable for the 100-expense demo limit. If the limit grows materially or expense pagination is introduced, add `ratapp:session:v1:{sessionId}:category-expenses:{categoryId}` sets as an explicit secondary index rather than introducing them prematurely.
-- Encapsulate Redis access behind three small backend repositories: session IDs, categories, and expenses. Route handlers resolve HTTP input and output; they do not issue scattered Redis commands or expose Redis-shaped values.
-- Run every automated test against mocks or in-memory fakes. Tests must not load Redis credentials, contact Upstash, or consume the service's command quota. Keep the fake's transaction, hash, and TTL behavior aligned with the Redis operations used by the repositories.
+- Encapsulate Redis access in concrete function-based session, category, and expense modules under `src/server/redis`. These modules resolve the configured client directly; do not add repository or manager classes, dependency-injection containers, cached persistence instances, or testing-only production APIs. Route handlers resolve HTTP input and output without issuing scattered Redis commands or exposing Redis-shaped values.
+- Run every automated test against mocks or in-memory fakes. Tests must not load Redis credentials, contact Upstash, or consume the service's command quota. Mock `getRedisClient()` and `getServerConfig()` while keeping transaction, hash, and TTL behavior aligned with the Redis operations used by the function modules.
 
 ## Redis development seeder
 
 - Provide a deterministic `npm run seed:redis` development command that writes demo category and expense data into an existing session without invoking the prompt endpoint, extraction boundary, OpenRouter, or any AI dependency.
-- Implement the seeder through the Phase 5 backend repositories and backend domain rules. It must not import the deleted browser services, duplicate raw Redis key-writing logic, or bypass the same stored schema and invariants used by route handlers.
-- Require an explicit `--session-id <uuid>` for a session previously created through `POST /session`. Refuse a missing or expired session, and print only the ID and concise next-step instructions; never print Redis credentials or seeded expense text unnecessarily.
+- Have the trusted developer seeder obtain the configured Redis client and key configuration directly, encode its deterministic fixtures with the shared Redis record encoding, and write them in one bounded transaction. Do not route fixtures through production category or expense operations or duplicate developer-owned validation in the seeding path.
+- Require an explicit `--session-id <uuid>` for a session previously created through `POST /api/v1/session`. Refuse a missing or expired session, and print only the ID and concise next-step instructions; never print Redis credentials or seeded expense text unnecessarily.
 - Refuse to run against a production environment. Read Redis connection keys from `.env.development.local` only for an explicit local seeding run. Automated tests use mocks and never load those credentials. Limit writes to the exact validated session key family selected for seeding.
 - Renew the existing session metadata TTL, upsert the deterministic fixture fields, and apply the configured TTL to the categories and expenses hashes. Repeated runs overwrite matching fixture IDs rather than deleting hashes or appending duplicates. The seeder never creates session metadata or an active-session pointer.
 - For the development/test fixture only, create several ordinary categories before creating expenses, then assign seeded expenses to those category IDs. Include multiple populated categories, one zero-total category, and at least one expense with `categoryId: null`. Do not seed system categories or an Unclassified category record, and never use this fixture to initialize production sessions. Keep it comfortably below the 100-expense cap.
-- Read the seeded categories and expenses back through the ordinary query operations and fail the command if calculated totals, category references, expense timestamps, or the overall total are inconsistent.
-- Keep seed definitions in a dedicated backend fixture module reusable by mock-backed and manual tests. `POST /session` always follows the ordinary create-or-resume flow and never consults seed state.
+- Keep seed definitions in a dedicated backend fixture module reusable by mock-backed and manual tests. `POST /api/v1/session` always follows the ordinary create-or-resume flow and never consults seed state.
 - Refuse to run the manual seeder in production, and expose no public seed endpoint.
 
 Recommended manual/API-test flow:
 
-1. Start the application and call `POST /session` to create or resume a normal development session.
-2. Copy its `sessionId` and run `npm run seed:redis -- --session-id <uuid>` against the development Upstash database.
-3. Reload the dashboard or query that same session ID and verify the seeded data.
+1. Start the application and call `POST /api/v1/session` to create or resume a normal development session.
+2. In browser developer tools, copy the development-only value of the HttpOnly `ratapp_session` cookie and run `npm run seed:redis -- --session-id <uuid>` against the development Upstash database. The application API never returns this value.
+3. Reload the dashboard or query the cookie-scoped `/api/v1` resources and verify the seeded data.
 4. Exercise category creation/deletion, expense review, totals, refresh signaling, and expiry without submitting an AI prompt.
 
 ## API contract
 
-All request and response bodies use JSON. Successful mutation responses return the updated resource or an explicit no-content response. Every session response, including errors, sends `Cache-Control: no-store` so browsers and intermediaries do not reuse session data. Unknown or expired session IDs return `401 Unauthorized`.
+Request and response bodies use JSON except `POST /api/v1/session` and successful deletes, which return no content. Next.js config applies `Cache-Control: no-store` once to `/api/v1/:path*` so browsers and intermediaries do not reuse session data. Missing, invalid, or expired session cookies return `401 Unauthorized` from resource handlers. Route handlers use standard JSON parsing and `Response.json()`; the hosting platform owns raw request-size enforcement.
 
 ### Error contract
 
@@ -146,29 +145,29 @@ Contract invariants:
 - Expenses are returned by `createdAt` descending. Expenses sharing a timestamp are ordered by opaque expense ID in ascending lexical order, making the response deterministic without relying on Redis hash iteration or insertion order.
 - Expense objects do not duplicate category names, colors, or totals. Expense List receives the current real categories from `DashboardResults`, resolves each expense's localized category presentation locally, and independently queries expense records.
 
-### `POST /session`
+### `POST /api/v1/session`
 
 - Resume the live anonymous session identified by the cookie, or create a fresh session with no categories, no expenses, and an Unclassified fallback total of zero.
-- Return `{ "sessionId": string }`. Use `200 OK` for a resumed session and `201 Created` for a newly created session.
-- Set or renew the session cookie without exposing application data in it.
+- Return `204 No Content` whether the session is resumed or newly created.
+- Set or renew `ratapp_session` with `HttpOnly`, `SameSite=Lax`, `Path=/`, a `Max-Age` equal to `RATAPP_SESSION_TTL_SECONDS`, and `Secure` in production. Return no session identifier or application data.
 
-### `GET /session/:sessionId/categories`
+### `GET /api/v1/categories`
 
 - Return `CategoriesResponse` with `200 OK`.
 - Include every real category and its total, including zero totals; ordering is a client concern.
 - Calculate category totals from the session's bounded expense hash and return them in the response; the browser must not calculate or reconcile a competing category total.
 
-### `POST /session/:sessionId/categories`
+### `POST /api/v1/categories`
 
 - Accept `{ "name": string }`, trim it, and create a real category under the 24-character, case-insensitive uniqueness, color-assignment, and ten-real-category rules. Reserve only `Unclassified` and `Sin clasificar`, compared case-insensitively, because those labels belong to the fallback bucket; Food, Home, and Transport are ordinary available names.
 - Generate the category identifier on the server and return `{ "category": CategoryDto }` with `201 Created`. The created category has `totalMinor: 0`.
 
-### `GET /session/:sessionId/expenses`
+### `GET /api/v1/expenses`
 
 - Return `ExpensesResponse` with `200 OK`, including all current-session expenses in newest-`createdAt` order.
 - Never return an expense whose category reference is invalid; uncertain or absent categories use `categoryId: null`.
 
-### `POST /session/:sessionId/expenses/prompt`
+### `POST /api/v1/expenses/prompt`
 
 - During Phase 5, validate the session and request envelope, then return `501 Not Implemented` with `classification_unavailable`. Add no expense, preserve the visitor's input, and do not invoke a deterministic classifier, extraction boundary, or AI provider. The remaining success/error behavior in this endpoint contract becomes active in Phase 6.
 - Accept `{ "prompt": string, "locale": "en" | "es" }` for the current anonymous session. The prompt must be non-empty after validation and no longer than 500 characters.
@@ -180,7 +179,7 @@ Contract invariants:
 - If no usable expense is produced, add nothing and return a recoverable `422 Unprocessable Content` response so the browser can preserve the exact prompt for correction or retry.
 - Provider failures, timeouts, and rate limits must add nothing and use the shared safe error shape. Phase 6 defines their precise public error codes.
 
-### `DELETE /session/:sessionId/categories/:categoryId`
+### `DELETE /api/v1/categories/:categoryId`
 
 - Delete the identified real category in the current session.
 - In the same server-side operation, set each affected expense's category ID to `null`, move its total to the Unclassified fallback total, and then remove the category.
@@ -189,22 +188,22 @@ Contract invariants:
 
 ## Client behavior
 
-- Create or resume the anonymous session when the application starts. `usePageSession` exposes the returned `sessionId`, and data-owning dashboard sections fetch their own server-backed resources only after it is available.
+- Create or resume the anonymous cookie session when the application starts. `useSessionBootstrap` exposes only readiness, initialization error, and retry; data-owning dashboard sections fetch their cookie-scoped resources only after it is ready.
 - Call the corresponding API operation for every category creation/deletion; do not mutate a client service first and synchronize later.
-- Only Capture Panel submits capture text through `POST /session/:sessionId/expenses/prompt`. Clear its input only when the response contains at least one created expense, report the accepted and rejected counts through localized rat dialogue, and notify the dashboard that server data changed.
+- Only Capture Panel submits capture text through `POST /api/v1/expenses/prompt`. Clear its input only when the response contains at least one created expense, report the accepted and rejected counts through localized rat dialogue, and notify the dashboard that server data changed.
 - Treat successful API responses as authoritative and refresh or update the rendering snapshot from returned server data without keeping a second mutable domain store.
 - Show localized loading, recoverable error, and expired-session states through the existing rat-dialogue feedback surface. Disable or serialize conflicting mutations while a request is pending.
-- Enforce the no-concurrency rule with one page-level mutation gate. `usePageSession` exposes `isMutating` and a `runMutation` wrapper; Capture Panel and Category Panel run writes through it and disable their mutation controls until the active request settles. Query refetches may still overlap.
+- Enforce the no-concurrency rule with one mutation gate owned by `DashboardPage`; Capture Panel and Category Panel run writes through it and disable their mutation controls until the active request settles. Query refetches may still overlap.
 - After an expired-session response, preserve unsent input where possible, create a fresh session, and explain that prior anonymous data is no longer available.
 - Continue deriving only presentation-specific groupings, percentages, and chart shapes from the fetched snapshots. Use category totals supplied by the API directly; do not recalculate or reconcile a competing client-authoritative total.
 
 ## Dashboard data flow
 
-- The dashboard coordinator owns `sessionId`, session readiness, and a refresh signal only. It does not fetch, combine, cache, or pass category and expense collections for the whole page.
-- Capture Panel receives `sessionId`, owns the prompt draft and prompt mutation, and is the only component that calls `POST /session/:sessionId/expenses/prompt`; after a successful response it asks the coordinator to refresh dashboard data.
+- `useSessionBootstrap` owns only cookie-session readiness, initialization error, and retry. `DashboardPage` separately owns the cross-feature mutation gate and refresh signal; neither owns fetched category or expense collections.
+- Capture Panel owns the prompt draft and prompt mutation and is the only component that calls `POST /api/v1/expenses/prompt`; after a successful response it asks `DashboardPage` to refresh dashboard data.
 - `DashboardPage` renders Capture Panel and `DashboardResults` through ordinary JSX composition. Do not pass already-rendered Category Panel, Results Panel, Spending Summary, or Expense List elements through named `ReactNode` layout props.
-- `DashboardResults` owns the responsive category/results grid and the categories query. It receives `sessionId`, calls `GET /session/:sessionId/categories`, and renders Category Panel and Spending Summary from that one response. Both views must rerender whenever the shared response changes.
-- Expense List renders inside `DashboardResults` but owns its expenses query independently. It receives `sessionId` and calls `GET /session/:sessionId/expenses`.
+- `DashboardResults` owns the responsive category/results grid and the categories query. It calls `GET /api/v1/categories` and renders Category Panel and Spending Summary from that one response. Both views must rerender whenever the shared response changes.
+- `ApiExpenseList` lives in the expenses feature, owns its expenses query independently, and calls `GET /api/v1/expenses`. `DashboardResults` passes only category data, the API dependency, refresh trigger, and session-recovery callback.
 - Remove `DashboardLayout` and `ResultsPanel` if their only responsibility remains accepting rendered elements and wrapping them with static classes. Keep structural markup with `DashboardResults`, or retain a wrapper only when it accepts ordinary `children` and provides reusable layout behavior without knowing feature-specific slots.
 - A coordinator refresh causes `DashboardResults` and Expense List to refetch their respective endpoints. A monotonically increasing local refresh counter, invalidation callback, or equivalent small signal is sufficient; it is not a server data revision, and the coordinator must not carry fetched domain data.
 - Successful mutations notify the coordinator whenever another section can become stale. Prompt submission refreshes categories and expenses. After category deletion, `DashboardResults` must refetch categories and Expense List must refetch expenses because the server may set affected expense category IDs to `null`; this updates Category Panel, Spending Summary, and Expense List from the completed cascade. After category creation, `DashboardResults` must refetch categories so the new category appears alphabetically in Category Panel and its zero total appears immediately in Spending Summary.
@@ -212,8 +211,8 @@ Contract invariants:
 
 ## Hook simplification
 
-- Treat the current `usePageSession` and `useCategories` implementations and public contracts as transition code. Delete or rewrite them rather than preserving their service-oriented APIs through compatibility wrappers.
-- Replace `usePageSession` with a small dashboard coordinator designed from the new layout contract. It exposes `sessionId`, session readiness, the shared `isMutating`/`runMutation` gate, and a refresh notification; it must not own category or expense snapshots.
+- Treat the former `usePageSession` and `useCategories` implementations and public contracts as removed transition code; do not recreate their service-oriented APIs through compatibility wrappers.
+- Keep `useSessionBootstrap` limited to readiness, initialization error, and retry for the cookie session. Keep mutation serialization and refresh coordination in `DashboardPage`, their nearest common owner.
 - Remove the current service-backed `useCategories` Hook. `DashboardResults` owns the replacement categories query, sorts real categories alphabetically for the active locale, and passes them to Category Panel and Spending Summary; no standalone mutable category Hook remains in the application path.
 - Give `DashboardResults` and Expense List new focused query hooks for their respective endpoints. Capture Panel owns a new prompt-mutation hook; category mutation hooks stay with the section that presents those actions. Design these hooks from the API and component needs rather than the signatures of the hooks they replace.
 - Remove client reducer actions, refs, effects, and synchronization steps whose only purpose was to keep category and expense services aligned, guard category deletion, generate domain identifiers, validate server-owned mutations, or recalculate category totals now returned by the API.
@@ -226,10 +225,10 @@ Contract invariants:
 
 - Enforce all category, expense, and cascade rules on the server; client validation is only an early usability aid.
 - Rewrite the required category, expense, and session rules in the backend from the current product requirements and Phase 5 API contract. Do not begin by modifying, wrapping, importing, or moving the browser service implementations into route handlers.
-- Persist authoritative mutations through the Redis session repository or matching category/expense manager; never treat a route-handler process or client response as the current server state.
-- Scope every read and mutation to the validated path `sessionId`. The demo relies on the UUID being opaque and does not add cookie/path ownership checks or CSRF machinery.
+- Persist authoritative mutations through the concrete Redis function modules; never treat a route-handler process or client response as the current server state.
+- Scope every read and mutation to the session ID resolved from `ratapp_session`. Browser callers cannot select another session through a URL, query, or request body. The demo uses an HttpOnly, same-site cookie for isolation and does not add accounts, API keys, CORS infrastructure, bot protection, or rate limiting in this phase.
 - Make category deletion and expense reassignment atomic so no response can expose dangling category references.
-- Validate identifiers and JSON bodies, bound request sizes, return safe messages, and avoid logging session identifiers or raw expense descriptions.
+- Validate each concern at its authoritative boundary: request bodies with the shared Zod schemas, category relationships and limits in the server operations, and cookie identity at session resolution. Mirror only category-name and prompt field limits in the browser. Return safe messages and avoid logging session identifiers or raw expense descriptions.
 - Add route and integration coverage for independent sessions, expired and missing sessions, validation failures, cross-session identifiers, category totals, and cascade deletion.
 - Add mock-backed seeder coverage for deterministic upserts, environment refusal, an explicitly supplied session ID, exact-session scoping, renewed seed-key TTLs, valid totals/references, and successful reads through both query endpoints.
 
@@ -238,8 +237,8 @@ Contract invariants:
 - Delete the current client-side category, expense, and session service implementation files under `src/services/` after their API-backed replacements are connected. They are transition code, not a compatibility layer or the foundation for the backend implementation.
 - Remove service construction, dependency wiring, injected service instances, service-specific errors, identifier factories, snapshot synchronization, and mocks that exist only for those implementations.
 - Do not retain adapters that make old service APIs call the new HTTP API. Components and focused Hooks call the Phase 5 browser API client directly through their section boundary.
-- Replace service unit tests with backend domain, route, mock-backed repository tests, and client query/mutation tests. Preserve behavioral coverage for validation, session isolation, partial expense acceptance, category-deletion cascade, and immutable API results without preserving the old class structure.
-- Delete obsolete `usePageSession` and `useCategories` tests together with the implementations they describe. Recreate the required behavioral coverage around the new coordinator and section-owned query/mutation hooks; do not port assertions whose purpose is preserving the old Hook contracts.
+- Replace service unit tests with backend domain, route, mock-backed Redis-module tests, and client query/mutation tests. Preserve behavioral coverage for validation, cookie-based session isolation, partial expense acceptance, category-deletion cascade, and immutable API results without preserving the old class structure.
+- Delete obsolete `usePageSession` and `useCategories` tests together with the implementations they describe. Recreate the required behavioral coverage around `useSessionBootstrap`, `DashboardPage`, and section-owned query/mutation hooks; do not port assertions whose purpose is preserving the old Hook contracts.
 - Shared wire types and genuinely presentation-neutral helpers may be rewritten in an appropriate non-service location when still useful. Do not keep an obsolete service file merely to reuse its types.
 
 ## Exclusions

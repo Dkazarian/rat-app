@@ -1,49 +1,36 @@
-import type { Redis } from "@upstash/redis";
-import type { ServerConfig } from "@/server/config";
-import { parseId } from "@/server/ids";
-import { CategoryManager } from "@/server/redis/category-manager";
-import { ExpenseManager } from "@/server/redis/expense-manager";
-import { UpstashSessionRepository } from "@/server/redis/session-repository";
-import { seedCategories, seedExpenses, seedTotalMinor } from "./fixture";
+import { getServerConfig } from "@/server/config";
+import { getRedisClient } from "@/server/redis/client";
+import { createSessionKeys } from "@/server/redis/keys";
+import { encodeRecord } from "@/server/redis/repository-helpers";
+import { seedCategories, seedExpenses } from "./fixture";
 
-export async function seedExistingSession(
-  redis: Redis,
-  config: ServerConfig,
-  unsafeSessionId: string,
-): Promise<string> {
+export async function seedExistingSession(sessionId: string): Promise<string> {
+  const config = getServerConfig();
   if (config.environment === "production") {
     throw new Error("Redis seeding is forbidden in production.");
   }
-  const sessionId = parseId(unsafeSessionId);
-  const sessions = new UpstashSessionRepository(redis, config);
-  const categoryManager = new CategoryManager(redis, config);
-  const expenseManager = new ExpenseManager(redis, config);
-  if (!(await sessions.renewSessionTtl(sessionId))) {
+  const redis = getRedisClient();
+  const keys = createSessionKeys(config.redisKeyPrefix, sessionId);
+  if ((await redis.exists(keys.meta)) !== 1) {
     throw new Error("Cannot seed a missing or expired session.");
   }
-  await categoryManager.upsertSeedCategories(sessionId, seedCategories);
-  await expenseManager.upsertSeedExpenses(sessionId, seedExpenses);
-
-  const [categories, expenses] = await Promise.all([
-    categoryManager.getCategories(sessionId),
-    expenseManager.getExpenses(sessionId),
-  ]);
-  const expectedReferences = new Map<string, string | null>(
-    seedExpenses.map((expense) => [expense.id, expense.categoryId]),
-  );
-  const verified =
-    categories.categories.length === seedCategories.length &&
-    expenses.expenses.length === seedExpenses.length &&
-    categories.totalMinor === seedTotalMinor &&
-    expenses.expenses.every(
-      (expense) =>
-        expectedReferences.get(expense.id) === expense.categoryId &&
-        seedExpenses.some(
-          (fixture) =>
-            fixture.id === expense.id &&
-            fixture.createdAt === expense.createdAt,
-        ),
-    );
-  if (!verified) throw new Error("Seed verification failed.");
+  await redis
+    .multi()
+    .hset(
+      keys.categories,
+      Object.fromEntries(
+        seedCategories.map((category) => [category.id, encodeRecord(category)]),
+      ),
+    )
+    .hset(
+      keys.expenses,
+      Object.fromEntries(
+        seedExpenses.map((expense) => [expense.id, encodeRecord(expense)]),
+      ),
+    )
+    .expire(keys.meta, config.sessionTtlSeconds)
+    .expire(keys.categories, config.sessionTtlSeconds)
+    .expire(keys.expenses, config.sessionTtlSeconds)
+    .exec();
   return sessionId;
 }

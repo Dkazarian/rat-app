@@ -2,18 +2,15 @@
 
 import { useId } from "react";
 import type { Ref } from "react";
+import { CATEGORY_NAME_MAX_LENGTH } from "@/contracts/session-api";
+import { useLocale } from "@/i18n/locale-context";
 
 export type CategoryNameValidationCode =
-  "empty" | "too-long" | "duplicate" | "reserved" | "limit-reached";
+  "empty" | "too-long" | "duplicate" | "invalid" | "limit-reached";
 
 export type CategoryFormProps = Readonly<{
   draft: string;
-  label: string;
-  placeholder: string;
-  addLabel: string;
-  cancelLabel: string;
   validationCode?: CategoryNameValidationCode;
-  validationMessages: Readonly<Record<CategoryNameValidationCode, string>>;
   inputRef?: Ref<HTMLInputElement>;
   onDraftChange: (draft: string) => void;
   onSubmit: () => void;
@@ -22,19 +19,22 @@ export type CategoryFormProps = Readonly<{
 
 export function CategoryForm({
   draft,
-  label,
-  placeholder,
-  addLabel,
-  cancelLabel,
   validationCode,
-  validationMessages,
   inputRef,
   onDraftChange,
   onSubmit,
   onCancel,
 }: CategoryFormProps) {
   const inputId = useId();
+  const { t } = useLocale();
   const errorId = `${inputId}-error`;
+  const validationKeys = {
+    empty: "categoryValidationEmpty",
+    "too-long": "categoryValidationTooLong",
+    duplicate: "categoryValidationDuplicate",
+    invalid: "categoryValidationInvalid",
+    "limit-reached": "categoryValidationLimit",
+  } as const;
 
   return (
     <form
@@ -46,13 +46,14 @@ export function CategoryForm({
       }}
     >
       <label htmlFor={inputId} className="mb-1.5 block text-[#ddd4e2]">
-        {label}
+        {t("categoryNameLabel")}
       </label>
       <input
         ref={inputRef}
         id={inputId}
         value={draft}
-        placeholder={placeholder}
+        placeholder={t("categoryNamePlaceholder")}
+        maxLength={CATEGORY_NAME_MAX_LENGTH}
         aria-invalid={validationCode ? true : undefined}
         aria-describedby={validationCode ? errorId : undefined}
         onChange={(event) => onDraftChange(event.target.value)}
@@ -60,7 +61,7 @@ export function CategoryForm({
       />
       {validationCode ? (
         <p id={errorId} role="alert" className="mt-1.5 text-sm text-[#ffaaa0]">
-          {validationMessages[validationCode]}
+          {t(validationKeys[validationCode])}
         </p>
       ) : null}
       <div className="mt-3 flex flex-wrap justify-end gap-2">
@@ -69,13 +70,13 @@ export function CategoryForm({
           onClick={onCancel}
           className="cursor-pointer rounded-[10px] border border-[#49404f] px-3 py-2 outline-offset-2 focus-visible:outline-2 focus-visible:outline-[#86afe0]"
         >
-          {cancelLabel}
+          {t("cancelCategory")}
         </button>
         <button
           type="submit"
           className="cursor-pointer rounded-[10px] bg-[#7355a5] px-3 py-2 font-medium outline-offset-2 focus-visible:outline-2 focus-visible:outline-[#86afe0]"
         >
-          {addLabel}
+          {t("addCategory")}
         </button>
       </div>
     </form>
