@@ -30,7 +30,9 @@ npm install
 
 For live classification, set the server-only `OPENROUTER_API_KEY` and
 `OPEN_ROUTER_MODEL=google/gemma-4-26b-a4b-it:free` in `.env.development.local`.
-Never expose either setting with a `NEXT_PUBLIC_` prefix or commit a real key.
+`OPEN_ROUTER_MODEL` also accepts a comma-separated fallback list in attempt
+order. Never expose either setting with a `NEXT_PUBLIC_` prefix or commit a real
+key.
 
 ## Application
 
@@ -70,5 +72,10 @@ npm run test:redis
 ```
 
 `test:redis` runs the Redis persistence and deterministic-seeder suites against an in-memory mock; tests never contact Upstash or consume its command quota. For an explicit manual test, initialize a non-production session through the app, inspect its development-only `ratapp_session` cookie in browser developer tools, and seed it with `npm run seed:redis -- --session-id <uuid>`.
+
+Run `npm run test:ai:live` explicitly to send one `Coffee $1.25` extraction to
+OpenRouter using `.env.development.local`. This live test is excluded from the
+default suite and CI, requires real server-only settings, and may consume
+provider quota.
 
 The formatting check, lint, type-check, tests, Storybook build, and Next.js build all run non-interactively and are suitable for CI.

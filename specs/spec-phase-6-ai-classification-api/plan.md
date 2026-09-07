@@ -1,6 +1,6 @@
 # Phase 6 Plan — AI Classification API
 
-Status: implementation complete; targeted automated verification passes; repository-wide formatting and live-provider/release validation remain pending.
+Status: single-model implementation complete; ordered OpenRouter model fallback, repository-wide formatting, and live-provider/release validation remain pending.
 
 ## Execution rules
 
@@ -11,7 +11,7 @@ Status: implementation complete; targeted automated verification passes; reposit
   3. one pure frontend API-outcome-to-rat-feedback mapper.
 - Reuse the existing contracts, server validation, domain rules, Redis functions, browser API client, mutation gate, refresh signal, and rat dialogue.
 - Do not introduce a use-case/service layer between the route and existing functions, a generic AI-provider interface, provider registry, factory, manager, repository wrapper, dependency-injection container, agent framework, or new global state.
-- Keep all automated tests provider-free. Mock the extractor boundary; never load a real OpenRouter key or consume provider quota in the test suite or Storybook.
+- Keep the default automated suite and Storybook provider-free. Mock the extractor boundary or model calls there; isolate the explicitly invoked live-provider integration test from normal test and CI commands.
 - Keep HTTP details out of the rat UI. Statuses and stable error codes remain visible in the network response and are converted to localized presentation data before rendering.
 - Preserve the exact input on every failure. Clear it and refresh both dashboard queries after any success, including partial success.
 
@@ -20,7 +20,8 @@ Status: implementation complete; targeted automated verification passes; reposit
 - [ ] Add runtime dependencies `ai` and `@openrouter/ai-sdk-provider`; continue using the existing `zod` dependency.
 - [ ] Keep exact versions in `package.json` and the lockfile without adding another AI, schema, retry, or HTTP package.
 - [ ] Validate `OPENROUTER_API_KEY` and `OPEN_ROUTER_MODEL` lazily in the extractor path so missing AI configuration does not break non-AI routes, builds, tests, or Storybook.
-- [ ] Require `google/gemma-4-26b-a4b-it:free` as the Phase 6 acceptance model while keeping the model browser-inaccessible.
+- [ ] Parse `OPEN_ROUTER_MODEL` as an ordered comma-separated list: trim identifiers, reject blank entries, require at least one model, and continue accepting a single identifier.
+- [ ] Require `google/gemma-4-26b-a4b-it:free` as the primary Phase 6 acceptance model while keeping the complete ordered model list browser-inaccessible.
 - [ ] Retain safe placeholders in `.env.example` and real values only in `.env.development.local` or the deployment environment.
 - [ ] Add an exact Zod schema for `PromptMutationResponse` to the existing shared contract module, including nested `ExpenseDto` constraints and non-negative safe-integer `rejectedCount`.
 - [ ] Infer the public response type from that schema where practical instead of maintaining a second handwritten shape.
@@ -35,13 +36,14 @@ Create `src/server/ai/expense-extractor.ts`. Keep its schema, types, error, prom
 - [ ] Define and export the Zod structured-output schema passed directly to Vercel AI SDK. Its result contains a bounded `expenses` array of `{ description, amountMinor, categoryName }`.
 - [ ] Infer `ExpenseExtractionOutput` from that Zod schema.
 - [ ] Export `extractExpenses(input): Promise<ExpenseExtractionOutput>`.
-- [ ] Use `generateText` with `Output.object` and the OpenRouter provider configured for `google/gemma-4-26b-a4b-it:free`.
-- [ ] Use one non-streaming generation with a finite timeout, bounded output tokens, and bounded retry behavior.
+- [ ] Use `generateText` with `Output.object` and the OpenRouter provider for each configured model attempted in left-to-right order.
+- [ ] Make at most one non-streaming generation per configured model. Stop on the first schema-valid result; on timeout, provider/model availability, network/SDK, or invalid-output failure, advance to the next model.
+- [ ] Give every attempt and the complete fallback sequence finite timeouts, bounded output tokens, and bounded SDK retry behavior. Never retry an earlier model or make a separate repair request.
 - [ ] Build separate system instructions and user data. Supply only the exact prompt, locale, and literal category names.
 - [ ] Instruct the model to extract purchases in source order, convert decimal values to integer minor units, preserve recognizable descriptions, and return a supplied category name only when clearly applicable.
 - [ ] Treat category names and prompt text as untrusted data, not instructions. Give the model no tools, URLs, prior expenses, IDs, totals, session data, or secrets.
 - [ ] Add one `ExpenseExtractorError` class with a typed `kind` discriminator: `configuration`, `timeout`, `provider`, or `invalid_output`. Do not add four subclasses when one typed exception carries the required distinction.
-- [ ] Translate SDK/provider errors into `ExpenseExtractorError`, retaining the original only as `cause` and using a safe generic public message.
+- [ ] Keep individual attempt failures inside the extractor while fallback models remain. After the list is exhausted, translate the terminal SDK/provider error into `ExpenseExtractorError`, retaining the original only as `cause` and using a safe generic public message.
 - [ ] Return a schema-valid empty array normally. Do not turn “no expenses” into an extractor exception or HTTP-aware application error.
 - [ ] Keep domain validation, category-ID resolution, capacity, persistence, IDs, timestamps, HTTP responses, and rat feedback out of this module.
 
@@ -86,7 +88,9 @@ Add one small pure module beside the capture-panel presentation, such as `src/fe
 
 ## Group 5 — Test each boundary
 
-- [ ] Unit-test AI configuration parsing and prove secrets are absent from returned/public values.
+- [ ] Unit-test AI configuration parsing for a single model, ordered comma-separated models, whitespace trimming, blank-entry rejection, and absence of secrets from returned/public values.
+- [ ] Add a mocked ordered-fallback unit test: make the first model fail and the second return a valid structured result; assert left-to-right model IDs, identical validated input, no call to later models, and no persistence from the failed attempt.
+- [ ] Add a mocked fallback-exhaustion test: make every configured model fail, assert each is attempted exactly once in order, and expect one terminal extractor error with no persistence.
 - [ ] Unit-test the extractor's Zod schema, inferred result, prompt construction, English/Spanish input, decimal point/comma instructions, bounded output, empty output, and each error kind.
 - [ ] Prove extractor prompts omit session IDs, category IDs, colors, totals, existing expenses, Redis data, and credentials.
 - [ ] Route-test success, partial success, invalid candidates, unknown categories, no categories, empty extraction, malformed structured output, every extractor error kind, malformed requests, expired sessions, full capacity, limited capacity, Redis failure, and unknown failure.
@@ -98,14 +102,17 @@ Add one small pure module beside the capture-panel presentation, such as `src/fe
 - [ ] Component-test loading, clearing after success, preservation after errors, session recovery, query refresh, localization, focus, and live-region announcements.
 - [ ] Prove no rendered or accessibility-only text contains an HTTP status, API code, exception name, provider detail, or `rejectedCount`.
 - [ ] Keep Storybook deterministic with fixture-only rat states and no AI configuration.
+- [ ] Add a separately invoked live OpenRouter integration test, excluded from the default suite and CI, that submits exactly one prompt (`Coffee $1.25`, locale `en`) through the configured extraction chain and asserts one schema-valid expense with `amountMinor: 125` and a non-empty description.
+- [ ] Gate the live test behind an explicit command or opt-in flag plus valid server-only credentials; skip clearly when either is absent, and never log the key or raw provider response.
 
 ## Group 6 — Documentation and final verification
 
 - [ ] Update root and source documentation to describe live classification instead of the Phase 5 placeholder.
 - [ ] Document the two server-only AI settings and local setup without committing a real key.
+- [ ] Document how to invoke the one-prompt live-provider test and that it contacts OpenRouter and may consume quota.
 - [ ] Update the roadmap only after all validation evidence is complete.
 - [ ] Run formatting, lint, strict TypeScript, all tests, Storybook build, and production build.
-- [ ] Perform a non-production live smoke test for English and Spanish single/multiple expenses, category matching, Unclassified fallback, partial capacity, no-result recovery, provider failure, and synchronized dashboard data.
+- [ ] Perform a non-production live smoke test for English and Spanish single/multiple expenses, category matching, Unclassified fallback, ordered model fallback, fallback exhaustion, partial capacity, no-result recovery, provider failure, and synchronized dashboard data.
 - [ ] Inspect browser bundles, HTML, responses, logs, and the Network panel for accidental secret or raw-provider-data exposure.
 - [ ] Reconcile every requirement and validation item with implementation evidence and record accepted differences before marking Phase 6 complete.
 

@@ -49,8 +49,20 @@ describe("parseAiConfig", () => {
         OPENROUTER_API_KEY: "test-only-key",
         OPEN_ROUTER_MODEL: OPEN_ROUTER_MODEL,
       }),
-    ).toEqual({ apiKey: "test-only-key", model: OPEN_ROUTER_MODEL });
+    ).toEqual({ apiKey: "test-only-key", models: [OPEN_ROUTER_MODEL] });
     expect(() => parseServerConfig(validEnvironment)).not.toThrow();
+  });
+
+  it("parses and trims an ordered model fallback list", () => {
+    expect(
+      parseAiConfig({
+        OPENROUTER_API_KEY: "test-only-key",
+        OPEN_ROUTER_MODEL: "provider/primary, provider/fallback ,third/model",
+      }),
+    ).toEqual({
+      apiKey: "test-only-key",
+      models: ["provider/primary", "provider/fallback", "third/model"],
+    });
   });
 
   it.each([
@@ -60,7 +72,13 @@ describe("parseAiConfig", () => {
       OPENROUTER_API_KEY: "replace-with-a-key",
       OPEN_ROUTER_MODEL: OPEN_ROUTER_MODEL,
     },
-    { OPENROUTER_API_KEY: "test-only-key", OPEN_ROUTER_MODEL: "other/model" },
+    { OPENROUTER_API_KEY: "test-only-key", OPEN_ROUTER_MODEL: "" },
+    { OPENROUTER_API_KEY: "test-only-key", OPEN_ROUTER_MODEL: ",other/model" },
+    { OPENROUTER_API_KEY: "test-only-key", OPEN_ROUTER_MODEL: "other/model," },
+    {
+      OPENROUTER_API_KEY: "test-only-key",
+      OPEN_ROUTER_MODEL: "primary/model, ,fallback/model",
+    },
   ])("rejects incomplete or unsafe AI settings", (environment) => {
     expect(() => parseAiConfig(environment)).toThrow();
   });

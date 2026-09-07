@@ -18,12 +18,12 @@ This phase adds the AI implementation behind the existing API boundary. It does 
 ## AI runtime and configuration
 
 - Use the Vercel AI SDK package `ai` with the existing `zod` dependency and the server-only OpenRouter provider package `@openrouter/ai-sdk-provider`.
-- Use the OpenRouter model `google/gemma-4-26b-a4b-it:free` for Phase 6 acceptance. The model may be read from the server-only `OPEN_ROUTER_MODEL` setting, but the browser must not select or override it.
+- Use the OpenRouter model `google/gemma-4-26b-a4b-it:free` as the primary Phase 6 acceptance model. Read `OPEN_ROUTER_MODEL` as an ordered, comma-separated list of one or more OpenRouter model identifiers; trim each identifier, reject blank entries, and try the models from left to right. A single identifier remains valid configuration. The browser must not select, reorder, or override the list.
 - Read the OpenRouter credential from the server-only `OPENROUTER_API_KEY` setting. Never use a `NEXT_PUBLIC_*` variable for AI configuration.
 - Document safe placeholders for both settings in `.env.example`; keep real development credentials only in `.env.development.local` and production credentials only in the deployment environment.
 - Resolve AI configuration only in the classification path. Missing or invalid AI configuration must not prevent session, category, or expense-query routes, Storybook, or mock-backed tests from running.
-- Make one non-streaming structured-generation operation per accepted HTTP submission. Do not add provider fallback, model fallback, tool calling, agents, chat history, or a second repair request.
-- Bound provider execution with a finite timeout, bounded output tokens, and bounded retry behavior. A timed-out or exhausted request must settle as a recoverable API error and must never continue into persistence.
+- Make at most one non-streaming structured-generation operation per configured model for an accepted HTTP submission. Stop after the first schema-valid extraction result. When a model attempt fails because of a timeout, provider/model availability, network/SDK error, or unusable structured output, try the next configured model with the same validated input.
+- Do not retry a failed model, return to an earlier model, switch providers, make a separate repair request, or add tool calling, agents, or chat history. Bound every attempt and the overall fallback sequence with finite timeouts, bounded output tokens, and bounded SDK retry behavior. If every configured model fails, settle as one recoverable API error and never continue into persistence.
 
 Exact dependency versions live in `package.json` and the lockfile.
 
@@ -301,8 +301,9 @@ The corresponding rendered copy is:
 
 ## Testing and verification
 
-- Automated tests must mock the AI extraction boundary or the model implementation. They must not load a real OpenRouter credential, contact OpenRouter, consume free-model quota, or depend on nondeterministic model text.
-- Unit-test AI configuration parsing without placing a usable credential in source or fixtures.
+- The default automated suite must mock the AI extraction boundary or the model implementation. It must not load a real OpenRouter credential, contact OpenRouter, consume free-model quota, or depend on nondeterministic model text.
+- Unit-test AI configuration parsing, including a single model, ordered comma-separated models, whitespace trimming, and rejection of empty entries, without placing a usable credential in source or fixtures.
+- Unit-test ordered fallback behavior with mocked model calls: make the first configured model fail and the second return a schema-valid result; assert model order, identical validated input, no call to later models after success, and no persistence from failed attempts. Also cover exhaustion and surface one provider failure only after every configured model fails.
 - Unit-test prompt construction to prove that only the exact prompt, locale, and category names are supplied and that IDs, totals, expenses, and session data are absent.
 - Unit-test structured output handling, category-name resolution, nullable fallback behavior, minor-unit validation, independent candidate rejection, order preservation, and rejected-count calculation.
 - Route-test success, partial success, empty extraction, all-invalid extraction, full sessions, limited remaining capacity, missing/expired sessions, malformed requests, provider failures, timeouts, malformed structured output, Redis failures, and unexpected failures.
@@ -312,6 +313,7 @@ The corresponding rendered copy is:
 - Component-test English and Spanish loading, success, partial-success, no-expense, limit, provider-error, retry, input-preservation, focus, live-region, and refresh behavior.
 - Keep Storybook deterministic and provider-free. Use fixtures for capture states rather than issuing AI requests.
 - Run formatting, lint, strict TypeScript, unit/component/mock-backed Redis tests, Storybook build, and the production build.
+- Add a separately invoked live-provider integration test that is excluded from the default test command and CI. It reads the real server-only OpenRouter settings, submits exactly one minimal prompt such as `Coffee $1.25` with locale `en`, and passes only when the configured extraction chain returns one schema-valid expense with `amountMinor: 125` and a non-empty description. It must skip with a clear message when live-test opt-in or credentials are absent and must never print the credential or raw provider response.
 - Complete a manual development smoke test with a non-production OpenRouter key for representative English and Spanish single- and multi-expense prompts, Unclassified fallback, partial capacity, provider failure, and synchronized dashboard refresh.
 - Confirm through build output and browser inspection that no AI credential or server-only configuration reaches the client.
 
@@ -335,11 +337,14 @@ The following are contract examples for deterministic mocked tests; they are not
 | AI6-012 | Complete a successful full or partial batch.                            | Clear the draft, show the ordinary localized success message for the accepted count, refresh both queries, and render synchronized data. |
 | AI6-013 | Put instructions or URLs inside the visitor prompt or a category name.  | Treat them as untrusted classification data; no tool, fetch, disclosure, or alternate output behavior occurs.                            |
 | AI6-014 | Run the automated suite without AI environment variables.               | Provider-free tests and Storybook pass; non-classification routes remain independently testable.                                         |
+| AI6-015 | Mock `model-a` to fail and `model-b` to return a valid extraction.      | Call the mocked models in order with identical input, accept `model-b`'s result, and do not call any later configured model.             |
+| AI6-016 | Mock every model in the configured list to fail.                        | Return one safe `503 service_unavailable`, preserve the draft, and write nothing.                                                        |
+| AI6-017 | Explicitly run the live-provider test with valid server-only settings.  | Send one minimal expense prompt to OpenRouter and receive one schema-valid expense with the expected minor-unit amount.                  |
 
 ## Exclusions
 
 - Model training, fine-tuning, embeddings, vector search, memory, conversational history, or personalized recommendations
-- Client-side model calls, streaming UI, tool use, agents, provider fallback, model fallback, or automatic repair calls
+- Client-side model calls, streaming UI, tool use, agents, cross-provider fallback, fallback outside the configured ordered model list, or automatic repair calls
 - Sending category descriptions, colors, totals, IDs, expense history, or other session data to the model
 - Currency detection, conversion, exchange rates, mixed-currency storage, tax calculations, budgets, income, refunds, or recurring expenses
 - Manual expense entry, editing descriptions or amounts, expense reclassification, or expense deletion
@@ -354,4 +359,4 @@ The following are contract examples for deterministic mocked tests; they are not
 - [Phase 5 requirements](../spec-phase-5-redesign/requirements.md): define the cookie session, Redis persistence, API DTOs, partial acceptance, error envelope, refresh coordinator, and placeholder prompt route that this phase completes.
 - [Technical baseline](../techstack.md): selects the Vercel AI SDK, OpenRouter provider, Gemma model, server-owned classification, and provider-independent domain boundary.
 
-Phase 6 is complete when the prompt endpoint performs live English and Spanish structured extraction through the selected model; server validation and Redis persistence satisfy full and partial-success contracts; failures preserve the draft and write nothing; the dashboard refreshes from authoritative API data; all automated gates remain provider-free and green; and a non-production live-provider smoke test confirms the intended workflow without exposing credentials or visitor data.
+Phase 6 is complete when the prompt endpoint performs live English and Spanish structured extraction through the configured ordered OpenRouter model list; the first successful structured result wins and exhausted fallback fails safely; server validation and Redis persistence satisfy full and partial-success contracts; failures preserve the draft and write nothing; the dashboard refreshes from authoritative API data; all automated gates remain provider-free and green; and a non-production live-provider smoke test confirms the intended workflow without exposing credentials or visitor data.

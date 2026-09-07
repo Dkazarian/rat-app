@@ -5,6 +5,7 @@ import { OPEN_ROUTER_MODEL } from "@/server/config";
 const mocks = vi.hoisted(() => ({
   createOpenRouter: vi.fn(),
   generateText: vi.fn(),
+  chat: vi.fn(),
 }));
 
 vi.mock("@openrouter/ai-sdk-provider", () => ({
@@ -25,8 +26,9 @@ describe("expense extractor", () => {
   beforeEach(() => {
     vi.stubEnv("OPENROUTER_API_KEY", "test-only-key");
     vi.stubEnv("OPEN_ROUTER_MODEL", OPEN_ROUTER_MODEL);
+    mocks.chat.mockImplementation((model: string) => `mock:${model}`);
     mocks.createOpenRouter.mockReturnValue({
-      chat: vi.fn().mockReturnValue("mock-model"),
+      chat: mocks.chat,
     });
     mocks.generateText.mockResolvedValue({ output: { expenses: [] } });
   });
@@ -98,11 +100,76 @@ describe("expense extractor", () => {
     expect(mocks.generateText).toHaveBeenCalledWith(
       expect.objectContaining({
         maxOutputTokens: 1200,
-        maxRetries: 1,
+        maxRetries: 0,
         timeout: 15000,
         prompt: expect.stringContaining("Almuerzo $18"),
       }),
     );
+  });
+
+  it("falls back in configured order and stops after the first valid result", async () => {
+    vi.stubEnv(
+      "OPEN_ROUTER_MODEL",
+      "provider/primary, provider/fallback,provider/unused",
+    );
+    mocks.generateText
+      .mockRejectedValueOnce(new Error("primary unavailable"))
+      .mockResolvedValueOnce({
+        output: {
+          expenses: [
+            { description: "Coffee", amountMinor: 125, categoryName: null },
+          ],
+        },
+      });
+
+    await expect(
+      extractExpenses({
+        prompt: "Coffee $1.25",
+        locale: "en",
+        categoryNames: [],
+      }),
+    ).resolves.toEqual({
+      expenses: [
+        { description: "Coffee", amountMinor: 125, categoryName: null },
+      ],
+    });
+
+    expect(mocks.chat.mock.calls).toEqual([
+      ["provider/primary"],
+      ["provider/fallback"],
+    ]);
+    expect(mocks.generateText).toHaveBeenCalledTimes(2);
+    expect(mocks.generateText.mock.calls[0]?.[0].prompt).toBe(
+      mocks.generateText.mock.calls[1]?.[0].prompt,
+    );
+  });
+
+  it("tries every configured model once before surfacing exhaustion", async () => {
+    vi.stubEnv(
+      "OPEN_ROUTER_MODEL",
+      "provider/primary,provider/fallback,provider/last",
+    );
+    mocks.generateText
+      .mockRejectedValueOnce(new Error("primary unavailable"))
+      .mockRejectedValueOnce({ name: "TimeoutError" })
+      .mockRejectedValueOnce(new Error("last unavailable"));
+
+    await expect(
+      extractExpenses({
+        prompt: "Coffee $1.25",
+        locale: "en",
+        categoryNames: [],
+      }),
+    ).rejects.toMatchObject({
+      kind: "provider",
+      message: "Expense extraction failed.",
+    });
+    expect(mocks.chat.mock.calls).toEqual([
+      ["provider/primary"],
+      ["provider/fallback"],
+      ["provider/last"],
+    ]);
+    expect(mocks.generateText).toHaveBeenCalledTimes(3);
   });
 
   it("translates configuration, timeout, provider, and output failures", async () => {

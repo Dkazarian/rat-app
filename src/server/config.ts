@@ -10,6 +10,11 @@ const positiveIntegerString = (fallback: number) =>
 
 export const OPEN_ROUTER_MODEL = "google/gemma-4-26b-a4b-it:free" as const;
 
+const openRouterModelsSchema = z
+  .string()
+  .transform((value) => value.split(",").map((model) => model.trim()))
+  .pipe(z.array(z.string().min(1)).min(1));
+
 const aiEnvironmentSchema = z.object({
   OPENROUTER_API_KEY: z
     .string()
@@ -18,7 +23,7 @@ const aiEnvironmentSchema = z.object({
       (value) => !/^replace[_-]with/i.test(value),
       "A real server-only OpenRouter key is required",
     ),
-  OPEN_ROUTER_MODEL: z.literal(OPEN_ROUTER_MODEL),
+  OPEN_ROUTER_MODEL: openRouterModelsSchema,
 });
 
 const environmentSchema = z.object({
@@ -54,14 +59,14 @@ export class ServerConfigurationError extends Error {
 
 export type AiConfig = Readonly<{
   apiKey: string;
-  model: typeof OPEN_ROUTER_MODEL;
+  models: ReadonlyArray<string>;
 }>;
 
 export function parseAiConfig(
   source: Record<string, string | undefined>,
 ): AiConfig {
   const value = aiEnvironmentSchema.parse(source);
-  return { apiKey: value.OPENROUTER_API_KEY, model: value.OPEN_ROUTER_MODEL };
+  return { apiKey: value.OPENROUTER_API_KEY, models: value.OPEN_ROUTER_MODEL };
 }
 
 export function getAiConfig(): AiConfig {

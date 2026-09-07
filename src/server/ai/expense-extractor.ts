@@ -13,7 +13,7 @@ import { getAiConfig } from "@/server/config";
 const MAX_EXTRACTED_EXPENSES = 100;
 const EXTRACTION_TIMEOUT_MS = 15_000;
 const MAX_OUTPUT_TOKENS = 1_200;
-const MAX_RETRIES = 1;
+const MAX_RETRIES = 0;
 
 export const expenseExtractionOutputSchema = z
   .object({
@@ -136,26 +136,38 @@ export async function extractExpenses(
     throw new ExpenseExtractorError("configuration", { cause: error });
   }
 
-  try {
-    const provider = createOpenRouter({ apiKey: config.apiKey });
-    const result = await generateText({
-      model: provider.chat(config.model),
-      system: expenseExtractionSystemPrompt,
-      prompt: buildExtractionUserPrompt(input),
-      output: Output.object({
-        schema: expenseExtractionOutputSchema,
-        name: "expense_extraction",
-      }),
-      maxOutputTokens: MAX_OUTPUT_TOKENS,
-      maxRetries: MAX_RETRIES,
-      timeout: EXTRACTION_TIMEOUT_MS,
-    });
+  const prompt = buildExtractionUserPrompt(input);
+  const provider = createOpenRouter({ apiKey: config.apiKey });
+  let lastError: ExpenseExtractorError | undefined;
+
+  for (const model of config.models) {
     try {
-      return expenseExtractionOutputSchema.parse(result.output);
+      const result = await generateText({
+        model: provider.chat(model),
+        system: expenseExtractionSystemPrompt,
+        prompt,
+        output: Output.object({
+          schema: expenseExtractionOutputSchema,
+          name: "expense_extraction",
+        }),
+        maxOutputTokens: MAX_OUTPUT_TOKENS,
+        maxRetries: MAX_RETRIES,
+        timeout: EXTRACTION_TIMEOUT_MS,
+      });
+      try {
+        return expenseExtractionOutputSchema.parse(result.output);
+      } catch (error) {
+        throw new ExpenseExtractorError("invalid_output", { cause: error });
+      }
     } catch (error) {
-      throw new ExpenseExtractorError("invalid_output", { cause: error });
+      lastError = toExtractorError(error);
     }
-  } catch (error) {
-    throw toExtractorError(error);
   }
+
+  throw (
+    lastError ??
+    new ExpenseExtractorError("configuration", {
+      cause: new Error("No OpenRouter models were configured."),
+    })
+  );
 }
