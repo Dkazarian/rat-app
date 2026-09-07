@@ -10,7 +10,7 @@ Ratapp is a Next.js application backed by an anonymous Redis session API. The se
 - **Localization:** i18next and react-i18next for English and Spanish
 - **Validation:** Zod at configuration and HTTP boundaries
 - **Session store:** Upstash Redis through server-only `@upstash/redis`
-- **AI:** OpenRouter through server-side platform `fetch`
+- **AI:** Vercel AI SDK (`ai`) with Zod structured output and the server-only OpenRouter provider (`@openrouter/ai-sdk-provider`), using `google/gemma-4-26b-a4b-it:free`
 - **Quality:** ESLint, Prettier, Vitest, Testing Library, and Storybook accessibility checks
 - **Hosting:** Vercel
 
@@ -63,7 +63,7 @@ All endpoints use JSON except session initialization and successful deletes, whi
 
 ## Classification boundary
 
-The prompt endpoint accepts a bounded message and locale, loads the session's current categories, and requests structured output from OpenRouter. Each candidate is validated independently; unknown categories become **Unclassified**. Accepted expenses are persisted through the same server session boundary. Provider failure or a zero-item result writes nothing.
+The prompt endpoint accepts a bounded message and locale, loads the session's current categories, and requests Zod-validated structured output from `google/gemma-4-26b-a4b-it:free` through the Vercel AI SDK and its server-only OpenRouter provider. Each candidate is validated independently; unknown categories become **Unclassified**. Accepted expenses are persisted through the same server session boundary. Provider failure or a zero-item result writes nothing.
 
 Initial-release category context contains category names only. AI-facing custom-category descriptions, expense reclassification, and expense deletion are post-release features.
 
