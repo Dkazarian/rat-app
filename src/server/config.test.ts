@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseServerConfig } from "./config";
+import { OPEN_ROUTER_MODEL, parseAiConfig, parseServerConfig } from "./config";
 
 const validEnvironment = {
   KV_REST_API_URL: "https://example.upstash.io",
@@ -39,5 +39,29 @@ describe("parseServerConfig", () => {
       redisUrl: KV_REST_API_URL,
       redisToken: KV_REST_API_TOKEN,
     });
+  });
+});
+
+describe("parseAiConfig", () => {
+  it("validates AI settings independently from Redis settings", () => {
+    expect(
+      parseAiConfig({
+        OPENROUTER_API_KEY: "test-only-key",
+        OPEN_ROUTER_MODEL: OPEN_ROUTER_MODEL,
+      }),
+    ).toEqual({ apiKey: "test-only-key", model: OPEN_ROUTER_MODEL });
+    expect(() => parseServerConfig(validEnvironment)).not.toThrow();
+  });
+
+  it.each([
+    {},
+    { OPENROUTER_API_KEY: "" },
+    {
+      OPENROUTER_API_KEY: "replace-with-a-key",
+      OPEN_ROUTER_MODEL: OPEN_ROUTER_MODEL,
+    },
+    { OPENROUTER_API_KEY: "test-only-key", OPEN_ROUTER_MODEL: "other/model" },
+  ])("rejects incomplete or unsafe AI settings", (environment) => {
+    expect(() => parseAiConfig(environment)).toThrow();
   });
 });

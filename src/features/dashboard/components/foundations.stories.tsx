@@ -31,9 +31,7 @@ export const AwaitingMascot: Story = {
 };
 export const RatDialogue: Story = {
   render: () => (
-    <RatDialogueComponent
-      feedback={{ state: "success", extractedCount: 3, rejectedCount: 0 }}
-    />
+    <RatDialogueComponent feedback={{ state: "success", extractedCount: 3 }} />
   ),
 };
 export const ExpenseInput: Story = {

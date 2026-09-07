@@ -2,7 +2,7 @@
 
 Ratapp is a bilingual expense-classification demo built with Next.js, React, and TypeScript. It supports session-only category management, expense capture, and a synchronized spending summary in English and Spanish.
 
-The current implementation is the Phase 5 Redis-backed redesign. The browser creates or resumes an expiring, cookie-scoped anonymous session through `/api/v1`, loads categories and expenses from that same-origin API, and performs category mutations server-side. Session IDs are never exposed through browser API URLs or response bodies. Expenses are read-only in the initial release. The prompt endpoint intentionally returns `classification_unavailable`; live AI extraction is planned for Phase 6.
+The current implementation is the Phase 6 Redis-backed classification flow. The browser creates or resumes an expiring, cookie-scoped anonymous session through `/api/v1`, loads categories and expenses from that same-origin API, and submits natural-language English or Spanish expense prompts for server-side structured extraction. Session IDs are never exposed through browser API URLs or response bodies. Expenses are read-only in the initial release.
 
 ## Project map
 
@@ -27,6 +27,10 @@ See [`src/README.md`](src/README.md) for placement and dependency rules, and [`s
 ```sh
 npm install
 ```
+
+For live classification, set the server-only `OPENROUTER_API_KEY` and
+`OPEN_ROUTER_MODEL=google/gemma-4-26b-a4b-it:free` in `.env.development.local`.
+Never expose either setting with a `NEXT_PUBLIC_` prefix or commit a real key.
 
 ## Application
 

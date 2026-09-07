@@ -21,7 +21,6 @@ describe("dashboardFixtures", () => {
     expect(dashboardFixtures.success.feedback).toEqual({
       state: "success",
       extractedCount: 3,
-      rejectedCount: 0,
     });
   });
 

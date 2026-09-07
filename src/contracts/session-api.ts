@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 export const categoryColors = [
   "coral",
   "purple",
@@ -18,36 +20,49 @@ export type CategoryDto = Readonly<{
   totalMinor: number;
 }>;
 
+export const expenseDtoSchema = z
+  .object({
+    id: z.uuid(),
+    description: z.string().trim().min(1),
+    amountMinor: z.number().int().safe().positive(),
+    categoryId: z.uuid().nullable(),
+    createdAt: z.number().int().safe().nonnegative(),
+  })
+  .strict();
+
+export const promptMutationResponseSchema = z
+  .object({
+    expenses: z.array(expenseDtoSchema).min(1),
+    rejectedCount: z.number().int().safe().nonnegative(),
+  })
+  .strict();
+
 export type CategoriesResponse = Readonly<{
   categories: ReadonlyArray<CategoryDto>;
   unclassifiedTotalMinor: number;
   totalMinor: number;
 }>;
 
-export type ExpenseDto = Readonly<{
-  id: string;
-  description: string;
-  amountMinor: number;
-  categoryId: string | null;
-  createdAt: number;
-}>;
+export type ExpenseDto = z.infer<typeof expenseDtoSchema>;
 
 export type ExpensesResponse = Readonly<{
   expenses: ReadonlyArray<ExpenseDto>;
 }>;
 
-export type ApiErrorCode =
-  | "invalid_request"
-  | "invalid_category_name"
-  | "session_not_found"
-  | "category_not_found"
-  | "category_name_duplicate"
-  | "category_limit_reached"
-  | "expense_limit_reached"
-  | "no_expenses_extracted"
-  | "classification_unavailable"
-  | "service_unavailable"
-  | "internal_error";
+export const apiErrorCodeSchema = z.enum([
+  "invalid_request",
+  "invalid_category_name",
+  "session_not_found",
+  "category_not_found",
+  "category_name_duplicate",
+  "category_limit_reached",
+  "expense_limit_reached",
+  "no_expenses_extracted",
+  "service_unavailable",
+  "internal_error",
+]);
+
+export type ApiErrorCode = z.infer<typeof apiErrorCodeSchema>;
 
 export type ApiErrorField = "name" | "prompt";
 
@@ -59,8 +74,38 @@ export type ApiErrorResponse = Readonly<{
   }>;
 }>;
 
+export const apiErrorResponseSchema = z
+  .object({
+    error: z
+      .object({
+        code: apiErrorCodeSchema,
+        message: z.string().min(1),
+        field: z.enum(["name", "prompt"]).optional(),
+      })
+      .strict(),
+  })
+  .strict();
+
+export const promptErrorResponseSchema = z
+  .object({
+    error: z
+      .object({
+        code: z.enum([
+          "invalid_request",
+          "session_not_found",
+          "expense_limit_reached",
+          "no_expenses_extracted",
+          "service_unavailable",
+          "internal_error",
+        ]),
+        message: z.string().min(1),
+        field: z.literal("prompt").optional(),
+      })
+      .strict(),
+  })
+  .strict();
+
 export type CategoryMutationResponse = Readonly<{ category: CategoryDto }>;
-export type PromptMutationResponse = Readonly<{
-  expenses: ReadonlyArray<ExpenseDto>;
-  rejectedCount: number;
-}>;
+export type PromptMutationResponse = z.infer<
+  typeof promptMutationResponseSchema
+>;

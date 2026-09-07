@@ -12,13 +12,16 @@ const errorKeys = {
   category_limit_reached: "apiErrorCategoryLimitReached",
   expense_limit_reached: "apiErrorExpenseLimitReached",
   no_expenses_extracted: "apiErrorNoExpensesExtracted",
-  classification_unavailable: "apiErrorClassificationUnavailable",
   service_unavailable: "apiErrorServiceUnavailable",
   internal_error: "apiErrorInternal",
 } as const satisfies Record<ApiErrorCode, TranslationKey>;
 
-export function getApiErrorMessage(error: unknown, t: TFunction): string {
+export function getApiErrorTranslationKey(error: unknown): TranslationKey {
   return error instanceof SessionApiError
-    ? t(errorKeys[error.code])
-    : t("apiErrorUnknown");
+    ? errorKeys[error.code]
+    : "apiErrorUnknown";
+}
+
+export function getApiErrorMessage(error: unknown, t: TFunction): string {
+  return t(getApiErrorTranslationKey(error));
 }

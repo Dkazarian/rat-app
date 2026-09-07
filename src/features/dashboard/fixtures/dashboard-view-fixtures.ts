@@ -74,10 +74,15 @@ const feedbackByState = {
   success: {
     state: "success",
     extractedCount: 3,
-    rejectedCount: 0,
   },
-  "extraction-failure": { state: "extraction-failure" },
-  "provider-error": { state: "provider-error" },
+  "extraction-failure": {
+    state: "extraction-failure",
+    detailKey: "apiErrorNoExpensesExtracted",
+  },
+  "provider-error": {
+    state: "provider-error",
+    detailKey: "apiErrorServiceUnavailable",
+  },
 } as const satisfies Record<RatDialogueState, RatDialogueFeedback>;
 
 const submittedInput = "Lunch $18, coffee $4.50 and taxi $12";

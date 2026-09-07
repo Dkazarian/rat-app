@@ -1,6 +1,5 @@
 "use client";
 
-import { getApiErrorMessage } from "@/features/dashboard/api/error-messages";
 import type { TranslationKey } from "@/i18n";
 import { useLocale } from "@/i18n/locale-context";
 
@@ -19,11 +18,10 @@ export type RatDialogueFeedback =
   | Readonly<{
       state: "success";
       extractedCount: number;
-      rejectedCount: number;
     }>
   | Readonly<{
       state: "extraction-failure" | "provider-error";
-      error?: unknown;
+      detailKey: TranslationKey;
     }>;
 
 export type RatDialogueProps = Readonly<{
@@ -61,16 +59,13 @@ export function RatDialogue({ feedback }: RatDialogueProps) {
           : "successDetailMany",
         { count: feedback.extractedCount },
       );
-      return feedback.rejectedCount
-        ? `${result} ${t("skippedExpenses", { count: feedback.rejectedCount })}`
-        : result;
+      return result;
     }
     if (
-      (feedback.state === "extraction-failure" ||
-        feedback.state === "provider-error") &&
-      feedback.error
+      feedback.state === "extraction-failure" ||
+      feedback.state === "provider-error"
     ) {
-      return getApiErrorMessage(feedback.error, t);
+      return t(feedback.detailKey);
     }
     return t(detailKeys[feedback.state]);
   })();

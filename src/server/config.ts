@@ -8,6 +8,19 @@ const positiveIntegerString = (fallback: number) =>
     .transform(Number)
     .pipe(z.number().int().positive().safe());
 
+export const OPEN_ROUTER_MODEL = "google/gemma-4-26b-a4b-it:free" as const;
+
+const aiEnvironmentSchema = z.object({
+  OPENROUTER_API_KEY: z
+    .string()
+    .min(1)
+    .refine(
+      (value) => !/^replace[_-]with/i.test(value),
+      "A real server-only OpenRouter key is required",
+    ),
+  OPEN_ROUTER_MODEL: z.literal(OPEN_ROUTER_MODEL),
+});
+
 const environmentSchema = z.object({
   KV_REST_API_URL: z.url().startsWith("https://"),
   KV_REST_API_TOKEN: z.string().min(1),
@@ -37,6 +50,22 @@ export class ServerConfigurationError extends Error {
     super("Server configuration is invalid.", options);
     this.name = "ServerConfigurationError";
   }
+}
+
+export type AiConfig = Readonly<{
+  apiKey: string;
+  model: typeof OPEN_ROUTER_MODEL;
+}>;
+
+export function parseAiConfig(
+  source: Record<string, string | undefined>,
+): AiConfig {
+  const value = aiEnvironmentSchema.parse(source);
+  return { apiKey: value.OPENROUTER_API_KEY, model: value.OPEN_ROUTER_MODEL };
+}
+
+export function getAiConfig(): AiConfig {
+  return parseAiConfig(process.env);
 }
 
 export function parseServerConfig(

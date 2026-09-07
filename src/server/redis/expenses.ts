@@ -58,6 +58,9 @@ export async function createExpenses(
   const redis = getRedisClient();
   const keys = createSessionKeys(config.redisKeyPrefix, sessionId);
   return redisOperation(async () => {
+    if ((await redis.exists(keys.meta)) !== 1) {
+      throw applicationErrors.sessionNotFound();
+    }
     const [categories, currentExpenses] = await Promise.all([
       readCategories(redis, keys),
       readExpenses(redis, keys),

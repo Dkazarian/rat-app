@@ -1,9 +1,14 @@
+import { z } from "zod";
 import type {
   ApiErrorResponse,
   CategoriesResponse,
   CategoryMutationResponse,
   ExpensesResponse,
   PromptMutationResponse,
+} from "@/contracts/session-api";
+import {
+  apiErrorResponseSchema,
+  promptMutationResponseSchema,
 } from "@/contracts/session-api";
 
 export class SessionApiError extends Error {
@@ -26,6 +31,7 @@ type RequestOptions = Readonly<{
 async function request<T>(
   path: string,
   options: RequestOptions = {},
+  responseSchema?: z.ZodType<T>,
 ): Promise<T> {
   const response = await fetch(path, {
     method: options.method ?? "GET",
@@ -43,14 +49,25 @@ async function request<T>(
       ? undefined
       : await response.json().catch(() => undefined);
   if (!response.ok) {
-    const error = payload as ApiErrorResponse | undefined;
+    const parsedError = apiErrorResponseSchema.safeParse(payload);
+    const error: ApiErrorResponse | undefined = parsedError.success
+      ? parsedError.data
+      : undefined;
     throw new SessionApiError(
       error?.error.code ?? "internal_error",
       error?.error.message ?? "The request could not be completed.",
       error?.error.field,
     );
   }
-  return payload as T;
+  if (!responseSchema) return payload as T;
+  const parsedResponse = responseSchema.safeParse(payload);
+  if (!parsedResponse.success) {
+    throw new SessionApiError(
+      "internal_error",
+      "The request could not be completed.",
+    );
+  }
+  return parsedResponse.data;
 }
 
 export type SessionApi = Readonly<{
@@ -80,8 +97,12 @@ export const browserSessionApi: SessionApi = {
     }),
   getExpenses: (signal) => request("/api/v1/expenses", { signal }),
   submitPrompt: (prompt, locale) =>
-    request("/api/v1/expenses/prompt", {
-      method: "POST",
-      body: { prompt, locale },
-    }),
+    request(
+      "/api/v1/expenses/prompt",
+      {
+        method: "POST",
+        body: { prompt, locale },
+      },
+      promptMutationResponseSchema,
+    ),
 };

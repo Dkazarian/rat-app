@@ -14,10 +14,36 @@ import {
   type SessionApi,
 } from "@/features/dashboard/api/session-api-client";
 import { getApiErrorMessage } from "@/features/dashboard/api/error-messages";
+import { getApiErrorTranslationKey } from "@/features/dashboard/api/error-messages";
+import {
+  mapPromptOutcomeToRatFeedback,
+  type PromptApiErrorCode,
+  type PromptApiOutcome,
+} from "@/features/dashboard/components/capture-panel/prompt-feedback";
 import { useSessionBootstrap } from "@/features/dashboard/hooks/use-session-bootstrap";
 import { useLocale } from "@/i18n/locale-context";
 
 export type DashboardPageProps = Readonly<{ api?: SessionApi }>;
+
+function isPromptApiErrorCode(
+  code: SessionApiError["code"],
+): code is PromptApiErrorCode {
+  return [
+    "invalid_request",
+    "session_not_found",
+    "expense_limit_reached",
+    "no_expenses_extracted",
+    "service_unavailable",
+    "internal_error",
+  ].includes(code as PromptApiErrorCode);
+}
+
+function promptOutcomeFromError(error: unknown): PromptApiOutcome {
+  if (error instanceof SessionApiError && isPromptApiErrorCode(error.code)) {
+    return { kind: "api-error", code: error.code };
+  }
+  return { kind: "unknown" };
+}
 
 export function DashboardPage({ api = browserSessionApi }: DashboardPageProps) {
   const { t, locale } = useLocale();
@@ -60,14 +86,16 @@ export function DashboardPage({ api = browserSessionApi }: DashboardPageProps) {
   );
   const handleOperationError = useCallback(
     (error: unknown) => {
+      setFeedback({
+        state: "provider-error",
+        detailKey: getApiErrorTranslationKey(error),
+      });
       if (
         error instanceof SessionApiError &&
         error.code === "session_not_found"
       ) {
         retrySession();
-        return;
       }
-      setFeedback({ state: "provider-error", error });
     },
     [retrySession],
   );
@@ -86,32 +114,27 @@ export function DashboardPage({ api = browserSessionApi }: DashboardPageProps) {
         api.submitPrompt(inputValue, locale),
       );
       if (result.expenses.length === 0) {
-        setFeedback({ state: "extraction-failure" });
+        setFeedback(
+          mapPromptOutcomeToRatFeedback({
+            kind: "api-error",
+            code: "no_expenses_extracted",
+          }),
+        );
         return;
       }
       setInputValue("");
-      setFeedback({
-        state: "success",
-        extractedCount: result.expenses.length,
-        rejectedCount: result.rejectedCount,
-      });
+      setFeedback(
+        mapPromptOutcomeToRatFeedback({ kind: "success", response: result }),
+      );
       notifyDataChanged();
     } catch (error) {
+      setFeedback(mapPromptOutcomeToRatFeedback(promptOutcomeFromError(error)));
       if (
         error instanceof SessionApiError &&
         error.code === "session_not_found"
       ) {
         retrySession();
-        return;
       }
-      setFeedback({
-        state:
-          error instanceof SessionApiError &&
-          error.code === "classification_unavailable"
-            ? "extraction-failure"
-            : "provider-error",
-        error,
-      });
     }
   };
 

@@ -58,8 +58,8 @@ function createApi() {
     getExpenses: vi.fn(async () => ({ expenses })),
     submitPrompt: vi.fn(async () => {
       throw new SessionApiError(
-        "classification_unavailable",
-        "Classification is unavailable.",
+        "no_expenses_extracted",
+        "No expenses could be found.",
         "prompt",
       );
     }),
@@ -134,7 +134,7 @@ describe("DashboardPage API composition", () => {
     expect(api.getCategories).toHaveBeenCalledTimes(1);
   });
 
-  it("preserves exact prompt text when Phase 5 classification is unavailable", async () => {
+  it("preserves exact prompt text when no expense is extracted", async () => {
     const api = createApi();
     const { user } = renderDashboard(api);
     const input = await screen.findByRole("textbox", {
@@ -148,8 +148,36 @@ describe("DashboardPage API composition", () => {
     );
     expect(input).toHaveValue(exact);
     expect(screen.getByRole("alert")).toHaveTextContent(
-      "Automatic sorting is not available yet.",
+      "No expenses could be found in that description.",
     );
+  });
+
+  it("clears and refreshes after partial success using ordinary success copy", async () => {
+    const api = createApi();
+    vi.mocked(api.submitPrompt).mockResolvedValueOnce({
+      expenses: [
+        {
+          id: "20000000-0000-4000-8000-000000000002",
+          description: "Coffee",
+          amountMinor: 450,
+          categoryId: null,
+          createdAt: 2,
+        },
+      ],
+      rejectedCount: 3,
+    });
+    const { user } = renderDashboard(api);
+    const input = await screen.findByRole("textbox", {
+      name: "What did you spend?",
+    });
+    await user.type(input, "Coffee $4.50");
+    await user.click(screen.getByRole("button", { name: "Sort it" }));
+
+    await waitFor(() => expect(input).toHaveValue(""));
+    expect(screen.getByText("1 expense sorted.")).toBeVisible();
+    expect(screen.queryByText(/skipped|rejected/i)).not.toBeInTheDocument();
+    expect(api.getCategories).toHaveBeenCalledTimes(2);
+    expect(api.getExpenses).toHaveBeenCalledTimes(2);
   });
 
   it("refreshes both section-owned resources after a category cascade", async () => {

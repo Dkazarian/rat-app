@@ -33,12 +33,12 @@ describe("browserSessionApi", () => {
         new Response(
           JSON.stringify({
             error: {
-              code: "classification_unavailable",
+              code: "service_unavailable",
               message: "Unavailable",
               field: "prompt",
             },
           }),
-          { status: 501, headers: { "Content-Type": "application/json" } },
+          { status: 503, headers: { "Content-Type": "application/json" } },
         ),
       ),
     );
@@ -46,11 +46,7 @@ describe("browserSessionApi", () => {
     await expect(
       browserSessionApi.submitPrompt(" exact ", "en"),
     ).rejects.toEqual(
-      new SessionApiError(
-        "classification_unavailable",
-        "Unavailable",
-        "prompt",
-      ),
+      new SessionApiError("service_unavailable", "Unavailable", "prompt"),
     );
   });
 
@@ -65,5 +61,57 @@ describe("browserSessionApi", () => {
       "/api/v1/session",
       expect.objectContaining({ method: "POST", credentials: "same-origin" }),
     );
+  });
+
+  it("validates prompt mutation success responses before returning them", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            expenses: [{ id: "not-a-uuid" }],
+            rejectedCount: 0,
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+      ),
+    );
+
+    await expect(
+      browserSessionApi.submitPrompt("Lunch $18", "en"),
+    ).rejects.toEqual(
+      new SessionApiError(
+        "internal_error",
+        "The request could not be completed.",
+      ),
+    );
+  });
+
+  it("returns a schema-valid prompt mutation response", async () => {
+    const payload = {
+      expenses: [
+        {
+          id: "10000000-0000-4000-8000-000000000001",
+          description: "Lunch",
+          amountMinor: 1800,
+          categoryId: null,
+          createdAt: 1,
+        },
+      ],
+      rejectedCount: 2,
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify(payload), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      ),
+    );
+
+    await expect(
+      browserSessionApi.submitPrompt("Lunch $18", "en"),
+    ).resolves.toEqual(payload);
   });
 });
