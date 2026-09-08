@@ -62,7 +62,7 @@ This intermediate phase records the refactor between expense management and AI i
 
 Validated on 2026-09-03: all six automated gates, 106 tests, and bilingual desktop/narrow browser workflows pass.
 
-## Phase 5 — Redesign
+## Phase 5 — Redesign ✅
 
 - Replace browser-owned category and expense services with a server API as the source of truth
 - Remove remains of deferred expense reclassification and deletion features
@@ -81,7 +81,7 @@ Detailed HTTP contracts and session-transport decisions are defined in the [Phas
 
 Validated on 2026-09-03: unit/component and Upstash integration suites, lint, strict TypeScript, Storybook, production build, and bilingual seeded browser review pass.
 
-## Phase 6 — AI classification API
+## Phase 6 — AI classification API ✅
 
 - Same-origin classification API connected to the configured AI provider
 - English and Spanish multi-expense extraction using the visitor's current categories
@@ -89,6 +89,8 @@ Validated on 2026-09-03: unit/component and Upstash integration suites, lint, st
 - Cumulative success and recoverable failure behavior
 - Server-only provider credentials and safe error responses
 - Category names as the only custom-category context supplied to the AI
+
+Validated on 2026-09-08: all six automated gates, 98 tests, the opt-in live `gpt-4.1-nano` integration test, privacy/architecture review, and representative bilingual desktop/narrow browser workflows pass. Detailed evidence and accepted environment differences are recorded in the [Phase 6 validation checklist](spec-phase-6-ai-classification-api/validation.md).
 
 ## Phase 7 — Public demo release
 

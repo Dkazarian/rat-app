@@ -38,10 +38,7 @@ export type ExpenseExtractorInput = Readonly<{
 }>;
 
 export type ExpenseExtractorErrorKind =
-  | "configuration"
-  | "timeout"
-  | "provider"
-  | "invalid_output";
+  "configuration" | "timeout" | "provider" | "invalid_output";
 
 const safeMessages: Record<ExpenseExtractorErrorKind, string> = {
   configuration: "AI classification is not configured.",
