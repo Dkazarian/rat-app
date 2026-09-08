@@ -223,6 +223,68 @@ describe("DashboardPage API composition", () => {
     expect(api.getExpenses).toHaveBeenCalledTimes(2);
   });
 
+  it("deletes an expense and refreshes both dashboard resources", async () => {
+    const api = createApi();
+    const { user } = renderDashboard(api);
+    const expenses = within(
+      await screen.findByRole("region", { name: "Recent expenses" }),
+    );
+
+    await user.click(expenses.getByRole("button", { name: "Delete Lunch" }));
+
+    await waitFor(() =>
+      expect(api.deleteExpense).toHaveBeenCalledWith(
+        "20000000-0000-4000-8000-000000000001",
+      ),
+    );
+    await waitFor(() =>
+      expect(expenses.queryByText("Lunch")).not.toBeInTheDocument(),
+    );
+    expect(api.getCategories).toHaveBeenCalledTimes(2);
+    expect(api.getExpenses).toHaveBeenCalledTimes(2);
+  });
+
+  it("routes expense deletion failures through dashboard error feedback", async () => {
+    const api = createApi();
+    vi.mocked(api.deleteExpense).mockRejectedValueOnce(
+      new SessionApiError(
+        "service_unavailable",
+        "The service is temporarily unavailable.",
+      ),
+    );
+    const { user } = renderDashboard(api);
+    const expenses = within(
+      await screen.findByRole("region", { name: "Recent expenses" }),
+    );
+
+    await user.click(expenses.getByRole("button", { name: "Delete Lunch" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "The service is temporarily unavailable. Try again.",
+    );
+    expect(expenses.getByText("Lunch")).toBeVisible();
+    expect(api.getCategories).toHaveBeenCalledTimes(1);
+    expect(api.getExpenses).toHaveBeenCalledTimes(1);
+  });
+
+  it("starts a new session when expense deletion reports expiration", async () => {
+    const api = createApi();
+    vi.mocked(api.deleteExpense).mockRejectedValueOnce(
+      new SessionApiError(
+        "session_not_found",
+        "The anonymous session was not found.",
+      ),
+    );
+    const { user } = renderDashboard(api);
+    const expenses = within(
+      await screen.findByRole("region", { name: "Recent expenses" }),
+    );
+
+    await user.click(expenses.getByRole("button", { name: "Delete Lunch" }));
+
+    await waitFor(() => expect(api.createSession).toHaveBeenCalledTimes(2));
+  });
+
   it("bootstraps a new session when a read reports an expired session", async () => {
     const api = createApi();
     let finishBootstrap!: () => void;

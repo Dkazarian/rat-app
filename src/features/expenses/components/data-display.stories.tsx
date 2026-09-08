@@ -50,6 +50,7 @@ export const ExpenseListItem: Story = {
             ...fixture.expenses[0],
             description: t("lunch"),
           }}
+          onDeleteExpense={async () => undefined}
         />
       </ul>
     );

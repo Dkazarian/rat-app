@@ -18,6 +18,8 @@ export type ApiExpenseListProps = Readonly<{
   categories: ReadonlyArray<CategoryItemData>;
   refreshCounter: number;
   onSessionExpired: () => void;
+  onDeleteExpense: (expenseId: string) => Promise<void>;
+  disabled?: boolean;
 }>;
 
 export function ApiExpenseList({
@@ -25,6 +27,8 @@ export function ApiExpenseList({
   categories,
   refreshCounter,
   onSessionExpired,
+  onDeleteExpense,
+  disabled = false,
 }: ApiExpenseListProps) {
   const { t } = useLocale();
   const query = useExpenseQuery(api, refreshCounter);
@@ -65,5 +69,11 @@ export function ApiExpenseList({
     };
   });
 
-  return <ExpenseList expenses={expenses} />;
+  return (
+    <ExpenseList
+      expenses={expenses}
+      onDeleteExpense={onDeleteExpense}
+      disabled={disabled}
+    />
+  );
 }

@@ -18,6 +18,7 @@
   "addCategory": "Add",
   "cancelCategory": "Cancel",
   "deleteCategory": "Delete {{name}}",
+  "deleteExpense": "Delete {{description}}",
   "categoryValidationEmpty": "Enter a category name.",
   "categoryValidationTooLong": "Use 24 characters or fewer.",
   "categoryValidationDuplicate": "That category already exists.",

@@ -91,6 +91,13 @@ export function DashboardResults(props: Props) {
     }
     onOperationError(error);
   };
+  const handleExpenseDelete = async (expenseId: string) => {
+    try {
+      await mutate(() => api.deleteExpense(expenseId));
+    } catch (error) {
+      handleCategoryError(error);
+    }
+  };
 
   return (
     <div className="grid grid-cols-[250px_minmax(0,1fr)] items-start gap-[18px] max-[850px]:grid-cols-1">
@@ -114,6 +121,8 @@ export function DashboardResults(props: Props) {
             categories={categories}
             refreshCounter={refreshCounter}
             onSessionExpired={onSessionExpired}
+            onDeleteExpense={handleExpenseDelete}
+            disabled={isMutating}
           />
         </div>
       </div>

@@ -7,9 +7,15 @@ import { useLocale } from "@/i18n/locale-context";
 
 export type ExpenseListProps = Readonly<{
   expenses: ReadonlyArray<ExpenseListItemData>;
+  onDeleteExpense: (expenseId: string) => Promise<void>;
+  disabled?: boolean;
 }>;
 
-export function ExpenseList({ expenses }: ExpenseListProps) {
+export function ExpenseList({
+  expenses,
+  onDeleteExpense,
+  disabled = false,
+}: ExpenseListProps) {
   const titleId = useId();
   const { t } = useLocale();
 
@@ -26,7 +32,12 @@ export function ExpenseList({ expenses }: ExpenseListProps) {
       ) : null}
       <ul className="grid list-none gap-2 p-0">
         {expenses.map((expense) => (
-          <ExpenseListItem key={expense.id} expense={expense} />
+          <ExpenseListItem
+            key={expense.id}
+            expense={expense}
+            onDeleteExpense={onDeleteExpense}
+            disabled={disabled}
+          />
         ))}
       </ul>
     </section>
