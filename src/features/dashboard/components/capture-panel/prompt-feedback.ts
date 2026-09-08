@@ -10,6 +10,7 @@ export type PromptApiErrorCode = Extract<
   | "invalid_request"
   | "session_not_found"
   | "expense_limit_reached"
+  | "rate_limited"
   | "no_expenses_extracted"
   | "service_unavailable"
   | "internal_error"
@@ -27,7 +28,10 @@ const detailKeys = {
   no_expenses_extracted: "apiErrorNoExpensesExtracted",
   service_unavailable: "apiErrorServiceUnavailable",
   internal_error: "apiErrorInternal",
-} as const satisfies Record<PromptApiErrorCode, TranslationKey>;
+} as const satisfies Record<
+  Exclude<PromptApiErrorCode, "rate_limited">,
+  TranslationKey
+>;
 
 export function mapPromptOutcomeToRatFeedback(
   outcome: PromptApiOutcome,
@@ -41,6 +45,10 @@ export function mapPromptOutcomeToRatFeedback(
 
   if (outcome.kind === "unknown") {
     return { state: "provider-error", detailKey: "apiErrorUnknown" };
+  }
+
+  if (outcome.code === "rate_limited") {
+    return { state: "rate-limited" };
   }
 
   return {

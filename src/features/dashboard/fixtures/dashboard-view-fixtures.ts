@@ -83,6 +83,7 @@ const feedbackByState = {
     state: "provider-error",
     detailKey: "apiErrorServiceUnavailable",
   },
+  "rate-limited": { state: "rate-limited" },
 } as const satisfies Record<RatDialogueState, RatDialogueFeedback>;
 
 const submittedInput = "Lunch $18, coffee $4.50 and taxi $12";
@@ -125,6 +126,10 @@ export const dashboardFixtures = {
     populated: false,
   }),
   "provider-error": createFixture("provider-error", {
+    inputValue: submittedInput,
+    populated: false,
+  }),
+  "rate-limited": createFixture("rate-limited", {
     inputValue: submittedInput,
     populated: false,
   }),

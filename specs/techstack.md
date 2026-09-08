@@ -20,7 +20,7 @@ Exact dependency versions live in `package.json` and the lockfile.
 
 ```text
 Browser UI -> /api/v1 Route Handlers -> server functions -> Upstash Redis
-                                      \-> OpenAI (Phase 6 classification)
+                                      \-> OpenAI (Classification)
 ```
 
 - `src/app` contains pages and thin HTTP route handlers.
@@ -30,7 +30,6 @@ Browser UI -> /api/v1 Route Handlers -> server functions -> Upstash Redis
 - Server Components are the default; client boundaries stay as narrow as practical.
 - Route handlers translate HTTP concerns and call reusable server functions directly. Redis access stays in concrete function-based modules rather than repository or manager classes.
 - Browser code calls the same-origin API and never imports server modules or credentials.
-- `/api/v1` is the application's browser transport, not a private or supported third-party API. It has no self-referential HTTP layer, backend shared secret, CORS infrastructure, or middleware authentication tier.
 
 ## State and data
 
@@ -67,13 +66,12 @@ The prompt endpoint accepts a bounded message and locale, loads the session's cu
 
 Initial-release category context contains category names only. AI-facing custom-category descriptions, expense reclassification, and expense deletion are post-release features.
 
-Provider credentials remain server-only. The category-name and expense-prompt limits are shared by browser and server validation; request-shape and business rules remain authoritative on the server. Routes use safe errors and logging that excludes raw prompts and session identifiers. Bot protection and rate-limiting infrastructure are outside the initial release.
+Provider credentials remain server-only. The category-name and expense-prompt limits are shared by browser and server validation; request-shape and business rules remain authoritative on the server. Routes use safe errors and a small server-only logger that excludes raw prompts and session identifiers. Redis atomically limits AI requests per session and globally across serverless instances; ordinary CRUD routes retain their existing domain limits.
 
 ## Engineering rules
 
 - Keep domain behavior independent of React, Redis representation, and provider response shapes.
 - Treat API responses as authoritative; derive display groupings and chart data instead of duplicating mutable stores.
-- Serialize conflicting writes while allowing independent reads.
 - Keep Storybook deterministic and independent of Redis and OpenAI.
 - Verify changes with formatting, lint, strict type checking, tests, Storybook, and a production build as appropriate.
 

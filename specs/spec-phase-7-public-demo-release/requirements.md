@@ -2,7 +2,15 @@
 
 ## Objective
 
-Prepare the existing bilingual classification flow for safe public use without changing its product behavior.
+Prepare the existing bilingual classification flow for safe public use with consistent input and expense-description normalization.
+
+## Input safety and normalization
+
+- Keep category validation server-authoritative. Reject unexpected request fields, normalize category names to Unicode NFC, trim surrounding whitespace, and reject empty values, overlong values, reserved names, duplicates, line breaks, and Unicode control or formatting characters.
+- Keep prompts as free-form text with the existing non-empty and 500-character checks. Do not use phrase or prompt-injection blacklists.
+- Continue JSON-encoding prompts and category names as explicitly untrusted AI input, and instruct the model to ignore instructions within that data.
+- Constrain AI output with the strict structured schema. Limit returned descriptions to 120 characters and returned non-null category names to `CATEGORY_NAME_MAX_LENGTH`; continue applying domain validation before persistence.
+- Before persistence, trim every accepted expense description and capitalize its first Unicode letter without changing preceding punctuation, lowercasing, or otherwise changing the remaining text. Do not delegate capitalization to OpenAI or apply it only in the UI.
 
 ## AI rate limiting
 
@@ -40,6 +48,7 @@ Prepare the existing bilingual classification flow for safe public use without c
 ## Verification
 
 - Test each limit and exact boundary, burst expiry/reset, session isolation, global sharing, lifetime-count preservation across session renewal, removal on session expiry, atomic concurrent admission, and Redis failure.
+- Test category Unicode normalization and unsafe-character rejection, bounded AI output, and server-side expense-description capitalization while preserving the remaining text.
 - Prove denied requests do not call OpenAI or persist expenses and that `429`, `Retry-After`, safe logging, bilingual feedback, tired mascot, and draft preservation work as specified.
 - Run formatting, lint, type checking, provider-free tests, Storybook build, production build, and responsive bilingual keyboard/accessibility review.
 

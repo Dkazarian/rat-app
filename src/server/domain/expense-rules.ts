@@ -1,4 +1,8 @@
-import type { ExpenseDto, ExpensesResponse } from "@/contracts/session-api";
+import {
+  EXPENSE_DESCRIPTION_MAX_LENGTH,
+  type ExpenseDto,
+  type ExpensesResponse,
+} from "@/contracts/session-api";
 import { applicationErrors } from "./errors";
 
 export type StoredExpense = ExpenseDto;
@@ -9,13 +13,22 @@ export type ExpenseCandidate = Readonly<{
   categoryId: string | null;
 }>;
 
+function capitalizeFirstLetter(value: string): string {
+  const firstLetter = value.match(/\p{L}/u);
+  if (!firstLetter || firstLetter.index === undefined) return value;
+  const start = firstLetter.index;
+  const end = start + firstLetter[0].length;
+  return `${value.slice(0, start)}${firstLetter[0].toUpperCase()}${value.slice(end)}`;
+}
+
 export function validateExpenseCandidate(
   candidate: ExpenseCandidate,
   categoryIds: ReadonlySet<string>,
 ): ExpenseCandidate {
-  const description = candidate.description.trim();
+  const description = capitalizeFirstLetter(candidate.description.trim());
   if (
     !description ||
+    description.length > EXPENSE_DESCRIPTION_MAX_LENGTH ||
     !Number.isSafeInteger(candidate.amountMinor) ||
     candidate.amountMinor <= 0
   ) {

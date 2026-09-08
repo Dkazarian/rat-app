@@ -5,7 +5,11 @@ import {
   ExpenseExtractorError,
   extractExpenses,
 } from "@/server/ai/expense-extractor";
-import { applicationErrors } from "@/server/domain/errors";
+import {
+  applicationErrors,
+  RepositoryUnavailableError,
+} from "@/server/domain/errors";
+import { logger } from "@/server/logger";
 import {
   validateExpenseCandidate,
   type ExpenseCandidate,
@@ -14,6 +18,7 @@ import { normalizeCategoryName } from "@/server/domain/category-rules";
 import { errorResponse } from "@/server/http/responses";
 import { getCategories } from "@/server/redis/categories";
 import { createExpenses, getExpenses } from "@/server/redis/expenses";
+import { consumeAiRateLimit } from "@/server/redis/ai-rate-limiter";
 import {
   requireSessionId,
   SESSION_COOKIE_NAME,
@@ -58,6 +63,10 @@ export async function POST(request: NextRequest) {
     const sessionId = await requireSessionId(
       request.cookies.get(SESSION_COOKIE_NAME)?.value,
     );
+    const rateLimit = await consumeAiRateLimit(sessionId);
+    if (!rateLimit.allowed) {
+      throw applicationErrors.rateLimited(rateLimit.retryAfterSeconds);
+    }
     const { prompt, locale } = parsePromptBody(await request.json());
     const [categoriesResponse, expensesResponse] = await Promise.all([
       getCategories(sessionId),
@@ -113,11 +122,17 @@ export async function POST(request: NextRequest) {
     return Response.json({ expenses, rejectedCount });
   } catch (error) {
     if (error instanceof ExpenseExtractorError) {
+      logger.warn("Expense extraction failed.", { kind: error.kind });
       return errorResponse(
         error.kind === "configuration"
           ? applicationErrors.internalError()
           : applicationErrors.serviceUnavailable(),
       );
+    }
+    if (error instanceof RepositoryUnavailableError) {
+      logger.error("Expense prompt dependency failed.");
+    } else if (!(error instanceof Error)) {
+      logger.error("Expense prompt failed.");
     }
     return errorResponse(error);
   }

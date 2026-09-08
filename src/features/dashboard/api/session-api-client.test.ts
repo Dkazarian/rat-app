@@ -50,6 +50,26 @@ describe("browserSessionApi", () => {
     );
   });
 
+  it("keeps rate limits as typed client errors", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue(
+          Response.json(
+            { error: { code: "rate_limited", message: "Too many requests." } },
+            { status: 429, headers: { "Retry-After": "60" } },
+          ),
+        ),
+    );
+
+    await expect(
+      browserSessionApi.submitPrompt("Lunch $18", "en"),
+    ).rejects.toEqual(
+      new SessionApiError("rate_limited", "Too many requests."),
+    );
+  });
+
   it("accepts the empty 204 session response", async () => {
     const fetchMock = vi
       .fn()

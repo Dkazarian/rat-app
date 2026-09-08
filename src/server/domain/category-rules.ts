@@ -12,6 +12,7 @@ import { applicationErrors } from "./errors";
 
 export const CATEGORY_LIMIT = 10;
 const RESERVED_CATEGORY_NAMES = new Set(["unclassified", "sin clasificar"]);
+const UNSAFE_CATEGORY_CHARACTERS = /[\p{Cc}\p{Cf}]/u;
 
 export type StoredCategory = Readonly<{
   id: string;
@@ -20,8 +21,12 @@ export type StoredCategory = Readonly<{
 }>;
 
 export function normalizeCategoryName(candidate: string): string {
-  const name = candidate.trim();
-  if (!name || name.length > CATEGORY_NAME_MAX_LENGTH) {
+  const name = candidate.trim().normalize("NFC");
+  if (
+    !name ||
+    name.length > CATEGORY_NAME_MAX_LENGTH ||
+    UNSAFE_CATEGORY_CHARACTERS.test(name)
+  ) {
     throw applicationErrors.invalidCategoryName();
   }
   if (RESERVED_CATEGORY_NAMES.has(name.toLocaleLowerCase("en-US"))) {

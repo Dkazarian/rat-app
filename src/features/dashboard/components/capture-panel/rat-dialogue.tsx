@@ -9,12 +9,13 @@ export const ratDialogueStates = [
   "success",
   "extraction-failure",
   "provider-error",
+  "rate-limited",
 ] as const;
 
 export type RatDialogueState = (typeof ratDialogueStates)[number];
 
 export type RatDialogueFeedback =
-  | Readonly<{ state: "empty" | "loading" }>
+  | Readonly<{ state: "empty" | "loading" | "rate-limited" }>
   | Readonly<{
       state: "success";
       extractedCount: number;
@@ -34,6 +35,7 @@ const titleKeys = {
   success: "successTitle",
   "extraction-failure": "extractionFailureTitle",
   "provider-error": "providerErrorTitle",
+  "rate-limited": "rateLimitedTitle",
 } as const satisfies Record<RatDialogueState, TranslationKey>;
 
 const detailKeys = {
@@ -41,6 +43,7 @@ const detailKeys = {
   loading: "loadingDetail",
   "extraction-failure": "extractionFailureDetail",
   "provider-error": "providerErrorDetail",
+  "rate-limited": "rateLimitedDetail",
 } as const satisfies Record<
   Exclude<RatDialogueState, "success">,
   TranslationKey
@@ -50,7 +53,8 @@ export function RatDialogue({ feedback }: RatDialogueProps) {
   const { t } = useLocale();
   const isUrgent =
     feedback.state === "extraction-failure" ||
-    feedback.state === "provider-error";
+    feedback.state === "provider-error" ||
+    feedback.state === "rate-limited";
   const detail = (() => {
     if (feedback.state === "success") {
       const result = t(

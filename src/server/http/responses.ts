@@ -5,8 +5,11 @@ import {
 } from "@/server/domain/errors";
 
 export function errorResponse(error: unknown): Response {
-  const options = { headers: { "Cache-Control": "no-store" } };
+  const headers: Record<string, string> = { "Cache-Control": "no-store" };
   if (error instanceof ApplicationError) {
+    if (error.retryAfterSeconds !== undefined) {
+      headers["Retry-After"] = String(error.retryAfterSeconds);
+    }
     return Response.json(
       {
         error: {
@@ -15,7 +18,7 @@ export function errorResponse(error: unknown): Response {
           ...(error.field ? { field: error.field } : {}),
         },
       },
-      { status: error.status, ...options },
+      { status: error.status, headers },
     );
   }
   if (error instanceof RepositoryUnavailableError) {
@@ -26,7 +29,7 @@ export function errorResponse(error: unknown): Response {
           message: "The session service is temporarily unavailable.",
         },
       },
-      { status: 503, ...options },
+      { status: 503, headers },
     );
   }
   if (error instanceof z.ZodError || error instanceof SyntaxError) {
@@ -34,7 +37,7 @@ export function errorResponse(error: unknown): Response {
       {
         error: { code: "invalid_request", message: "The request is invalid." },
       },
-      { status: 400, ...options },
+      { status: 400, headers },
     );
   }
   return Response.json(
@@ -44,6 +47,6 @@ export function errorResponse(error: unknown): Response {
         message: "The request could not be completed.",
       },
     },
-    { status: 500, ...options },
+    { status: 500, headers },
   );
 }

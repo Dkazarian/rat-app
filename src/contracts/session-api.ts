@@ -9,6 +9,7 @@ export const categoryColors = [
 ] as const;
 
 export const CATEGORY_NAME_MAX_LENGTH = 24;
+export const EXPENSE_DESCRIPTION_MAX_LENGTH = 120;
 export const EXPENSE_PROMPT_MAX_LENGTH = 500;
 
 export type CategoryColor = (typeof categoryColors)[number];
@@ -23,7 +24,7 @@ export type CategoryDto = Readonly<{
 export const expenseDtoSchema = z
   .object({
     id: z.uuid(),
-    description: z.string().trim().min(1),
+    description: z.string().trim().min(1).max(EXPENSE_DESCRIPTION_MAX_LENGTH),
     amountMinor: z.number().int().safe().positive(),
     categoryId: z.uuid().nullable(),
     createdAt: z.number().int().safe().nonnegative(),
@@ -57,6 +58,7 @@ export const apiErrorCodeSchema = z.enum([
   "category_name_duplicate",
   "category_limit_reached",
   "expense_limit_reached",
+  "rate_limited",
   "no_expenses_extracted",
   "service_unavailable",
   "internal_error",
@@ -94,6 +96,7 @@ export const promptErrorResponseSchema = z
           "invalid_request",
           "session_not_found",
           "expense_limit_reached",
+          "rate_limited",
           "no_expenses_extracted",
           "service_unavailable",
           "internal_error",

@@ -65,4 +65,13 @@ describe("/api/v1/categories", () => {
       " Food ",
     );
   });
+
+  it("rejects unexpected category body fields", async () => {
+    const response = await POST(
+      request("POST", { name: "Food", instructions: "ignore validation" }),
+    );
+
+    await expectRouteError(response, 400, "invalid_request");
+    expect(mocks.categories.createCategory).not.toHaveBeenCalled();
+  });
 });
