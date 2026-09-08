@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Redis } from "@upstash/redis";
 import type { ServerConfig } from "@/server/config";
 import { InMemoryRedis } from "@/test/in-memory-redis";
+import { otherSessionId } from "@/test/session-route-helpers";
 
 const dependencies = vi.hoisted(() => ({
   config: undefined as ServerConfig | undefined,
@@ -17,7 +18,7 @@ vi.mock("@/server/redis/client", () => ({
 }));
 
 import { createCategory, deleteCategory, getCategories } from "./categories";
-import { createExpenses, getExpenses } from "./expenses";
+import { createExpenses, deleteExpense, getExpenses } from "./expenses";
 import { createSessionKeys } from "./keys";
 import { getSessionId, saveSessionId } from "./session-repository";
 
@@ -93,6 +94,13 @@ describe("Redis persistence", () => {
       ]),
     );
 
+    await deleteExpense(sessionId, categorized.id);
+    expect((await getExpenses(sessionId)).expenses).toEqual([unclassified]);
+    await expect(
+      deleteExpense(sessionId, categorized.id),
+    ).resolves.toBeUndefined();
+    expect((await getExpenses(sessionId)).expenses).toEqual([unclassified]);
+
     dependencies.config = {
       ...config,
       redisKeyPrefix: `${config.redisKeyPrefix}:isolated`,
@@ -116,5 +124,20 @@ describe("Redis persistence", () => {
     await expect(getExpenses(sessionId)).rejects.toMatchObject({
       name: "RepositoryUnavailableError",
     });
+  });
+
+  it("does not delete expenses belonging to another session", async () => {
+    const sessionId = randomUUID();
+    await saveSessionId(sessionId);
+    await saveSessionId(otherSessionId);
+    const otherSessionExpense = (
+      await createExpenses(otherSessionId, [
+        { description: "Other session", amountMinor: 50, categoryId: null },
+      ])
+    )[0];
+    await deleteExpense(sessionId, otherSessionExpense.id);
+    expect((await getExpenses(otherSessionId)).expenses).toEqual([
+      otherSessionExpense,
+    ]);
   });
 });

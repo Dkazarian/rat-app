@@ -75,6 +75,7 @@ export type SessionApi = Readonly<{
   getCategories: (signal?: AbortSignal) => Promise<CategoriesResponse>;
   createCategory: (name: string) => Promise<CategoryMutationResponse>;
   deleteCategory: (categoryId: string) => Promise<void>;
+  deleteExpense: (expenseId: string) => Promise<void>;
   getExpenses: (signal?: AbortSignal) => Promise<ExpensesResponse>;
   submitPrompt: (
     prompt: string,
@@ -93,6 +94,10 @@ export const browserSessionApi: SessionApi = {
     }),
   deleteCategory: (categoryId) =>
     request(`/api/v1/categories/${encodeURIComponent(categoryId)}`, {
+      method: "DELETE",
+    }),
+  deleteExpense: (expenseId) =>
+    request(`/api/v1/expenses/${encodeURIComponent(expenseId)}`, {
       method: "DELETE",
     }),
   getExpenses: (signal) => request("/api/v1/expenses", { signal }),

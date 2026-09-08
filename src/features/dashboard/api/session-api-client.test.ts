@@ -83,6 +83,25 @@ describe("browserSessionApi", () => {
     );
   });
 
+  it("deletes an expense through the cookie-scoped API", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(new Response(null, { status: 204 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      browserSessionApi.deleteExpense("expense/id"),
+    ).resolves.toBeUndefined();
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/v1/expenses/expense%2Fid",
+      expect.objectContaining({
+        method: "DELETE",
+        credentials: "same-origin",
+        cache: "no-store",
+      }),
+    );
+  });
+
   it("validates prompt mutation success responses before returning them", async () => {
     vi.stubGlobal(
       "fetch",

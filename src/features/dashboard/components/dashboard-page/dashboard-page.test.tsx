@@ -55,6 +55,9 @@ function createApi() {
         expense.categoryId === id ? { ...expense, categoryId: null } : expense,
       );
     }),
+    deleteExpense: vi.fn(async (id) => {
+      expenses = expenses.filter((expense) => expense.id !== id);
+    }),
     getExpenses: vi.fn(async () => ({ expenses })),
     submitPrompt: vi.fn(async () => {
       throw new SessionApiError(

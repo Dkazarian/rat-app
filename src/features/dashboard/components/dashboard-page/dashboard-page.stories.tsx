@@ -59,6 +59,7 @@ const populatedApi: SessionApi = {
     category: { id: crypto.randomUUID(), name, color: "blue", totalMinor: 0 },
   }),
   deleteCategory: async () => undefined,
+  deleteExpense: async () => undefined,
   getExpenses: async () => expenses,
   submitPrompt: async () => ({
     expenses: [expenses.expenses[0]],

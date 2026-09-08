@@ -91,3 +91,15 @@ export async function createExpenses(
     return expenses;
   });
 }
+
+export async function deleteExpense(
+  sessionId: string,
+  expenseId: string,
+): Promise<void> {
+  const config = getServerConfig();
+  const redis = getRedisClient();
+  const keys = createSessionKeys(config.redisKeyPrefix, sessionId);
+  await redisOperation(async () => {
+    await redis.hdel(keys.expenses, expenseId);
+  });
+}
