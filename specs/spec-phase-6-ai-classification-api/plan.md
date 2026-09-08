@@ -1,121 +1,158 @@
 # Phase 6 Plan — AI Classification API
 
-Status: single-model implementation complete; ordered OpenRouter model fallback, repository-wide formatting, and live-provider/release validation remain pending.
+Status: implementation complete; final repository and live-provider verification remain.
 
-## Execution rules
+This is the single execution record for Phase 6. It consolidates the original
+implementation plan, the review decisions that refined it, and the subsequent
+provider migration from OpenRouter to the OpenAI API. Superseded proposals are
+recorded below only where they explain the final design; they are not remaining
+work.
 
-- Treat [requirements.md](requirements.md) as authoritative. Update the requirement, plan, tests, and affected documentation together when an accepted contract changes.
-- Implement only three new behavior boundaries:
-  1. one server `expense-extractor` module;
-  2. the existing prompt route as HTTP orchestrator; and
-  3. one pure frontend API-outcome-to-rat-feedback mapper.
-- Reuse the existing contracts, server validation, domain rules, Redis functions, browser API client, mutation gate, refresh signal, and rat dialogue.
-- Do not introduce a use-case/service layer between the route and existing functions, a generic AI-provider interface, provider registry, factory, manager, repository wrapper, dependency-injection container, agent framework, or new global state.
-- Keep the default automated suite and Storybook provider-free. Mock the extractor boundary or model calls there; isolate the explicitly invoked live-provider integration test from normal test and CI commands.
-- Keep HTTP details out of the rat UI. Statuses and stable error codes remain visible in the network response and are converted to localized presentation data before rendering.
-- Preserve the exact input on every failure. Clear it and refresh both dashboard queries after any success, including partial success.
+## Outcome
 
-## Group 1 — Add dependencies, configuration, and wire schemas
+Replace the Phase 5 `501 classification_unavailable` response with a live,
+server-side expense-classification path. A validated English or Spanish prompt
+can produce several expenses, which are independently validated, matched to the
+current session's categories, persisted in Redis, and returned through the
+existing prompt-mutation contract.
 
-- [ ] Add runtime dependencies `ai` and `@openrouter/ai-sdk-provider`; continue using the existing `zod` dependency.
-- [ ] Keep exact versions in `package.json` and the lockfile without adding another AI, schema, retry, or HTTP package.
-- [ ] Validate `OPENROUTER_API_KEY` and `OPEN_ROUTER_MODEL` lazily in the extractor path so missing AI configuration does not break non-AI routes, builds, tests, or Storybook.
-- [ ] Parse `OPEN_ROUTER_MODEL` as an ordered comma-separated list: trim identifiers, reject blank entries, require at least one model, and continue accepting a single identifier.
-- [ ] Require `google/gemma-4-26b-a4b-it:free` as the primary Phase 6 acceptance model while keeping the complete ordered model list browser-inaccessible.
-- [ ] Retain safe placeholders in `.env.example` and real values only in `.env.development.local` or the deployment environment.
-- [ ] Add an exact Zod schema for `PromptMutationResponse` to the existing shared contract module, including nested `ExpenseDto` constraints and non-negative safe-integer `rejectedCount`.
-- [ ] Infer the public response type from that schema where practical instead of maintaining a second handwritten shape.
-- [ ] Validate successful prompt responses in the browser API client before treating them as trusted application data.
-- [ ] Keep the existing shared API error envelope and stable error-code union; remove `classification_unavailable` only after every Phase 5 runtime and presentation reference is gone.
+The browser remains provider-agnostic. Redis remains authoritative, and the
+session, category, expense-query, mutation-gate, refresh, and rat-feedback
+architecture from Phase 5 remains intact.
 
-## Group 2 — Implement the expense extractor module
+## Consolidated decisions
 
-Create `src/server/ai/expense-extractor.ts`. Keep its schema, types, error, prompt construction, provider setup, and extraction function together because they form one small provider boundary.
+### Final provider decision
 
-- [ ] Export `ExpenseExtractorInput` with only `prompt`, `locale`, and `categoryNames`.
-- [ ] Define and export the Zod structured-output schema passed directly to Vercel AI SDK. Its result contains a bounded `expenses` array of `{ description, amountMinor, categoryName }`.
-- [ ] Infer `ExpenseExtractionOutput` from that Zod schema.
-- [ ] Export `extractExpenses(input): Promise<ExpenseExtractionOutput>`.
-- [ ] Use `generateText` with `Output.object` and the OpenRouter provider for each configured model attempted in left-to-right order.
-- [ ] Make at most one non-streaming generation per configured model. Stop on the first schema-valid result; on timeout, provider/model availability, network/SDK, or invalid-output failure, advance to the next model.
-- [ ] Give every attempt and the complete fallback sequence finite timeouts, bounded output tokens, and bounded SDK retry behavior. Never retry an earlier model or make a separate repair request.
-- [ ] Build separate system instructions and user data. Supply only the exact prompt, locale, and literal category names.
-- [ ] Instruct the model to extract purchases in source order, convert decimal values to integer minor units, preserve recognizable descriptions, and return a supplied category name only when clearly applicable.
-- [ ] Treat category names and prompt text as untrusted data, not instructions. Give the model no tools, URLs, prior expenses, IDs, totals, session data, or secrets.
-- [ ] Add one `ExpenseExtractorError` class with a typed `kind` discriminator: `configuration`, `timeout`, `provider`, or `invalid_output`. Do not add four subclasses when one typed exception carries the required distinction.
-- [ ] Keep individual attempt failures inside the extractor while fallback models remain. After the list is exhausted, translate the terminal SDK/provider error into `ExpenseExtractorError`, retaining the original only as `cause` and using a safe generic public message.
-- [ ] Return a schema-valid empty array normally. Do not turn “no expenses” into an extractor exception or HTTP-aware application error.
-- [ ] Keep domain validation, category-ID resolution, capacity, persistence, IDs, timestamps, HTTP responses, and rat feedback out of this module.
+- Use the OpenAI Chat Completions API directly at
+  `https://api.openai.com/v1/chat/completions`.
+- Configure it lazily with the server-only `OPENAI_API_KEY` and `OPENAI_MODEL`
+  environment variables.
+- Deploy with `OPENAI_MODEL=gpt-4.1-nano`; do not hard-code a browser-selectable
+  model.
+- Use one configured model per request. The earlier OpenRouter proposal for an
+  ordered, comma-separated fallback list is retired.
+- Do not retain the Vercel AI SDK or OpenRouter provider dependencies solely for
+  this narrow request boundary. Continue to use Zod for runtime validation.
+- An OpenAI API key and API billing are separate from a ChatGPT subscription.
 
-## Group 3 — Complete endpoint orchestration and persistence
+### Boundaries retained from plan review
 
-Update the existing `src/app/api/v1/expenses/prompt/route.ts`; do not create another controller or application-service wrapper.
+- Keep one provider-specific, function-based adapter in
+  `src/server/ai/expense-extractor.ts`; do not add provider registries, generic
+  AI abstractions, repositories, dependency-injection containers, agents, or
+  chat history.
+- Keep route orchestration, category resolution, candidate validation, session
+  capacity, IDs, timestamps, persistence, HTTP mapping, and UI feedback outside
+  the provider adapter.
+- Send only the exact validated prompt, locale, and literal category names to
+  OpenAI. Never send session/category IDs, colors, totals, existing expenses,
+  Redis data, cookies, logs, or configuration.
+- Treat visitor text and category names as untrusted data and keep system
+  instructions separate from user content.
+- Make one non-streaming request with a strict JSON Schema response format, a
+  15-second timeout, and a bounded output-token budget.
+- Validate the parsed response with the existing Zod schema before returning a
+  provider-neutral result. Never persist raw provider output.
+- Translate configuration, timeout, provider, and invalid-output failures into
+  the narrow `ExpenseExtractorError` taxonomy with safe messages.
+- Keep default automated tests and Storybook provider-free. The explicit live
+  test is opt-in and must never log credentials or raw provider responses.
 
-- [ ] Require the cookie session and validate `{ prompt, locale }` with the existing request schema before calling AI.
-- [ ] Read current real categories and current expenses through existing server functions.
-- [ ] Return `409 expense_limit_reached` without calling the extractor when the session is already full.
-- [ ] Pass only the validated prompt, locale, and category names to `extractExpenses`.
-- [ ] Resolve returned category names against the pre-call category snapshot using the server's existing case-insensitive normalization; map missing, blank, unknown, ambiguous, or fallback labels to `categoryId: null`.
-- [ ] Independently validate each structural candidate with existing expense domain rules. Continue after a candidate-level validation failure.
-- [ ] Calculate the remaining capacity, keep valid candidates in extraction order, take only the first `n` when `n` slots remain, and include validation plus overflow omissions in `rejectedCount`.
-- [ ] Return `422 no_expenses_extracted` without writing when the extractor returns no candidates or no candidate survives domain validation/capacity handling.
-- [ ] Pass the accepted provider-neutral candidates to the existing Redis expense-creation function so it generates UUIDs and `createdAt`, revalidates category references, and persists the batch.
-- [ ] Adjust the existing expense-creation function only as needed for partial-capacity behavior and one bounded batch write; do not add a new persistence abstraction.
-- [ ] Return `200 PromptMutationResponse` containing only the newly persisted `ExpenseDto` values in extraction order and `rejectedCount`.
-- [ ] Preserve `GET /api/v1/expenses` ordering independently: newest `createdAt`, then ID.
-- [ ] Map extractor `configuration` to `500 internal_error`; map `timeout`, `provider`, and `invalid_output` to `503 service_unavailable`.
-- [ ] Preserve existing mappings for request validation (`400`), missing session (`401`), full session (`409`), no accepted expenses (`422`), Redis unavailability (`503`), and unknown failures (`500`).
-- [ ] Narrow exceptions by class and discriminator, never by matching message text.
-- [ ] Ensure provider, validation, session, capacity, and persistence failures write no expenses.
-- [ ] Retire the deliberate `501 classification_unavailable` response.
+## Completed implementation
 
-## Group 4 — Add the frontend rat-feedback mapper
+### 1. Configuration and provider adapter
 
-Add one small pure module beside the capture-panel presentation, such as `src/features/dashboard/components/capture-panel/prompt-feedback.ts`.
+- [x] Replace `OPENROUTER_API_KEY` and `OPEN_ROUTER_MODEL` with lazily validated
+      `OPENAI_API_KEY` and `OPENAI_MODEL` settings.
+- [x] Reject missing, blank, or placeholder credentials and missing/blank model
+      identifiers without breaking routes that do not classify expenses.
+- [x] Remove `ai` and `@openrouter/ai-sdk-provider` from the package manifest and
+      lockfile.
+- [x] Build separate system instructions and structurally delimited user data.
+- [x] Request strict JSON Schema output containing at most 100
+      `{ description, amountMinor, categoryName }` candidates.
+- [x] Parse assistant content as JSON and validate the complete result with Zod.
+- [x] Bound the request with `AbortSignal.timeout(15_000)` and
+      `max_completion_tokens: 1200`.
+- [x] Map failures to `configuration`, `timeout`, `provider`, or
+      `invalid_output` without exposing response bodies or credentials.
 
-- [ ] Define a minimal discriminated `PromptApiOutcome`: successful `PromptMutationResponse`, known API error code, or unknown/network failure.
-- [ ] Export one `mapPromptOutcomeToRatFeedback` function that returns the existing rat presentation type or its smallest necessary revision.
-- [ ] Map a successful outcome from `response.expenses.length` to the ordinary success state.
-- [ ] Make partial and full success with the same accepted count return identical rat feedback; do not read `rejectedCount` when choosing visible or accessible copy.
-- [ ] Map `invalid_request` and `no_expenses_extracted` to the extraction-failure state and corresponding localization key.
-- [ ] Map `session_not_found`, `expense_limit_reached`, `service_unavailable`, `internal_error`, and unknown/network failures to the provider-error state with the corresponding user-facing localization key.
-- [ ] Keep `classification_unavailable` unreachable rather than adding another UI branch.
-- [ ] Return UI state, accepted count, and localization keys only. Do not put raw errors, status numbers, API codes, server fallback messages, or provider details into rat feedback.
-- [ ] Keep loading outside the completed-outcome mapper; Dashboard Page selects it before awaiting the request.
-- [ ] Keep draft clearing/preservation, query refresh, focus, and session recovery in Dashboard Page rather than putting side effects in the mapper.
-- [ ] Remove the unused `skippedExpenses` translations after partial success uses ordinary success copy.
-- [ ] Preserve exact drafts on all failures, including session recovery; clear and refresh after every full or partial success.
+### 2. Existing Phase 6 application behavior
 
-## Group 5 — Test each boundary
+- [x] Resolve the cookie session and validate `{ prompt, locale }` before
+      classification.
+- [x] Avoid a provider call when the session is already at its expense limit.
+- [x] Pass only prompt, locale, and current real-category names to the extractor.
+- [x] Resolve returned category names against the server snapshot; normalize
+      missing, blank, unknown, ambiguous, stale, or fallback labels to
+      `categoryId: null`.
+- [x] Validate structural candidates independently, preserve source order, and
+      accept only the candidates that fit the remaining session capacity.
+- [x] Count domain-invalid and over-capacity candidates in `rejectedCount`.
+- [x] Generate expense UUIDs and timestamps on the server and persist accepted
+      expenses through one bounded Redis mutation.
+- [x] Return `200` only when at least one expense is persisted; preserve the
+      established `400`, `401`, `409`, `422`, `500`, and `503` mappings otherwise.
+- [x] Keep all failure paths free of provisional expense writes.
+- [x] Retire the deliberate Phase 5 `501 classification_unavailable` response.
 
-- [ ] Unit-test AI configuration parsing for a single model, ordered comma-separated models, whitespace trimming, blank-entry rejection, and absence of secrets from returned/public values.
-- [ ] Add a mocked ordered-fallback unit test: make the first model fail and the second return a valid structured result; assert left-to-right model IDs, identical validated input, no call to later models, and no persistence from the failed attempt.
-- [ ] Add a mocked fallback-exhaustion test: make every configured model fail, assert each is attempted exactly once in order, and expect one terminal extractor error with no persistence.
-- [ ] Unit-test the extractor's Zod schema, inferred result, prompt construction, English/Spanish input, decimal point/comma instructions, bounded output, empty output, and each error kind.
-- [ ] Prove extractor prompts omit session IDs, category IDs, colors, totals, existing expenses, Redis data, and credentials.
-- [ ] Route-test success, partial success, invalid candidates, unknown categories, no categories, empty extraction, malformed structured output, every extractor error kind, malformed requests, expired sessions, full capacity, limited capacity, Redis failure, and unknown failure.
-- [ ] Prove a full session causes no extractor call and every failed request leaves Redis unchanged.
-- [ ] Prove `n` remaining slots plus `n + y` valid extracted candidates persists and returns the first `n` with `rejectedCount: y`.
-- [ ] Prove extractor output is transformed into server-generated `ExpenseDto` values rather than returned directly.
-- [ ] Test the browser client against valid and invalid prompt-response schemas.
-- [ ] Table-test every rat mapper outcome, including identical feedback for full and partial success with the same accepted count.
-- [ ] Component-test loading, clearing after success, preservation after errors, session recovery, query refresh, localization, focus, and live-region announcements.
-- [ ] Prove no rendered or accessibility-only text contains an HTTP status, API code, exception name, provider detail, or `rejectedCount`.
-- [ ] Keep Storybook deterministic with fixture-only rat states and no AI configuration.
-- [ ] Add a separately invoked live OpenRouter integration test, excluded from the default suite and CI, that submits exactly one prompt (`Coffee $1.25`, locale `en`) through the configured extraction chain and asserts one schema-valid expense with `amountMinor: 125` and a non-empty description.
-- [ ] Gate the live test behind an explicit command or opt-in flag plus valid server-only credentials; skip clearly when either is absent, and never log the key or raw provider response.
+### 3. Client behavior
 
-## Group 6 — Documentation and final verification
+- [x] Validate successful prompt responses before treating them as application
+      data.
+- [x] Map stable API outcomes to localized rat feedback without rendering HTTP
+      statuses, API codes, provider details, raw errors, or `rejectedCount`.
+- [x] Present full and partial successes identically for the same accepted count.
+- [x] Preserve the exact draft on failure; clear it and refresh category and
+      expense queries after every success.
+- [x] Keep loading, focus, session recovery, and refresh side effects outside the
+      pure feedback mapper.
 
-- [ ] Update root and source documentation to describe live classification instead of the Phase 5 placeholder.
-- [ ] Document the two server-only AI settings and local setup without committing a real key.
-- [ ] Document how to invoke the one-prompt live-provider test and that it contacts OpenRouter and may consume quota.
-- [ ] Update the roadmap only after all validation evidence is complete.
-- [ ] Run formatting, lint, strict TypeScript, all tests, Storybook build, and production build.
-- [ ] Perform a non-production live smoke test for English and Spanish single/multiple expenses, category matching, Unclassified fallback, ordered model fallback, fallback exhaustion, partial capacity, no-result recovery, provider failure, and synchronized dashboard data.
-- [ ] Inspect browser bundles, HTML, responses, logs, and the Network panel for accidental secret or raw-provider-data exposure.
-- [ ] Reconcile every requirement and validation item with implementation evidence and record accepted differences before marking Phase 6 complete.
+### 4. Tests and documentation
+
+- [x] Update configuration tests for the OpenAI variables and singular model.
+- [x] Mock `fetch` in extractor tests and assert URL, bearer authentication,
+      configured model, message separation, strict response schema, timeout signal,
+      token bound, response parsing, and safe error translation.
+- [x] Keep route, persistence, browser-client, feedback, and component coverage
+      for success, partial success, invalid candidates, capacity, session recovery,
+      localization, focus, and query refresh.
+- [x] Gate the live extractor test on valid `OPENAI_API_KEY` and `OPENAI_MODEL`
+      values and keep it outside the default suite.
+- [x] Update root/source documentation, technology notes, and the dashboard model
+      label from OpenRouter to OpenAI `gpt-4.1-nano`.
+
+## Remaining verification
+
+- [ ] Run Prettier checking, ESLint, strict TypeScript, the complete Vitest suite,
+      Storybook build, and the production Next.js build in a fully provisioned
+      environment.
+- [ ] Run `npm run test:ai:live` with a funded OpenAI API key and
+      `OPENAI_MODEL=gpt-4.1-nano`; confirm `Coffee $1.25` produces one schema-valid
+      expense with `amountMinor: 125` and a non-empty description.
+- [ ] Perform non-production smoke tests for English and Spanish prompts,
+      multiple expenses, category matching, Unclassified fallback, partial
+      capacity, empty extraction, provider failure, and synchronized dashboard data.
+- [ ] Inspect browser bundles, HTML, responses, server logs, and the Network panel
+      for accidental secrets, session identifiers, raw prompts, or raw-provider-data
+      exposure.
+- [ ] Reconcile `requirements.md` and `validation.md` with the accepted OpenAI
+      provider amendment before declaring the entire phase/release complete.
+
+## Vercel deployment
+
+1. Add `OPENAI_API_KEY` and `OPENAI_MODEL` in **Project Settings → Environment
+   Variables** for the intended Preview and Production environments.
+2. Set `OPENAI_MODEL` to `gpt-4.1-nano`.
+3. Do not prefix either setting with `NEXT_PUBLIC_`.
+4. Remove stale `OPENROUTER_API_KEY` and `OPEN_ROUTER_MODEL` values.
+5. Redeploy so the deployment receives the new settings, then run the smoke
+   checks above.
 
 ## Completion handoff
 
-Phase 6 hands Phase 7 a live, server-side classification path with one narrow provider module, the existing HTTP/Redis architecture, stable safe errors, deterministic UI feedback mapping, and provider-free automated tests. Phase 7 remains responsible for public-release safeguards and deployment verification.
+After the remaining verification is recorded, Phase 6 hands Phase 7 a live,
+single-model OpenAI classification path behind the existing HTTP/Redis boundary,
+with safe errors, deterministic UI feedback, provider-free default tests, and no
+browser-visible AI credentials.
