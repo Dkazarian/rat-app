@@ -46,7 +46,6 @@
   "successTitle": "Done",
   "successDetail": "3 expenses sorted.",
   "successDetailOne": "{{count}} expense sorted.",
-  "skippedExpenses": "{{count}} skipped.",
   "successDetailMany": "{{count}} expenses sorted.",
   "successMascotAlt": "Happy rat mascot",
   "extractionFailureTitle": "I didn't understand :(",
@@ -71,7 +70,6 @@
   "apiErrorCategoryLimitReached": "You can have up to 10 categories.",
   "apiErrorExpenseLimitReached": "This session has reached its 100-expense limit.",
   "apiErrorNoExpensesExtracted": "No expenses could be found in that description.",
-  "apiErrorClassificationUnavailable": "Automatic sorting is not available yet.",
   "apiErrorServiceUnavailable": "The service is temporarily unavailable. Try again.",
   "apiErrorInternal": "Something went wrong. Try again.",
   "apiErrorUnknown": "Something went wrong. Try again."

@@ -8,6 +8,19 @@ const positiveIntegerString = (fallback: number) =>
     .transform(Number)
     .pipe(z.number().int().positive().safe());
 
+export const OPENAI_MODEL = "gpt-4.1-nano" as const;
+
+const aiEnvironmentSchema = z.object({
+  OPENAI_API_KEY: z
+    .string()
+    .min(1)
+    .refine(
+      (value) => !/^replace[_-]with/i.test(value),
+      "A real server-only OpenAI key is required",
+    ),
+  OPENAI_MODEL: z.string().trim().min(1),
+});
+
 const environmentSchema = z.object({
   KV_REST_API_URL: z.url().startsWith("https://"),
   KV_REST_API_TOKEN: z.string().min(1),
@@ -37,6 +50,22 @@ export class ServerConfigurationError extends Error {
     super("Server configuration is invalid.", options);
     this.name = "ServerConfigurationError";
   }
+}
+
+export type AiConfig = Readonly<{
+  apiKey: string;
+  model: string;
+}>;
+
+export function parseAiConfig(
+  source: Record<string, string | undefined>,
+): AiConfig {
+  const value = aiEnvironmentSchema.parse(source);
+  return { apiKey: value.OPENAI_API_KEY, model: value.OPENAI_MODEL };
+}
+
+export function getAiConfig(): AiConfig {
+  return parseAiConfig(process.env);
 }
 
 export function parseServerConfig(

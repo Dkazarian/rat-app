@@ -17,6 +17,7 @@
     "lint": "eslint . --max-warnings=0",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:ai:live": "node --env-file-if-exists=.env.development.local ./node_modules/vitest/vitest.mjs run --config vitest.live.config.ts",
     "seed:redis": "tsx --env-file=.env.development.local src/server/seed/seed-redis.ts",
     "test:redis": "vitest run src/server/redis/persistence.test.ts src/server/seed/seed-arguments.test.ts src/server/seed/seed-session.test.ts"
   },

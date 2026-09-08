@@ -46,7 +46,6 @@
   "successTitle": "Listo",
   "successDetail": "3 gastos ordenados.",
   "successDetailOne": "{{count}} gasto ordenado.",
-  "skippedExpenses": "Se omitieron {{count}}.",
   "successDetailMany": "{{count}} gastos ordenados.",
   "successMascotAlt": "Mascota rata feliz",
   "extractionFailureTitle": "No entendí :(",
@@ -71,7 +70,6 @@
   "apiErrorCategoryLimitReached": "Podés tener hasta 10 categorías.",
   "apiErrorExpenseLimitReached": "Esta sesión alcanzó el límite de 100 gastos.",
   "apiErrorNoExpensesExtracted": "No se encontraron gastos en esa descripción.",
-  "apiErrorClassificationUnavailable": "La clasificación automática todavía no está disponible.",
   "apiErrorServiceUnavailable": "El servicio no está disponible por el momento. Probá de nuevo.",
   "apiErrorInternal": "Algo salió mal. Probá de nuevo.",
   "apiErrorUnknown": "Algo salió mal. Probá de nuevo."

@@ -60,7 +60,10 @@ const populatedApi: SessionApi = {
   }),
   deleteCategory: async () => undefined,
   getExpenses: async () => expenses,
-  submitPrompt: async () => ({ expenses: [], rejectedCount: 0 }),
+  submitPrompt: async () => ({
+    expenses: [expenses.expenses[0]],
+    rejectedCount: 0,
+  }),
 };
 const emptyApi: SessionApi = {
   ...populatedApi,

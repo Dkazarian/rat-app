@@ -11,8 +11,14 @@ type StoryProps = Readonly<{
 
 function feedbackFor(state: RatDialogueState): RatDialogueFeedback {
   return state === "success"
-    ? { state, extractedCount: 3, rejectedCount: 0 }
-    : { state };
+    ? { state, extractedCount: 3 }
+    : {
+        state,
+        detailKey:
+          state === "extraction-failure"
+            ? "apiErrorNoExpensesExtracted"
+            : "apiErrorServiceUnavailable",
+      };
 }
 
 function LocalizedCapturePanel({ state, inputValue, disabled }: StoryProps) {

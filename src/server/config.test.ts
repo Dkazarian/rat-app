@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseServerConfig } from "./config";
+import { OPENAI_MODEL, parseAiConfig, parseServerConfig } from "./config";
 
 const validEnvironment = {
   KV_REST_API_URL: "https://example.upstash.io",
@@ -39,5 +39,42 @@ describe("parseServerConfig", () => {
       redisUrl: KV_REST_API_URL,
       redisToken: KV_REST_API_TOKEN,
     });
+  });
+});
+
+describe("parseAiConfig", () => {
+  it("validates AI settings independently from Redis settings", () => {
+    expect(
+      parseAiConfig({
+        OPENAI_API_KEY: "test-only-key",
+        OPENAI_MODEL,
+      }),
+    ).toEqual({ apiKey: "test-only-key", model: OPENAI_MODEL });
+    expect(() => parseServerConfig(validEnvironment)).not.toThrow();
+  });
+
+  it("trims the configured model", () => {
+    expect(
+      parseAiConfig({
+        OPENAI_API_KEY: "test-only-key",
+        OPENAI_MODEL: "  gpt-4.1-nano  ",
+      }),
+    ).toEqual({
+      apiKey: "test-only-key",
+      model: "gpt-4.1-nano",
+    });
+  });
+
+  it.each([
+    {},
+    { OPENAI_API_KEY: "" },
+    {
+      OPENAI_API_KEY: "replace-with-a-key",
+      OPENAI_MODEL,
+    },
+    { OPENAI_API_KEY: "test-only-key", OPENAI_MODEL: "" },
+    { OPENAI_API_KEY: "test-only-key", OPENAI_MODEL: "   " },
+  ])("rejects incomplete or unsafe AI settings", (environment) => {
+    expect(() => parseAiConfig(environment)).toThrow();
   });
 });
