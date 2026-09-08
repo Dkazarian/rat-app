@@ -16,7 +16,7 @@ Status: `[x]` completed, `[ ]` pending external or manual validation.
 ## 1. Redis rate limiter
 
 - [x] Extend `src/server/redis/keys.ts` with builders for the session-burst and global-burst keys; cover their exact environment-prefixed forms in `keys.test.ts`.
-- [x] Create `src/server/redis/ai-rate-limiter.ts` with fixed server-only limits of 5/session/minute, 50/session lifetime, and 30/global/minute.
+- [x] Create `src/server/redis/ai-rate-limiter.ts` with fixed server-only limits of 5/session/minute, 50/session lifetime, and 60/global/minute.
 - [x] Export only:
 
 ```ts

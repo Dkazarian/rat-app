@@ -15,7 +15,7 @@ Leave items unchecked until supported by current evidence.
 
 - [x] `POST /api/v1/expenses/prompt` allows 5 requests per session per 60 seconds and rejects request 6.
 - [x] One session allows 50 lifetime requests and rejects request 51.
-- [x] All sessions together allow 30 requests per 60 seconds and reject request 31.
+- [x] All sessions together allow 60 requests per 60 seconds and reject request 61.
 - [x] Session-burst keys use `${RATAPP_REDIS_KEY_PREFIX}:ratelimit:ai:burst:{<sessionId>}`.
 - [x] Global-burst key uses `${RATAPP_REDIS_KEY_PREFIX}:ratelimit:ai:global`.
 - [x] Lifetime count uses `aiRequestCount` in `${RATAPP_REDIS_KEY_PREFIX}:session:v1:{<sessionId>}:meta` and survives TTL renewal.

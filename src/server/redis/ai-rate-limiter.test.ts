@@ -149,8 +149,8 @@ describe("consumeAiRateLimit", () => {
     expect(redis.counters.get(`${prefix}:ratelimit:ai:global`)?.value).toBe(6);
   });
 
-  it("enforces the thirty-request global burst", async () => {
-    for (let index = 0; index < 6; index += 1) {
+  it("enforces the sixty-request global burst", async () => {
+    for (let index = 0; index < 12; index += 1) {
       const sessionId = randomUUID();
       redis.createSession(sessionId);
       const decisions = await Promise.all(

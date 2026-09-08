@@ -8,7 +8,7 @@ import { redisOperation } from "./repository-helpers";
 const AI_RATE_LIMITS = {
   sessionBurst: 5,
   sessionLifetime: 50,
-  globalBurst: 30,
+  globalBurst: 60,
   burstWindowMilliseconds: 60_000,
 } as const;
 

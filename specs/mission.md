@@ -22,7 +22,7 @@ Ratapp is a playful, public demo that turns natural-language spending descriptio
 
 ## Demo limits
 
-Up to 20 active demo users. Demo data expires 48 hours after the user’s first visit. Each user can create up to 10 custom categories and 100 expenses.
+The demo is designed for occasional portfolio traffic rather than sustained production usage. Demo data expires 48 hours after the user’s first visit. Each user can create up to 10 custom categories and 100 expenses.
 
 ## Initial-release boundary
 
