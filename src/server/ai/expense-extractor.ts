@@ -1,19 +1,11 @@
-import {
-  NoObjectGeneratedError,
-  NoOutputGeneratedError,
-  Output,
-  RetryError,
-  TypeValidationError,
-  generateText,
-} from "ai";
-import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { z } from "zod";
 import { getAiConfig } from "@/server/config";
 
 const MAX_EXTRACTED_EXPENSES = 100;
 const EXTRACTION_TIMEOUT_MS = 15_000;
 const MAX_OUTPUT_TOKENS = 1_200;
-const MAX_RETRIES = 0;
+const OPENAI_CHAT_COMPLETIONS_URL =
+  "https://api.openai.com/v1/chat/completions";
 
 export const expenseExtractionOutputSchema = z
   .object({
@@ -46,7 +38,10 @@ export type ExpenseExtractorInput = Readonly<{
 }>;
 
 export type ExpenseExtractorErrorKind =
-  "configuration" | "timeout" | "provider" | "invalid_output";
+  | "configuration"
+  | "timeout"
+  | "provider"
+  | "invalid_output";
 
 const safeMessages: Record<ExpenseExtractorErrorKind, string> = {
   configuration: "AI classification is not configured.",
@@ -91,12 +86,6 @@ export function buildExtractionUserPrompt({
 
 function isTimeoutError(error: unknown, depth = 0): boolean {
   if (depth > 2 || error === null || typeof error !== "object") return false;
-  if (RetryError.isInstance(error)) {
-    return (
-      error.reason === "abort" ||
-      error.errors.some((nested) => isTimeoutError(nested, depth + 1))
-    );
-  }
   if (
     "name" in error &&
     (error.name === "AbortError" || error.name === "TimeoutError")
@@ -107,23 +96,84 @@ function isTimeoutError(error: unknown, depth = 0): boolean {
   return false;
 }
 
-function isInvalidOutputError(error: unknown): boolean {
-  return (
-    NoObjectGeneratedError.isInstance(error) ||
-    NoOutputGeneratedError.isInstance(error) ||
-    TypeValidationError.isInstance(error)
-  );
-}
-
 function toExtractorError(error: unknown): ExpenseExtractorError {
   if (error instanceof ExpenseExtractorError) return error;
   if (isTimeoutError(error)) {
     return new ExpenseExtractorError("timeout", { cause: error });
   }
-  if (isInvalidOutputError(error)) {
-    return new ExpenseExtractorError("invalid_output", { cause: error });
-  }
   return new ExpenseExtractorError("provider", { cause: error });
+}
+
+type OpenAiChatCompletion = Readonly<{
+  choices?: ReadonlyArray<
+    Readonly<{ message?: Readonly<{ content?: string | null }> }>
+  >;
+}>;
+
+async function requestExtraction(
+  config: ReturnType<typeof getAiConfig>,
+  prompt: string,
+): Promise<ExpenseExtractionOutput> {
+  const response = await fetch(OPENAI_CHAT_COMPLETIONS_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${config.apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: config.model,
+      messages: [
+        { role: "system", content: expenseExtractionSystemPrompt },
+        { role: "user", content: prompt },
+      ],
+      response_format: {
+        type: "json_schema",
+        json_schema: {
+          name: "expense_extraction",
+          strict: true,
+          schema: {
+            type: "object",
+            additionalProperties: false,
+            required: ["expenses"],
+            properties: {
+              expenses: {
+                type: "array",
+                maxItems: MAX_EXTRACTED_EXPENSES,
+                items: {
+                  type: "object",
+                  additionalProperties: false,
+                  required: ["description", "amountMinor", "categoryName"],
+                  properties: {
+                    description: { type: "string" },
+                    amountMinor: { type: "number" },
+                    categoryName: { type: ["string", "null"] },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      max_completion_tokens: MAX_OUTPUT_TOKENS,
+    }),
+    signal: AbortSignal.timeout(EXTRACTION_TIMEOUT_MS),
+  });
+
+  if (!response.ok) {
+    throw new Error(`OpenAI request failed with status ${response.status}.`);
+  }
+
+  const result = (await response.json()) as OpenAiChatCompletion;
+  const content = result.choices?.[0]?.message?.content;
+  if (!content) {
+    throw new ExpenseExtractorError("invalid_output");
+  }
+
+  try {
+    return expenseExtractionOutputSchema.parse(JSON.parse(content));
+  } catch (error) {
+    throw new ExpenseExtractorError("invalid_output", { cause: error });
+  }
 }
 
 export async function extractExpenses(
@@ -137,37 +187,9 @@ export async function extractExpenses(
   }
 
   const prompt = buildExtractionUserPrompt(input);
-  const provider = createOpenRouter({ apiKey: config.apiKey });
-  let lastError: ExpenseExtractorError | undefined;
-
-  for (const model of config.models) {
-    try {
-      const result = await generateText({
-        model: provider.chat(model),
-        system: expenseExtractionSystemPrompt,
-        prompt,
-        output: Output.object({
-          schema: expenseExtractionOutputSchema,
-          name: "expense_extraction",
-        }),
-        maxOutputTokens: MAX_OUTPUT_TOKENS,
-        maxRetries: MAX_RETRIES,
-        timeout: EXTRACTION_TIMEOUT_MS,
-      });
-      try {
-        return expenseExtractionOutputSchema.parse(result.output);
-      } catch (error) {
-        throw new ExpenseExtractorError("invalid_output", { cause: error });
-      }
-    } catch (error) {
-      lastError = toExtractorError(error);
-    }
+  try {
+    return await requestExtraction(config, prompt);
+  } catch (error) {
+    throw toExtractorError(error);
   }
-
-  throw (
-    lastError ??
-    new ExpenseExtractorError("configuration", {
-      cause: new Error("No OpenRouter models were configured."),
-    })
-  );
 }

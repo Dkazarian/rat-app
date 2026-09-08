@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { OPEN_ROUTER_MODEL, parseAiConfig, parseServerConfig } from "./config";
+import { OPENAI_MODEL, parseAiConfig, parseServerConfig } from "./config";
 
 const validEnvironment = {
   KV_REST_API_URL: "https://example.upstash.io",
@@ -46,39 +46,34 @@ describe("parseAiConfig", () => {
   it("validates AI settings independently from Redis settings", () => {
     expect(
       parseAiConfig({
-        OPENROUTER_API_KEY: "test-only-key",
-        OPEN_ROUTER_MODEL: OPEN_ROUTER_MODEL,
+        OPENAI_API_KEY: "test-only-key",
+        OPENAI_MODEL,
       }),
-    ).toEqual({ apiKey: "test-only-key", models: [OPEN_ROUTER_MODEL] });
+    ).toEqual({ apiKey: "test-only-key", model: OPENAI_MODEL });
     expect(() => parseServerConfig(validEnvironment)).not.toThrow();
   });
 
-  it("parses and trims an ordered model fallback list", () => {
+  it("trims the configured model", () => {
     expect(
       parseAiConfig({
-        OPENROUTER_API_KEY: "test-only-key",
-        OPEN_ROUTER_MODEL: "provider/primary, provider/fallback ,third/model",
+        OPENAI_API_KEY: "test-only-key",
+        OPENAI_MODEL: "  gpt-4.1-nano  ",
       }),
     ).toEqual({
       apiKey: "test-only-key",
-      models: ["provider/primary", "provider/fallback", "third/model"],
+      model: "gpt-4.1-nano",
     });
   });
 
   it.each([
     {},
-    { OPENROUTER_API_KEY: "" },
+    { OPENAI_API_KEY: "" },
     {
-      OPENROUTER_API_KEY: "replace-with-a-key",
-      OPEN_ROUTER_MODEL: OPEN_ROUTER_MODEL,
+      OPENAI_API_KEY: "replace-with-a-key",
+      OPENAI_MODEL,
     },
-    { OPENROUTER_API_KEY: "test-only-key", OPEN_ROUTER_MODEL: "" },
-    { OPENROUTER_API_KEY: "test-only-key", OPEN_ROUTER_MODEL: ",other/model" },
-    { OPENROUTER_API_KEY: "test-only-key", OPEN_ROUTER_MODEL: "other/model," },
-    {
-      OPENROUTER_API_KEY: "test-only-key",
-      OPEN_ROUTER_MODEL: "primary/model, ,fallback/model",
-    },
+    { OPENAI_API_KEY: "test-only-key", OPENAI_MODEL: "" },
+    { OPENAI_API_KEY: "test-only-key", OPENAI_MODEL: "   " },
   ])("rejects incomplete or unsafe AI settings", (environment) => {
     expect(() => parseAiConfig(environment)).toThrow();
   });

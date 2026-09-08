@@ -28,11 +28,10 @@ See [`src/README.md`](src/README.md) for placement and dependency rules, and [`s
 npm install
 ```
 
-For live classification, set the server-only `OPENROUTER_API_KEY` and
-`OPEN_ROUTER_MODEL=google/gemma-4-26b-a4b-it:free` in `.env.development.local`.
-`OPEN_ROUTER_MODEL` also accepts a comma-separated fallback list in attempt
-order. Never expose either setting with a `NEXT_PUBLIC_` prefix or commit a real
-key.
+For live classification, set the server-only `OPENAI_API_KEY` and
+`OPENAI_MODEL=gpt-4.1-nano` in `.env.development.local` or in the Vercel project
+environment. Never expose either setting with a `NEXT_PUBLIC_*` prefix or commit
+a real key.
 
 ## Application
 
