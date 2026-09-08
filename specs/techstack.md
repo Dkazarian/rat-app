@@ -20,7 +20,7 @@ Exact dependency versions live in `package.json` and the lockfile.
 
 ```text
 Browser UI -> /api/v1 Route Handlers -> server functions -> Upstash Redis
-                                      \-> OpenRouter (Phase 6 classification)
+                                      \-> OpenAI (Phase 6 classification)
 ```
 
 - `src/app` contains pages and thin HTTP route handlers.
@@ -74,7 +74,7 @@ Provider credentials remain server-only. The category-name and expense-prompt li
 - Keep domain behavior independent of React, Redis representation, and provider response shapes.
 - Treat API responses as authoritative; derive display groupings and chart data instead of duplicating mutable stores.
 - Serialize conflicting writes while allowing independent reads.
-- Keep Storybook deterministic and independent of Redis and OpenRouter.
+- Keep Storybook deterministic and independent of Redis and OpenAI.
 - Verify changes with formatting, lint, strict type checking, tests, Storybook, and a production build as appropriate.
 
 Phase status and temporary implementation detail belong in the [roadmap](roadmap.md) and phase specifications, not in this baseline.

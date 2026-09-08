@@ -73,7 +73,7 @@ npm run test:redis
 `test:redis` runs the Redis persistence and deterministic-seeder suites against an in-memory mock; tests never contact Upstash or consume its command quota. For an explicit manual test, initialize a non-production session through the app, inspect its development-only `ratapp_session` cookie in browser developer tools, and seed it with `npm run seed:redis -- --session-id <uuid>`.
 
 Run `npm run test:ai:live` explicitly to send one `Coffee $1.25` extraction to
-OpenRouter using `.env.development.local`. This live test is excluded from the
+OpenAI using `.env.development.local`. This live test is excluded from the
 default suite and CI, requires real server-only settings, and may consume
 provider quota.
 

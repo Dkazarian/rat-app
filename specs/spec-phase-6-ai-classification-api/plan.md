@@ -3,18 +3,16 @@
 Status: implementation complete; final repository and live-provider verification remain.
 
 This is the single execution record for Phase 6. It consolidates the original
-implementation plan, the review decisions that refined it, and the subsequent
-provider migration from OpenRouter to the OpenAI API. Superseded proposals are
-recorded below only where they explain the final design; they are not remaining
-work.
+implementation plan, the review decisions that refined it, and the accepted
+OpenAI implementation. It describes the resulting design rather than narrating
+superseded implementation steps.
 
 ## Outcome
 
-Replace the Phase 5 `501 classification_unavailable` response with a live,
-server-side expense-classification path. A validated English or Spanish prompt
-can produce several expenses, which are independently validated, matched to the
-current session's categories, persisted in Redis, and returned through the
-existing prompt-mutation contract.
+Add a live, server-side expense-classification path to the Phase 5 prompt
+endpoint. A validated English or Spanish prompt can produce several expenses,
+which are independently validated, matched to the current session's categories,
+persisted in Redis, and returned through the existing prompt-mutation contract.
 
 The browser remains provider-agnostic. Redis remains authoritative, and the
 session, category, expense-query, mutation-gate, refresh, and rat-feedback
@@ -30,10 +28,9 @@ architecture from Phase 5 remains intact.
   environment variables.
 - Deploy with `OPENAI_MODEL=gpt-4.1-nano`; do not hard-code a browser-selectable
   model.
-- Use one configured model per request. The earlier OpenRouter proposal for an
-  ordered, comma-separated fallback list is retired.
-- Do not retain the Vercel AI SDK or OpenRouter provider dependencies solely for
-  this narrow request boundary. Continue to use Zod for runtime validation.
+- Use one configured model per request, with no model fallback chain.
+- Use the platform `fetch` implementation for this narrow request boundary and
+  Zod for runtime validation; do not add an AI SDK dependency.
 - An OpenAI API key and API billing are separate from a ChatGPT subscription.
 
 ### Boundaries retained from plan review
@@ -63,12 +60,11 @@ architecture from Phase 5 remains intact.
 
 ### 1. Configuration and provider adapter
 
-- [x] Replace `OPENROUTER_API_KEY` and `OPEN_ROUTER_MODEL` with lazily validated
-      `OPENAI_API_KEY` and `OPENAI_MODEL` settings.
+- [x] Add lazily validated `OPENAI_API_KEY` and `OPENAI_MODEL` settings.
 - [x] Reject missing, blank, or placeholder credentials and missing/blank model
       identifiers without breaking routes that do not classify expenses.
-- [x] Remove `ai` and `@openrouter/ai-sdk-provider` from the package manifest and
-      lockfile.
+- [x] Keep the package manifest and lockfile free of unnecessary AI SDK and
+      provider-adapter dependencies.
 - [x] Build separate system instructions and structurally delimited user data.
 - [x] Request strict JSON Schema output containing at most 100
       `{ description, amountMinor, categoryName }` candidates.
@@ -120,8 +116,8 @@ architecture from Phase 5 remains intact.
       localization, focus, and query refresh.
 - [x] Gate the live extractor test on valid `OPENAI_API_KEY` and `OPENAI_MODEL`
       values and keep it outside the default suite.
-- [x] Update root/source documentation, technology notes, and the dashboard model
-      label from OpenRouter to OpenAI `gpt-4.1-nano`.
+- [x] Document OpenAI `gpt-4.1-nano` in the root/source documentation, technology
+      notes, and dashboard model label.
 
 ## Remaining verification
 
@@ -146,8 +142,7 @@ architecture from Phase 5 remains intact.
    Variables** for the intended Preview and Production environments.
 2. Set `OPENAI_MODEL` to `gpt-4.1-nano`.
 3. Do not prefix either setting with `NEXT_PUBLIC_`.
-4. Remove stale `OPENROUTER_API_KEY` and `OPEN_ROUTER_MODEL` values.
-5. Redeploy so the deployment receives the new settings, then run the smoke
+4. Redeploy so the deployment receives the new settings, then run the smoke
    checks above.
 
 ## Completion handoff
