@@ -11,6 +11,7 @@ const errorKeys = {
   category_name_duplicate: "apiErrorCategoryNameDuplicate",
   category_limit_reached: "apiErrorCategoryLimitReached",
   expense_limit_reached: "apiErrorExpenseLimitReached",
+  rate_limited: "rateLimitedDetail",
   no_expenses_extracted: "apiErrorNoExpensesExtracted",
   service_unavailable: "apiErrorServiceUnavailable",
   internal_error: "apiErrorInternal",

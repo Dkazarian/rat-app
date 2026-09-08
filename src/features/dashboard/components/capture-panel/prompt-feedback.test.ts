@@ -65,4 +65,13 @@ describe("mapPromptOutcomeToRatFeedback", () => {
       detailKey: "apiErrorUnknown",
     });
   });
+
+  it("maps rate limiting to its dedicated rat state", () => {
+    expect(
+      mapPromptOutcomeToRatFeedback({
+        kind: "api-error",
+        code: "rate_limited",
+      }),
+    ).toEqual({ state: "rate-limited" });
+  });
 });

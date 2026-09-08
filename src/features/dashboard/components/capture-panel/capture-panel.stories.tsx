@@ -10,15 +10,14 @@ type StoryProps = Readonly<{
 }>;
 
 function feedbackFor(state: RatDialogueState): RatDialogueFeedback {
-  return state === "success"
-    ? { state, extractedCount: 3 }
-    : {
-        state,
-        detailKey:
-          state === "extraction-failure"
-            ? "apiErrorNoExpensesExtracted"
-            : "apiErrorServiceUnavailable",
-      };
+  if (state === "success") return { state, extractedCount: 3 };
+  if (state === "extraction-failure") {
+    return { state, detailKey: "apiErrorNoExpensesExtracted" };
+  }
+  if (state === "provider-error") {
+    return { state, detailKey: "apiErrorServiceUnavailable" };
+  }
+  return { state };
 }
 
 function LocalizedCapturePanel({ state, inputValue, disabled }: StoryProps) {
@@ -52,3 +51,4 @@ export const AwaitingInput: Story = { args: { state: "empty" } };
 export const Success: Story = {};
 export const Loading: Story = { args: { state: "loading", disabled: true } };
 export const Error: Story = { args: { state: "provider-error" } };
+export const RateLimited: Story = { args: { state: "rate-limited" } };

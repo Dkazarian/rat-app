@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   categories: { getCategories: vi.fn() },
   expenses: { getExpenses: vi.fn(), createExpenses: vi.fn() },
   extractor: { extractExpenses: vi.fn() },
+  rateLimit: { consumeAiRateLimit: vi.fn() },
   config: { getServerConfig: vi.fn() },
 }));
 
@@ -21,6 +22,7 @@ vi.mock("@/server/ai/expense-extractor", async () => {
   return { ...actual, extractExpenses: mocks.extractor.extractExpenses };
 });
 vi.mock("@/server/config", () => mocks.config);
+vi.mock("@/server/redis/ai-rate-limiter", () => mocks.rateLimit);
 
 import { POST } from "./route";
 
@@ -72,12 +74,45 @@ beforeEach(() => {
   mocks.expenses.createExpenses.mockResolvedValue([createdExpense]);
   mocks.extractor.extractExpenses.mockResolvedValue({
     expenses: [
-      { description: "Lunch", amountMinor: 1800, categoryName: " food " },
+      { description: "lunch", amountMinor: 1800, categoryName: " food " },
     ],
   });
+  mocks.rateLimit.consumeAiRateLimit.mockResolvedValue({ allowed: true });
 });
 
 describe("POST /api/v1/expenses/prompt", () => {
+  it("rate limits after session resolution and before parsing the body", async () => {
+    mocks.rateLimit.consumeAiRateLimit.mockResolvedValue({
+      allowed: false,
+      retryAfterSeconds: 37,
+    });
+    const malformed = new NextRequest(
+      "https://rat.test/api/v1/expenses/prompt",
+      {
+        method: "POST",
+        headers: {
+          cookie: `ratapp_session=${sessionId}`,
+          "content-type": "application/json",
+        },
+        body: "not-json",
+      },
+    );
+
+    const response = await POST(malformed);
+
+    expect(response.status).toBe(429);
+    expect(response.headers.get("Retry-After")).toBe("37");
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    await expect(response.json()).resolves.toEqual({
+      error: { code: "rate_limited", message: "Too many requests." },
+    });
+    expect(mocks.rateLimit.consumeAiRateLimit).toHaveBeenCalledWith(sessionId);
+    expect(mocks.categories.getCategories).not.toHaveBeenCalled();
+    expect(mocks.expenses.getExpenses).not.toHaveBeenCalled();
+    expect(mocks.extractor.extractExpenses).not.toHaveBeenCalled();
+    expect(mocks.expenses.createExpenses).not.toHaveBeenCalled();
+  });
+
   it("extracts using the exact prompt and persists only server-created DTOs", async () => {
     const exactPrompt = "  Lunch $18  ";
     const response = await POST(request({ prompt: exactPrompt, locale: "en" }));
@@ -227,6 +262,7 @@ describe("POST /api/v1/expenses/prompt", () => {
       error: { code: "session_not_found" },
     });
     expect(mocks.categories.getCategories).not.toHaveBeenCalled();
+    expect(mocks.rateLimit.consumeAiRateLimit).not.toHaveBeenCalled();
     expect(mocks.extractor.extractExpenses).not.toHaveBeenCalled();
   });
 });

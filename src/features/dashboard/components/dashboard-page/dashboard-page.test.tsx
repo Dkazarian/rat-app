@@ -152,6 +152,27 @@ describe("DashboardPage API composition", () => {
     );
   });
 
+  it("preserves the draft and shows the tired rat when rate limited", async () => {
+    const api = createApi();
+    vi.mocked(api.submitPrompt).mockRejectedValueOnce(
+      new SessionApiError("rate_limited", "Too many requests."),
+    );
+    const { user } = renderDashboard(api);
+    const input = await screen.findByRole("textbox", {
+      name: "What did you spend?",
+    });
+    const exact = "  Coffee $4.50  ";
+    await user.type(input, exact);
+    await user.click(screen.getByRole("button", { name: "Sort it" }));
+
+    expect(await screen.findByText("AI is tired")).toBeVisible();
+    expect(screen.getByText("Try again later.")).toBeVisible();
+    expect(screen.getByRole("img", { name: "Tired rat mascot" })).toBeVisible();
+    expect(input).toHaveValue(exact);
+    expect(api.getCategories).toHaveBeenCalledTimes(1);
+    expect(api.getExpenses).toHaveBeenCalledTimes(1);
+  });
+
   it("clears and refreshes after partial success using ordinary success copy", async () => {
     const api = createApi();
     vi.mocked(api.submitPrompt).mockResolvedValueOnce({

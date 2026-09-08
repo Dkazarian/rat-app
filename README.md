@@ -1,8 +1,10 @@
 # Ratapp
 
-Ratapp is a bilingual expense-classification demo built with Next.js, React, and TypeScript. It supports session-only category management, expense capture, and a synchronized spending summary in English and Spanish.
+Ratapp is a expense-classification demo built with Next.js, React, and TypeScript. It supports session-only category management, expense capture, and a synchronized spending summary.
 
-The current implementation is the Phase 6 Redis-backed classification flow. The browser creates or resumes an expiring, cookie-scoped anonymous session through `/api/v1`, loads categories and expenses from that same-origin API, and submits natural-language English or Spanish expense prompts for server-side structured extraction. Session IDs are never exposed through browser API URLs or response bodies. Expenses are read-only in the initial release.
+## Privacy
+
+Expense prompts, selected language, and current category names are sent to OpenAI. OpenAI processes that input and produces the classification output. Accepted expenses remain temporarily in the anonymous Redis session. Do not submit sensitive or personally identifying information.
 
 ## Project map
 
@@ -28,10 +30,7 @@ See [`src/README.md`](src/README.md) for placement and dependency rules, and [`s
 npm install
 ```
 
-For live classification, set the server-only `OPENAI_API_KEY` and
-`OPENAI_MODEL=gpt-4.1-nano` in `.env.development.local` or in the Vercel project
-environment. Never expose either setting with a `NEXT_PUBLIC_*` prefix or commit
-a real key.
+For live classification, set the server-only `OPENAI_API_KEY` and `OPENAI_MODEL`.
 
 ## Application
 
@@ -71,10 +70,5 @@ npm run test:redis
 ```
 
 `test:redis` runs the Redis persistence and deterministic-seeder suites against an in-memory mock; tests never contact Upstash or consume its command quota. For an explicit manual test, initialize a non-production session through the app, inspect its development-only `ratapp_session` cookie in browser developer tools, and seed it with `npm run seed:redis -- --session-id <uuid>`.
-
-Run `npm run test:ai:live` explicitly to send one `Coffee $1.25` extraction to
-OpenAI using `.env.development.local`. This live test is excluded from the
-default suite and CI, requires real server-only settings, and may consume
-provider quota.
 
 The formatting check, lint, type-check, tests, Storybook build, and Next.js build all run non-interactively and are suitable for CI.

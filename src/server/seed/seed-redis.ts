@@ -1,13 +1,12 @@
 import { readSeedSessionId } from "./seed-arguments";
 import { seedExistingSession } from "./seed-session";
+import { logger } from "@/server/logger";
 
 try {
   const sessionId = readSeedSessionId(process.argv.slice(2));
   await seedExistingSession(sessionId);
-  console.log(`Seeded data into anonymous session ${sessionId}.`);
-} catch (error) {
-  console.error(
-    error instanceof Error ? error.message : "Redis seeding failed.",
-  );
+  logger.info("Seeded data into anonymous session.");
+} catch {
+  logger.error("Redis seeding failed.");
   process.exitCode = 1;
 }

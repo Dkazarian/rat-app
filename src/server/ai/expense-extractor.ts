@@ -1,4 +1,8 @@
 import { z } from "zod";
+import {
+  CATEGORY_NAME_MAX_LENGTH,
+  EXPENSE_DESCRIPTION_MAX_LENGTH,
+} from "@/contracts/session-api";
 import { getAiConfig } from "@/server/config";
 
 const MAX_EXTRACTED_EXPENSES = 100;
@@ -13,9 +17,9 @@ export const expenseExtractionOutputSchema = z
       .array(
         z
           .object({
-            description: z.string(),
+            description: z.string().max(EXPENSE_DESCRIPTION_MAX_LENGTH),
             amountMinor: z.number(),
-            categoryName: z.string().nullable(),
+            categoryName: z.string().max(CATEGORY_NAME_MAX_LENGTH).nullable(),
           })
           .strict(),
       )

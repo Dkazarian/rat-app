@@ -32,6 +32,7 @@ function isPromptApiErrorCode(
     "invalid_request",
     "session_not_found",
     "expense_limit_reached",
+    "rate_limited",
     "no_expenses_extracted",
     "service_unavailable",
     "internal_error",

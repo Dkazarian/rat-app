@@ -36,4 +36,11 @@ describe("RatDialogue", () => {
       "The service is temporarily unavailable. Try again.",
     );
   });
+
+  it("announces concise rate-limit feedback", () => {
+    renderDialogue({ state: "rate-limited" });
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "AI is tiredTry again later.",
+    );
+  });
 });

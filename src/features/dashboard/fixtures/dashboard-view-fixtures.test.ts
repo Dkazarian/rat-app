@@ -31,5 +31,8 @@ describe("dashboardFixtures", () => {
     expect(dashboardFixtures["provider-error"].inputValue).toBe(
       dashboardFixtures.loading.inputValue,
     );
+    expect(dashboardFixtures["rate-limited"].inputValue).toBe(
+      dashboardFixtures.loading.inputValue,
+    );
   });
 });

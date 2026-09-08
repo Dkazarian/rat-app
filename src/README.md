@@ -18,6 +18,7 @@ src/
 - `app/api/v1/` contains thin browser-facing route handlers. They resolve the cookie session, validate transport input, and call `server/` functions directly.
 - `contracts/` contains stable JSON wire types. It imports neither React nor server implementations.
 - `server/` is server-only. Redis credentials, persistence, stored records, category/expense rules, session identity, and deterministic seed data stay here.
+- `server/redis/ai-rate-limiter.ts` atomically enforces Redis-backed AI request limits. `server/logger.ts` provides thin server-only logging helpers.
 - `features/dashboard/api/` is the browser HTTP boundary. It uses same-origin credentials and stable error envelopes and never reads Redis configuration.
 - `useSessionBootstrap` owns only cookie-session readiness, initialization error, and retry. `DashboardPage` owns the page-wide one-at-a-time mutation gate and refresh signal.
 - `DashboardResults` owns the categories query used by Category Panel and Spending Summary. Its nested expense section independently owns the expenses query. Both protect against aborted and stale responses.

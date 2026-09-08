@@ -19,6 +19,7 @@ const mascotByState = {
     "extractionFailureMascotAlt",
   ],
   "provider-error": ["/assets/rat-mascot-error.png", "providerErrorMascotAlt"],
+  "rate-limited": ["/assets/rat-mascot-tired.png", "rateLimitedMascotAlt"],
 } as const satisfies Record<
   RatDialogueState,
   readonly [string, TranslationKey]

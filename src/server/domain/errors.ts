@@ -6,6 +6,7 @@ export class ApplicationError extends Error {
     readonly status: number,
     message: string,
     readonly field?: ApiErrorField,
+    readonly retryAfterSeconds?: number,
   ) {
     super(message);
     this.name = "ApplicationError";
@@ -55,6 +56,14 @@ export const applicationErrors = {
       "expense_limit_reached",
       409,
       "The expense limit has been reached.",
+    ),
+  rateLimited: (retryAfterSeconds: number) =>
+    new ApplicationError(
+      "rate_limited",
+      429,
+      "Too many requests.",
+      undefined,
+      retryAfterSeconds,
     ),
   noExpensesExtracted: () =>
     new ApplicationError(

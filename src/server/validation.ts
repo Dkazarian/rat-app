@@ -17,9 +17,11 @@ export const storedCategorySchema = z.object({
 
 export const storedExpenseSchema = expenseDtoSchema;
 
-export const categoryNameBodySchema = z.object({
-  name: z.string(),
-});
+export const categoryNameBodySchema = z
+  .object({
+    name: z.string(),
+  })
+  .strict();
 
 export const promptBodySchema = z
   .object({

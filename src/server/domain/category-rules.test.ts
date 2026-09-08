@@ -34,6 +34,24 @@ describe("category rules", () => {
     );
   });
 
+  it("normalizes names to Unicode NFC before duplicate checks", () => {
+    const composed = createCategoryRecord([], "Café", randomUUID());
+
+    expect(normalizeCategoryName(" Cafe\u0301 ")).toBe("Café");
+    expect(() =>
+      createCategoryRecord([composed], "Cafe\u0301", randomUUID()),
+    ).toThrow(expect.objectContaining({ code: "category_name_duplicate" }));
+  });
+
+  it.each(["Food\nTravel", "Food\u0000", "Food\u200BTravel"])(
+    "rejects control or formatting characters in %j",
+    (name) => {
+      expect(() => normalizeCategoryName(name)).toThrow(
+        expect.objectContaining({ code: "invalid_category_name" }),
+      );
+    },
+  );
+
   it("enforces ten real categories", () => {
     const categories: StoredCategory[] = Array.from(
       { length: 10 },

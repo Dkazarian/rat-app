@@ -1,4 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  CATEGORY_NAME_MAX_LENGTH,
+  EXPENSE_DESCRIPTION_MAX_LENGTH,
+} from "@/contracts/session-api";
 import { OPENAI_MODEL } from "@/server/config";
 import {
   buildExtractionUserPrompt,
@@ -44,6 +48,31 @@ describe("expense extractor", () => {
           amountMinor: 100,
           categoryName: null,
         })),
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects overlong descriptions and category names", () => {
+    expect(
+      expenseExtractionOutputSchema.safeParse({
+        expenses: [
+          {
+            description: "x".repeat(EXPENSE_DESCRIPTION_MAX_LENGTH + 1),
+            amountMinor: 100,
+            categoryName: null,
+          },
+        ],
+      }).success,
+    ).toBe(false);
+    expect(
+      expenseExtractionOutputSchema.safeParse({
+        expenses: [
+          {
+            description: "Lunch",
+            amountMinor: 100,
+            categoryName: "x".repeat(CATEGORY_NAME_MAX_LENGTH + 1),
+          },
+        ],
       }).success,
     ).toBe(false);
   });
