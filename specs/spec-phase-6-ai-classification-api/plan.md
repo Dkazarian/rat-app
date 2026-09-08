@@ -1,6 +1,6 @@
 # Phase 6 Plan — AI Classification API
 
-Status: single-model implementation complete; ordered OpenRouter model fallback, repository-wide formatting, and live-provider/release validation remain pending.
+Status: single-model implementation complete; ordered OpenAI model fallback, repository-wide formatting, and live-provider/release validation remain pending.
 
 ## Execution rules
 
@@ -17,10 +17,10 @@ Status: single-model implementation complete; ordered OpenRouter model fallback,
 
 ## Group 1 — Add dependencies, configuration, and wire schemas
 
-- [ ] Add runtime dependencies `ai` and `@openrouter/ai-sdk-provider`; continue using the existing `zod` dependency.
+- [ ] Add runtime dependencies `ai` and `@ai-sdk/openai`; continue using the existing `zod` dependency.
 - [ ] Keep exact versions in `package.json` and the lockfile without adding another AI, schema, retry, or HTTP package.
-- [ ] Validate `OPENROUTER_API_KEY` and `OPEN_ROUTER_MODEL` lazily in the extractor path so missing AI configuration does not break non-AI routes, builds, tests, or Storybook.
-- [ ] Parse `OPEN_ROUTER_MODEL` as an ordered comma-separated list: trim identifiers, reject blank entries, require at least one model, and continue accepting a single identifier.
+- [ ] Validate `OPENAI_API_KEY` and `OPENAI_MODEL` lazily in the extractor path so missing AI configuration does not break non-AI routes, builds, tests, or Storybook.
+- [ ] Parse `OPENAI_MODEL` as an ordered comma-separated list: trim identifiers, reject blank entries, require at least one model, and continue accepting a single identifier.
 - [ ] Require `google/gemma-4-26b-a4b-it:free` as the primary Phase 6 acceptance model while keeping the complete ordered model list browser-inaccessible.
 - [ ] Retain safe placeholders in `.env.example` and real values only in `.env.development.local` or the deployment environment.
 - [ ] Add an exact Zod schema for `PromptMutationResponse` to the existing shared contract module, including nested `ExpenseDto` constraints and non-negative safe-integer `rejectedCount`.
@@ -36,7 +36,7 @@ Create `src/server/ai/expense-extractor.ts`. Keep its schema, types, error, prom
 - [ ] Define and export the Zod structured-output schema passed directly to Vercel AI SDK. Its result contains a bounded `expenses` array of `{ description, amountMinor, categoryName }`.
 - [ ] Infer `ExpenseExtractionOutput` from that Zod schema.
 - [ ] Export `extractExpenses(input): Promise<ExpenseExtractionOutput>`.
-- [ ] Use `generateText` with `Output.object` and the OpenRouter provider for each configured model attempted in left-to-right order.
+- [ ] Use `generateText` with `Output.object` and the OpenAI provider for each configured model attempted in left-to-right order.
 - [ ] Make at most one non-streaming generation per configured model. Stop on the first schema-valid result; on timeout, provider/model availability, network/SDK, or invalid-output failure, advance to the next model.
 - [ ] Give every attempt and the complete fallback sequence finite timeouts, bounded output tokens, and bounded SDK retry behavior. Never retry an earlier model or make a separate repair request.
 - [ ] Build separate system instructions and user data. Supply only the exact prompt, locale, and literal category names.
@@ -102,14 +102,14 @@ Add one small pure module beside the capture-panel presentation, such as `src/fe
 - [ ] Component-test loading, clearing after success, preservation after errors, session recovery, query refresh, localization, focus, and live-region announcements.
 - [ ] Prove no rendered or accessibility-only text contains an HTTP status, API code, exception name, provider detail, or `rejectedCount`.
 - [ ] Keep Storybook deterministic with fixture-only rat states and no AI configuration.
-- [ ] Add a separately invoked live OpenRouter integration test, excluded from the default suite and CI, that submits exactly one prompt (`Coffee $1.25`, locale `en`) through the configured extraction chain and asserts one schema-valid expense with `amountMinor: 125` and a non-empty description.
+- [ ] Add a separately invoked live OpenAI integration test, excluded from the default suite and CI, that submits exactly one prompt (`Coffee $1.25`, locale `en`) through the configured extraction chain and asserts one schema-valid expense with `amountMinor: 125` and a non-empty description.
 - [ ] Gate the live test behind an explicit command or opt-in flag plus valid server-only credentials; skip clearly when either is absent, and never log the key or raw provider response.
 
 ## Group 6 — Documentation and final verification
 
 - [ ] Update root and source documentation to describe live classification instead of the Phase 5 placeholder.
 - [ ] Document the two server-only AI settings and local setup without committing a real key.
-- [ ] Document how to invoke the one-prompt live-provider test and that it contacts OpenRouter and may consume quota.
+- [ ] Document how to invoke the one-prompt live-provider test and that it contacts OpenAI and may consume quota.
 - [ ] Update the roadmap only after all validation evidence is complete.
 - [ ] Run formatting, lint, strict TypeScript, all tests, Storybook build, and production build.
 - [ ] Perform a non-production live smoke test for English and Spanish single/multiple expenses, category matching, Unclassified fallback, ordered model fallback, fallback exhaustion, partial capacity, no-result recovery, provider failure, and synchronized dashboard data.

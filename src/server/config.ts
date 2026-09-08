@@ -8,22 +8,17 @@ const positiveIntegerString = (fallback: number) =>
     .transform(Number)
     .pipe(z.number().int().positive().safe());
 
-export const OPEN_ROUTER_MODEL = "google/gemma-4-26b-a4b-it:free" as const;
-
-const openRouterModelsSchema = z
-  .string()
-  .transform((value) => value.split(",").map((model) => model.trim()))
-  .pipe(z.array(z.string().min(1)).min(1));
+export const OPENAI_MODEL = "gpt-4.1-nano" as const;
 
 const aiEnvironmentSchema = z.object({
-  OPENROUTER_API_KEY: z
+  OPENAI_API_KEY: z
     .string()
     .min(1)
     .refine(
       (value) => !/^replace[_-]with/i.test(value),
-      "A real server-only OpenRouter key is required",
+      "A real server-only OpenAI key is required",
     ),
-  OPEN_ROUTER_MODEL: openRouterModelsSchema,
+  OPENAI_MODEL: z.string().trim().min(1),
 });
 
 const environmentSchema = z.object({
@@ -59,14 +54,14 @@ export class ServerConfigurationError extends Error {
 
 export type AiConfig = Readonly<{
   apiKey: string;
-  models: ReadonlyArray<string>;
+  model: string;
 }>;
 
 export function parseAiConfig(
   source: Record<string, string | undefined>,
 ): AiConfig {
   const value = aiEnvironmentSchema.parse(source);
-  return { apiKey: value.OPENROUTER_API_KEY, models: value.OPEN_ROUTER_MODEL };
+  return { apiKey: value.OPENAI_API_KEY, model: value.OPENAI_MODEL };
 }
 
 export function getAiConfig(): AiConfig {
