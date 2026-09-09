@@ -150,7 +150,7 @@ describe("DashboardPage API composition", () => {
     );
     expect(input).toHaveValue(exact);
     expect(screen.getByRole("alert")).toHaveTextContent(
-      "No expenses could be found in that description.",
+      "Include what you bought and the amount.",
     );
   });
 
@@ -259,7 +259,7 @@ describe("DashboardPage API composition", () => {
     await user.click(expenses.getByRole("button", { name: "Delete Lunch" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "The service is temporarily unavailable. Try again.",
+      "Service unavailable. Try again.",
     );
     expect(expenses.getByText("Lunch")).toBeVisible();
     expect(api.getCategories).toHaveBeenCalledTimes(1);
@@ -287,7 +287,7 @@ describe("DashboardPage API composition", () => {
     await user.click(panel.getByRole("button", { name: "Add" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "The service is temporarily unavailable. Try again.",
+      "Service unavailable. Try again.",
     );
     expect(panel.getByRole("textbox", { name: "Category name" })).toHaveValue(
       "Health",

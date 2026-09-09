@@ -25,6 +25,7 @@ Use these decisions unless direct browser evidence shows that one fails an accep
 - Desktop feedback column target: `340px`, replacing `270px`.
 - Capture-panel stacking breakpoint target: `840px`, replacing `680px` only for the outer capture layout.
 - Keep the input row's existing `680px` stacking breakpoint.
+- Tailwind v4 arbitrary `max-*` variants compile to strict less-than queries. Encode the inclusive `<= 840px` and `<= 680px` product breakpoints as `max-[841px]` and `max-[681px]`, respectively.
 - Keep the desktop mascot at `116px` and the narrow mascot at `88px`.
 - Keep automatic height and complete visible copy.
 - Do not introduce truncation, line clamping, a scrollable bubble, or a fixed panel height.
@@ -83,7 +84,7 @@ Use the following target English copy:
 | ----------------------------- | ------------------------------------------- |
 | `apiErrorInvalidRequest`      | `Check your input and try again.`           |
 | `apiErrorSessionNotFound`     | `Session expired. Continue to start fresh.` |
-| `apiErrorExpenseLimitReached` | `This session is full (100 expenses).`      |
+| `apiErrorExpenseLimitReached` | `This session reached its expense limit.`   |
 | `apiErrorNoExpensesExtracted` | `Include what you bought and the amount.`   |
 | `apiErrorServiceUnavailable`  | `Service unavailable. Try again.`           |
 | `apiErrorInternal`            | `Try again.`                                |
@@ -95,7 +96,7 @@ Use the following target Spanish copy:
 | ----------------------------- | --------------------------------------------------- |
 | `apiErrorInvalidRequest`      | `Revisá los datos e intentá de nuevo.`              |
 | `apiErrorSessionNotFound`     | `La sesión venció. Continuá para empezar de nuevo.` |
-| `apiErrorExpenseLimitReached` | `La sesión está llena (100 gastos).`                |
+| `apiErrorExpenseLimitReached` | `La sesión alcanzó su límite de gastos.`            |
 | `apiErrorNoExpensesExtracted` | `Incluí qué compraste y el monto.`                  |
 | `apiErrorServiceUnavailable`  | `Servicio no disponible. Probá de nuevo.`           |
 | `apiErrorInternal`            | `Probá de nuevo.`                                   |
@@ -119,13 +120,13 @@ Search the repository for every old phrase after editing. No stale user-facing c
 Edit `src/features/dashboard/components/capture-panel/capture-panel.tsx`.
 
 - [ ] Change the desktop outer grid from `270px minmax(0, 1fr)` to `340px minmax(0, 1fr)`.
-- [ ] Move only the outer feedback/composer stacking behavior from `680px` to `840px`:
+- [ ] Move only the outer feedback/composer stacking behavior from `680px` to the inclusive `840px` product breakpoint, encoded as `max-[841px]`:
   - outer panel changes to one column at `840px`;
   - feedback remains in column 1, row 1;
   - composer moves to column 1, row 2 at `840px`;
   - feedback removes its desktop minimum height when stacked at `840px`.
-- [ ] Keep the compact feedback subgrid (`82px`) at `680px`; widths from 681px through 840px should retain the desktop mascot/subgrid sizing while using the stacked outer layout.
-- [ ] Keep `ExpenseInput`'s textarea/button stacking behavior at `680px`.
+- [ ] Keep the compact feedback subgrid (`82px`) at the inclusive `680px` product breakpoint, encoded as `max-[681px]`; widths from 681px through 840px should retain the desktop mascot/subgrid sizing while using the stacked outer layout.
+- [ ] Keep `ExpenseInput`'s textarea/button stacking behavior at the inclusive `680px` product breakpoint, encoded as `max-[681px]`.
 - [ ] Do not edit `Mascot` sizing unless rendered evidence shows a regression.
 - [ ] Preserve `minmax(0, 1fr)` and `min-w-0` containment so long input and localized text cannot create horizontal overflow.
 - [ ] Preserve current spacing, borders, colors, radii, and speech-bubble pointer geometry.
