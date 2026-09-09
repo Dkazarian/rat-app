@@ -38,9 +38,29 @@ const preview: Preview = {
     layout: "fullscreen",
     viewport: {
       options: {
+        desktop1200: {
+          name: "Desktop (1200px)",
+          styles: { width: "1200px", height: "900px" },
+        },
         desktop: {
           name: "Desktop (1440px)",
           styles: { width: "1440px", height: "900px" },
+        },
+        captureBoundaryAbove: {
+          name: "Capture Boundary (841px)",
+          styles: { width: "841px", height: "900px" },
+        },
+        captureBoundary: {
+          name: "Capture Boundary (840px)",
+          styles: { width: "840px", height: "900px" },
+        },
+        inputBoundaryAbove: {
+          name: "Input Boundary (681px)",
+          styles: { width: "681px", height: "900px" },
+        },
+        inputBoundary: {
+          name: "Input Boundary (680px)",
+          styles: { width: "680px", height: "900px" },
         },
         narrow: {
           name: "Narrow (390px)",
