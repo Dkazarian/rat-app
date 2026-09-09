@@ -13,14 +13,12 @@ import {
   SessionApiError,
   type SessionApi,
 } from "@/features/dashboard/api/session-api-client";
-import { getApiErrorMessage } from "@/features/dashboard/api/error-messages";
 import { getApiErrorTranslationKey } from "@/features/dashboard/api/error-messages";
 import {
   mapPromptOutcomeToRatFeedback,
   type PromptApiErrorCode,
   type PromptApiOutcome,
 } from "@/features/dashboard/components/capture-panel/prompt-feedback";
-import { useSessionBootstrap } from "@/features/dashboard/hooks/use-session-bootstrap";
 import { useLocale } from "@/i18n/locale-context";
 
 export type DashboardPageProps = Readonly<{ api?: SessionApi }>;
@@ -48,11 +46,6 @@ function promptOutcomeFromError(error: unknown): PromptApiOutcome {
 
 export function DashboardPage({ api = browserSessionApi }: DashboardPageProps) {
   const { t, locale } = useLocale();
-  const {
-    isReady: isSessionReady,
-    error: sessionError,
-    retry: retrySession,
-  } = useSessionBootstrap(api);
   const [inputValue, setInputValue] = useState("");
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const [promptValidation, setPromptValidation] = useState<
@@ -95,14 +88,14 @@ export function DashboardPage({ api = browserSessionApi }: DashboardPageProps) {
         error instanceof SessionApiError &&
         error.code === "session_not_found"
       ) {
-        retrySession();
+        notifyDataChanged();
       }
     },
-    [retrySession],
+    [notifyDataChanged],
   );
 
   const submitPrompt = async () => {
-    if (!isSessionReady || isMutating) return;
+    if (isMutating) return;
     const trimmed = inputValue.trim();
     if (!trimmed || inputValue.length > EXPENSE_PROMPT_MAX_LENGTH) {
       setPromptValidation(!trimmed ? "empty" : "too-long");
@@ -134,7 +127,7 @@ export function DashboardPage({ api = browserSessionApi }: DashboardPageProps) {
         error instanceof SessionApiError &&
         error.code === "session_not_found"
       ) {
-        retrySession();
+        notifyDataChanged();
       }
     }
   };
@@ -151,7 +144,7 @@ export function DashboardPage({ api = browserSessionApi }: DashboardPageProps) {
                 inputValue={inputValue}
                 inputRef={inputRef}
                 validationCode={promptValidation}
-                disabled={!isSessionReady || isMutating}
+                disabled={isMutating}
                 onInputChange={(value) => {
                   setInputValue(value);
                   setPromptValidation(undefined);
@@ -159,35 +152,15 @@ export function DashboardPage({ api = browserSessionApi }: DashboardPageProps) {
                 onSubmit={() => void submitPrompt()}
               />
             </div>
-            {sessionError ? (
-              <div
-                role="alert"
-                className="rounded-[20px] border border-[#49404f] bg-[#26222d] p-5"
-              >
-                <p>{getApiErrorMessage(sessionError, t)}</p>
-                <button
-                  type="button"
-                  onClick={retrySession}
-                  className="mt-3 rounded-[10px] border border-[#49404f] px-3 py-2"
-                >
-                  {t("retry")}
-                </button>
-              </div>
-            ) : isSessionReady ? (
-              <DashboardResults
-                api={api}
-                refreshCounter={refreshCounter}
-                isMutating={isMutating}
-                runMutation={runMutation}
-                onDataChanged={notifyDataChanged}
-                onSessionExpired={retrySession}
-                onOperationError={handleOperationError}
-              />
-            ) : (
-              <p role="status" className="text-[#bbb1c1]">
-                {t("loadingSession")}
-              </p>
-            )}
+            <DashboardResults
+              api={api}
+              refreshCounter={refreshCounter}
+              isMutating={isMutating}
+              runMutation={runMutation}
+              onDataChanged={notifyDataChanged}
+              onSessionExpired={notifyDataChanged}
+              onOperationError={handleOperationError}
+            />
           </main>
         </AppShell>
         <Footer

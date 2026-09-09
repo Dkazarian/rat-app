@@ -71,7 +71,6 @@ async function request<T>(
 }
 
 export type SessionApi = Readonly<{
-  createSession: (signal?: AbortSignal) => Promise<void>;
   getCategories: (signal?: AbortSignal) => Promise<CategoriesResponse>;
   createCategory: (name: string) => Promise<CategoryMutationResponse>;
   deleteCategory: (categoryId: string) => Promise<void>;
@@ -84,8 +83,6 @@ export type SessionApi = Readonly<{
 }>;
 
 export const browserSessionApi: SessionApi = {
-  createSession: (signal) =>
-    request("/api/v1/session", { method: "POST", signal }),
   getCategories: (signal) => request("/api/v1/categories", { signal }),
   createCategory: (name) =>
     request("/api/v1/categories", {

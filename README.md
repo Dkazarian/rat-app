@@ -69,6 +69,6 @@ npm test
 npm run test:redis
 ```
 
-`test:redis` runs the Redis persistence and deterministic-seeder suites against an in-memory mock; tests never contact Upstash or consume its command quota. For an explicit manual test, initialize a non-production session through the app, inspect its development-only `ratapp_session` cookie in browser developer tools, and seed it with `npm run seed:redis -- --session-id <uuid>`.
+`test:redis` runs the Redis persistence and deterministic-seeder suites against an in-memory mock; tests never contact Upstash or consume its command quota. For an explicit manual test, perform a stateful action such as creating a category, inspect the resulting development-only `ratapp_session` cookie in browser developer tools, and seed it with `npm run seed:redis -- --session-id <uuid>`.
 
 The formatting check, lint, type-check, tests, Storybook build, and Next.js build all run non-interactively and are suitable for CI.

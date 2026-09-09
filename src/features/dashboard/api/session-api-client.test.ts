@@ -70,19 +70,6 @@ describe("browserSessionApi", () => {
     );
   });
 
-  it("accepts the empty 204 session response", async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValue(new Response(null, { status: 204 }));
-    vi.stubGlobal("fetch", fetchMock);
-
-    await expect(browserSessionApi.createSession()).resolves.toBeUndefined();
-    expect(fetchMock).toHaveBeenCalledWith(
-      "/api/v1/session",
-      expect.objectContaining({ method: "POST", credentials: "same-origin" }),
-    );
-  });
-
   it("deletes an expense through the cookie-scoped API", async () => {
     const fetchMock = vi
       .fn()

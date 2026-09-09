@@ -33,7 +33,7 @@ Browser UI -> /api/v1 Route Handlers -> server functions -> Upstash Redis
 
 ## State and data
 
-- `POST /api/v1/session` creates or resumes an anonymous session, returns `204 No Content`, and sets the `HttpOnly`, `SameSite=Lax` `ratapp_session` cookie. The cookie is `Secure` in production, uses `Path=/`, and has the same 48-hour `Max-Age` as Redis.
+- Anonymous page loads and stateless reads do not create a session. The first stateful mutation creates one and sets the `HttpOnly`, `SameSite=Lax` `ratapp_session` cookie. The cookie is `Secure` in production, uses `Path=/`, and has the same 48-hour `Max-Age` as Redis. Existing sessions are reused without refreshing their lifetime.
 - The cookie is the sole browser-facing session identity. Resource routes require it and never accept a browser-supplied session ID in a URL, query, or body.
 - Redis is authoritative. Session keys, including explicitly seeded manual-test sessions, are environment-scoped, bounded, and expire after a configurable TTL.
 - Production sessions start with no categories or expenses.
@@ -46,7 +46,6 @@ Browser UI -> /api/v1 Route Handlers -> server functions -> Upstash Redis
 
 Initial release:
 
-- `POST /api/v1/session` — create or resume the cookie-scoped anonymous session
 - `GET /api/v1/categories` — list categories and authoritative totals
 - `POST /api/v1/categories` — create a category
 - `DELETE /api/v1/categories/:categoryId` — delete a category and move its expenses to **Unclassified**
@@ -58,7 +57,7 @@ Post-release expense controls:
 - `PUT /api/v1/expenses/:expenseId/category` — reclassify an expense
 - `DELETE /api/v1/expenses/:expenseId` — delete an expense
 
-All endpoints use JSON except session initialization and successful deletes, which return no body. `Cache-Control: no-store` is configured for `/api/v1/:path*`. Error responses use the shared safe error envelope defined in `src/contracts/session-api.ts`.
+All endpoints use JSON except successful deletes, which return no body. Category and expense reads return empty JSON state when no valid session exists. `Cache-Control: no-store` is configured for `/api/v1/:path*`. Error responses use the shared safe error envelope defined in `src/contracts/session-api.ts`.
 
 ## Classification boundary
 

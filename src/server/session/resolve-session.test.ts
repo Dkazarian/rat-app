@@ -23,6 +23,7 @@ describe("resolveSession", () => {
     });
     expect(sessions.saveSessionId).not.toHaveBeenCalled();
     expect(sessions.getSessionId).toHaveBeenCalledWith(sessionId);
+    expect(sessions.getSessionId).toHaveBeenCalledTimes(1);
   });
 
   it("creates an empty replacement for an invalid or expired cookie", async () => {

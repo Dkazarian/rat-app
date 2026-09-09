@@ -4,7 +4,10 @@ import { ExpenseExtractorError } from "@/server/ai/expense-extractor";
 import { categoryId, expenseId, sessionId } from "@/test/session-route-helpers";
 
 const mocks = vi.hoisted(() => ({
-  sessions: { getSessionId: vi.fn(async (id: string) => id) },
+  sessions: {
+    getSessionId: vi.fn(async (id: string) => id),
+    saveSessionId: vi.fn(),
+  },
   categories: { getCategories: vi.fn() },
   expenses: { getExpenses: vi.fn(), createExpenses: vi.fn() },
   extractor: { extractExpenses: vi.fn() },
@@ -81,7 +84,7 @@ beforeEach(() => {
 });
 
 describe("POST /api/v1/expenses/prompt", () => {
-  it("rate limits after session resolution and before parsing the body", async () => {
+  it("rejects malformed input before resolving or creating a session", async () => {
     mocks.rateLimit.consumeAiRateLimit.mockResolvedValue({
       allowed: false,
       retryAfterSeconds: 37,
@@ -100,13 +103,14 @@ describe("POST /api/v1/expenses/prompt", () => {
 
     const response = await POST(malformed);
 
-    expect(response.status).toBe(429);
-    expect(response.headers.get("Retry-After")).toBe("37");
+    expect(response.status).toBe(400);
     expect(response.headers.get("Cache-Control")).toBe("no-store");
     await expect(response.json()).resolves.toEqual({
-      error: { code: "rate_limited", message: "Too many requests." },
+      error: { code: "invalid_request", message: "The request is invalid." },
     });
-    expect(mocks.rateLimit.consumeAiRateLimit).toHaveBeenCalledWith(sessionId);
+    expect(mocks.sessions.getSessionId).not.toHaveBeenCalled();
+    expect(mocks.sessions.saveSessionId).not.toHaveBeenCalled();
+    expect(mocks.rateLimit.consumeAiRateLimit).not.toHaveBeenCalled();
     expect(mocks.categories.getCategories).not.toHaveBeenCalled();
     expect(mocks.expenses.getExpenses).not.toHaveBeenCalled();
     expect(mocks.extractor.extractExpenses).not.toHaveBeenCalled();
@@ -252,17 +256,22 @@ describe("POST /api/v1/expenses/prompt", () => {
     expect(mocks.expenses.createExpenses).not.toHaveBeenCalled();
   });
 
-  it("requires the session before parsing the request", async () => {
+  it("creates a session transparently when the cookie is invalid", async () => {
     const response = await POST(
       request({ prompt: "Lunch $18", locale: "en" }, "not-a-uuid"),
     );
 
-    expect(response.status).toBe(401);
-    await expect(response.json()).resolves.toMatchObject({
-      error: { code: "session_not_found" },
-    });
-    expect(mocks.categories.getCategories).not.toHaveBeenCalled();
-    expect(mocks.rateLimit.consumeAiRateLimit).not.toHaveBeenCalled();
-    expect(mocks.extractor.extractExpenses).not.toHaveBeenCalled();
+    expect(response.status).toBe(200);
+    const createdSessionId = mocks.sessions.saveSessionId.mock.calls[0][0];
+    expect(mocks.rateLimit.consumeAiRateLimit).toHaveBeenCalledWith(
+      createdSessionId,
+    );
+    expect(mocks.expenses.createExpenses).toHaveBeenCalledWith(
+      createdSessionId,
+      expect.any(Array),
+    );
+    expect(response.headers.get("set-cookie")).toContain(
+      `ratapp_session=${createdSessionId}`,
+    );
   });
 });

@@ -6,11 +6,19 @@ export type ResolvedSession = Readonly<{
   created: boolean;
 }>;
 
+export async function resolveExistingSession(
+  cookieSessionId: string | undefined,
+): Promise<string | null> {
+  if (!isCanonicalId(cookieSessionId)) return null;
+  return getSessionId(cookieSessionId);
+}
+
 export async function resolveSession(
   cookieSessionId: string | undefined,
 ): Promise<ResolvedSession> {
-  if (isCanonicalId(cookieSessionId) && (await getSessionId(cookieSessionId))) {
-    return { sessionId: cookieSessionId, created: false };
+  const existingSessionId = await resolveExistingSession(cookieSessionId);
+  if (existingSessionId) {
+    return { sessionId: existingSessionId, created: false };
   }
 
   const sessionId = createId();

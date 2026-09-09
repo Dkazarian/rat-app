@@ -19,10 +19,7 @@ import { errorResponse } from "@/server/http/responses";
 import { getCategories } from "@/server/redis/categories";
 import { createExpenses, getExpenses } from "@/server/redis/expenses";
 import { consumeAiRateLimit } from "@/server/redis/ai-rate-limiter";
-import {
-  requireSessionId,
-  SESSION_COOKIE_NAME,
-} from "@/server/session/session-id";
+import { withLazySession } from "@/server/session/session-handler";
 import { promptBodySchema } from "@/server/validation";
 
 function parsePromptBody(body: unknown) {
@@ -58,82 +55,95 @@ function resolveCategoryId(
   return matches.length === 1 ? matches[0].id : null;
 }
 
+function promptErrorResponse(error: unknown): Response {
+  if (error instanceof ExpenseExtractorError) {
+    logger.warn("Expense extraction failed.", { kind: error.kind });
+    return errorResponse(
+      error.kind === "configuration"
+        ? applicationErrors.internalError()
+        : applicationErrors.serviceUnavailable(),
+    );
+  }
+  if (error instanceof RepositoryUnavailableError) {
+    logger.error("Expense prompt dependency failed.");
+  } else if (!(error instanceof Error)) {
+    logger.error("Expense prompt failed.");
+  }
+  return errorResponse(error);
+}
+
+async function submitPrompt(
+  sessionId: string,
+  prompt: string,
+  locale: "en" | "es",
+): Promise<Response> {
+  const rateLimit = await consumeAiRateLimit(sessionId);
+  if (!rateLimit.allowed) {
+    throw applicationErrors.rateLimited(rateLimit.retryAfterSeconds);
+  }
+  const [categoriesResponse, expensesResponse] = await Promise.all([
+    getCategories(sessionId),
+    getExpenses(sessionId),
+  ]);
+  const config = getServerConfig();
+  const remainingCapacity =
+    config.maxExpensesPerSession - expensesResponse.expenses.length;
+  if (remainingCapacity <= 0) throw applicationErrors.expenseLimit();
+
+  const extraction = await extractExpenses({
+    prompt,
+    locale,
+    categoryNames: categoriesResponse.categories.map(({ name }) => name),
+  });
+  const categoryIds = new Set(
+    categoriesResponse.categories.map(({ id }) => id),
+  );
+  const acceptedCandidates: ExpenseCandidate[] = [];
+  let rejectedCount = 0;
+
+  for (const candidate of extraction.expenses) {
+    try {
+      const validated = validateExpenseCandidate(
+        {
+          description: candidate.description,
+          amountMinor: candidate.amountMinor,
+          categoryId: resolveCategoryId(
+            candidate.categoryName,
+            categoriesResponse.categories,
+          ),
+        },
+        categoryIds,
+      );
+      if (acceptedCandidates.length >= remainingCapacity) {
+        rejectedCount += 1;
+      } else {
+        acceptedCandidates.push(validated);
+      }
+    } catch {
+      rejectedCount += 1;
+    }
+  }
+
+  if (acceptedCandidates.length === 0) {
+    throw applicationErrors.noExpensesExtracted();
+  }
+
+  const expenses = await createExpenses(sessionId, acceptedCandidates);
+  if (expenses.length === 0) {
+    throw applicationErrors.noExpensesExtracted();
+  }
+  return Response.json({ expenses, rejectedCount });
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const sessionId = await requireSessionId(
-      request.cookies.get(SESSION_COOKIE_NAME)?.value,
-    );
-    const rateLimit = await consumeAiRateLimit(sessionId);
-    if (!rateLimit.allowed) {
-      throw applicationErrors.rateLimited(rateLimit.retryAfterSeconds);
-    }
     const { prompt, locale } = parsePromptBody(await request.json());
-    const [categoriesResponse, expensesResponse] = await Promise.all([
-      getCategories(sessionId),
-      getExpenses(sessionId),
-    ]);
-    const config = getServerConfig();
-    const remainingCapacity =
-      config.maxExpensesPerSession - expensesResponse.expenses.length;
-    if (remainingCapacity <= 0) throw applicationErrors.expenseLimit();
-
-    const extraction = await extractExpenses({
-      prompt,
-      locale,
-      categoryNames: categoriesResponse.categories.map(({ name }) => name),
-    });
-    const categoryIds = new Set(
-      categoriesResponse.categories.map(({ id }) => id),
+    return withLazySession(
+      request,
+      (sessionId) => submitPrompt(sessionId, prompt, locale),
+      promptErrorResponse,
     );
-    const acceptedCandidates: ExpenseCandidate[] = [];
-    let rejectedCount = 0;
-
-    for (const candidate of extraction.expenses) {
-      try {
-        const validated = validateExpenseCandidate(
-          {
-            description: candidate.description,
-            amountMinor: candidate.amountMinor,
-            categoryId: resolveCategoryId(
-              candidate.categoryName,
-              categoriesResponse.categories,
-            ),
-          },
-          categoryIds,
-        );
-        if (acceptedCandidates.length >= remainingCapacity) {
-          rejectedCount += 1;
-        } else {
-          acceptedCandidates.push(validated);
-        }
-      } catch {
-        rejectedCount += 1;
-      }
-    }
-
-    if (acceptedCandidates.length === 0) {
-      throw applicationErrors.noExpensesExtracted();
-    }
-
-    const expenses = await createExpenses(sessionId, acceptedCandidates);
-    if (expenses.length === 0) {
-      throw applicationErrors.noExpensesExtracted();
-    }
-    return Response.json({ expenses, rejectedCount });
   } catch (error) {
-    if (error instanceof ExpenseExtractorError) {
-      logger.warn("Expense extraction failed.", { kind: error.kind });
-      return errorResponse(
-        error.kind === "configuration"
-          ? applicationErrors.internalError()
-          : applicationErrors.serviceUnavailable(),
-      );
-    }
-    if (error instanceof RepositoryUnavailableError) {
-      logger.error("Expense prompt dependency failed.");
-    } else if (!(error instanceof Error)) {
-      logger.error("Expense prompt failed.");
-    }
-    return errorResponse(error);
+    return promptErrorResponse(error);
   }
 }

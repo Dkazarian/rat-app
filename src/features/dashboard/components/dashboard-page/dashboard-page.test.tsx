@@ -1,4 +1,4 @@
-import { act, screen, waitFor, within } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { CategoryDto, ExpenseDto } from "@/contracts/session-api";
 import {
@@ -28,7 +28,6 @@ function createApi() {
     },
   ];
   const api: SessionApi = {
-    createSession: vi.fn().mockResolvedValue(undefined),
     getCategories: vi.fn(async () => ({
       categories,
       unclassifiedTotalMinor: expenses
@@ -265,74 +264,6 @@ describe("DashboardPage API composition", () => {
     expect(expenses.getByText("Lunch")).toBeVisible();
     expect(api.getCategories).toHaveBeenCalledTimes(1);
     expect(api.getExpenses).toHaveBeenCalledTimes(1);
-  });
-
-  it("starts a new session when expense deletion reports expiration", async () => {
-    const api = createApi();
-    vi.mocked(api.deleteExpense).mockRejectedValueOnce(
-      new SessionApiError(
-        "session_not_found",
-        "The anonymous session was not found.",
-      ),
-    );
-    const { user } = renderDashboard(api);
-    const expenses = within(
-      await screen.findByRole("region", { name: "Recent expenses" }),
-    );
-
-    await user.click(expenses.getByRole("button", { name: "Delete Lunch" }));
-
-    await waitFor(() => expect(api.createSession).toHaveBeenCalledTimes(2));
-  });
-
-  it("bootstraps a new session when a read reports an expired session", async () => {
-    const api = createApi();
-    let finishBootstrap!: () => void;
-    vi.mocked(api.createSession)
-      .mockResolvedValueOnce(undefined)
-      .mockImplementationOnce(
-        () => new Promise<void>((resolve) => (finishBootstrap = resolve)),
-      );
-    vi.mocked(api.getCategories)
-      .mockRejectedValueOnce(
-        new SessionApiError(
-          "session_not_found",
-          "The anonymous session was not found.",
-        ),
-      )
-      .mockResolvedValue({
-        categories: [],
-        unclassifiedTotalMinor: 0,
-        totalMinor: 0,
-      });
-
-    renderDashboard(api);
-
-    await waitFor(() => expect(api.createSession).toHaveBeenCalledTimes(2));
-    expect(screen.getByText("Starting your anonymous session…")).toBeVisible();
-    await act(async () => finishBootstrap());
-    await waitFor(() => expect(api.getCategories).toHaveBeenCalledTimes(2));
-    expect(await screen.findByText("Lunch")).toBeVisible();
-  });
-
-  it("bootstraps a new session when a prompt mutation reports expiration", async () => {
-    const api = createApi();
-    vi.mocked(api.submitPrompt).mockRejectedValueOnce(
-      new SessionApiError(
-        "session_not_found",
-        "The anonymous session was not found.",
-      ),
-    );
-    const { user } = renderDashboard(api);
-    const input = await screen.findByRole("textbox", {
-      name: "What did you spend?",
-    });
-    await user.type(input, "coffee $4");
-
-    await user.click(screen.getByRole("button", { name: "Sort it" }));
-
-    await waitFor(() => expect(api.createSession).toHaveBeenCalledTimes(2));
-    expect(input).toHaveValue("coffee $4");
   });
 
   it("routes non-validation category failures to localized feedback", async () => {

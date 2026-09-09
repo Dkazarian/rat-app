@@ -53,7 +53,6 @@ const expenses = {
 };
 
 const populatedApi: SessionApi = {
-  createSession: async () => undefined,
   getCategories: async () => categories,
   createCategory: async (name) => ({
     category: { id: crypto.randomUUID(), name, color: "blue", totalMinor: 0 },
