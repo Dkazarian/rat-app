@@ -1,9 +1,7 @@
 import { applicationErrors } from "@/server/domain/errors";
 import { logger } from "@/server/logger";
-import { getServerConfig } from "@/server/config";
-import { getRedisClient } from "./client";
-import { createAiRateLimitKeys, createSessionKeys } from "./keys";
-import { redisOperation } from "./repository-helpers";
+import { createAiRateLimitKeys } from "./keys";
+import { sessionRedisOperation } from "./repository-helpers";
 
 const AI_RATE_LIMITS = {
   sessionBurst: 5,
@@ -89,16 +87,12 @@ function parseScriptResult(value: unknown): readonly [number, number, number] {
 export async function consumeAiRateLimit(
   sessionId: string,
 ): Promise<AiRateLimitDecision> {
-  const config = getServerConfig();
-  const redis = getRedisClient();
-  const sessionKeys = createSessionKeys(config.redisKeyPrefix, sessionId);
-  const limitKeys = createAiRateLimitKeys(config.redisKeyPrefix, sessionId);
-
-  return redisOperation(async () => {
+  return sessionRedisOperation(sessionId, async ({ config, redis, keys }) => {
+    const limitKeys = createAiRateLimitKeys(config.redisKeyPrefix, sessionId);
     const result = parseScriptResult(
       await redis.eval(
         AI_RATE_LIMIT_SCRIPT,
-        [sessionKeys.meta, limitKeys.sessionBurst, limitKeys.globalBurst],
+        [keys.meta, limitKeys.sessionBurst, limitKeys.globalBurst],
         [
           AI_RATE_LIMITS.sessionBurst,
           AI_RATE_LIMITS.sessionLifetime,

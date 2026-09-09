@@ -1,6 +1,5 @@
 import type { Redis } from "@upstash/redis";
 import type { CategoriesResponse, CategoryDto } from "@/contracts/session-api";
-import { getServerConfig } from "@/server/config";
 import {
   createCategoryRecord,
   toCategoriesResponse,
@@ -9,13 +8,12 @@ import {
 import { applicationErrors } from "@/server/domain/errors";
 import { createId } from "@/server/ids";
 import { storedCategorySchema } from "@/server/validation";
-import { getRedisClient } from "./client";
 import { readExpenses } from "./expenses";
-import { createSessionKeys, type SessionKeys } from "./keys";
+import type { SessionKeys } from "./keys";
 import {
   decodeRecord,
   encodeRecord,
-  redisOperation,
+  sessionRedisOperation,
 } from "./repository-helpers";
 
 export async function readCategories(
@@ -33,10 +31,7 @@ export async function readCategories(
 export async function getCategories(
   sessionId: string,
 ): Promise<CategoriesResponse> {
-  const config = getServerConfig();
-  const redis = getRedisClient();
-  const keys = createSessionKeys(config.redisKeyPrefix, sessionId);
-  return redisOperation(async () => {
+  return sessionRedisOperation(sessionId, async ({ redis, keys }) => {
     const [categories, expenses] = await Promise.all([
       readCategories(redis, keys),
       readExpenses(redis, keys),
@@ -49,10 +44,7 @@ export async function createCategory(
   sessionId: string,
   name: string,
 ): Promise<CategoryDto> {
-  const config = getServerConfig();
-  const redis = getRedisClient();
-  const keys = createSessionKeys(config.redisKeyPrefix, sessionId);
-  return redisOperation(async () => {
+  return sessionRedisOperation(sessionId, async ({ config, redis, keys }) => {
     const category = createCategoryRecord(
       await readCategories(redis, keys),
       name,
@@ -71,10 +63,7 @@ export async function deleteCategory(
   sessionId: string,
   categoryId: string,
 ): Promise<void> {
-  const config = getServerConfig();
-  const redis = getRedisClient();
-  const keys = createSessionKeys(config.redisKeyPrefix, sessionId);
-  await redisOperation(async () => {
+  await sessionRedisOperation(sessionId, async ({ redis, keys }) => {
     const [categories, expenses] = await Promise.all([
       readCategories(redis, keys),
       readExpenses(redis, keys),

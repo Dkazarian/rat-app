@@ -1,6 +1,5 @@
 import type { Redis } from "@upstash/redis";
 import type { ExpenseDto, ExpensesResponse } from "@/contracts/session-api";
-import { getServerConfig } from "@/server/config";
 import { applicationErrors } from "@/server/domain/errors";
 import {
   toExpensesResponse,
@@ -11,12 +10,11 @@ import {
 import { createId } from "@/server/ids";
 import { storedExpenseSchema } from "@/server/validation";
 import { readCategories } from "./categories";
-import { getRedisClient } from "./client";
-import { createSessionKeys, type SessionKeys } from "./keys";
+import type { SessionKeys } from "./keys";
 import {
   decodeRecord,
   encodeRecord,
-  redisOperation,
+  sessionRedisOperation,
 } from "./repository-helpers";
 
 export async function readExpenses(
@@ -34,10 +32,7 @@ export async function readExpenses(
 export async function getExpenses(
   sessionId: string,
 ): Promise<ExpensesResponse> {
-  const config = getServerConfig();
-  const redis = getRedisClient();
-  const keys = createSessionKeys(config.redisKeyPrefix, sessionId);
-  return redisOperation(async () => {
+  return sessionRedisOperation(sessionId, async ({ redis, keys }) => {
     const [categories, expenses] = await Promise.all([
       readCategories(redis, keys),
       readExpenses(redis, keys),
@@ -54,10 +49,7 @@ export async function createExpenses(
   candidates: ReadonlyArray<ExpenseCandidate>,
   now = Date.now(),
 ): Promise<ReadonlyArray<ExpenseDto>> {
-  const config = getServerConfig();
-  const redis = getRedisClient();
-  const keys = createSessionKeys(config.redisKeyPrefix, sessionId);
-  return redisOperation(async () => {
+  return sessionRedisOperation(sessionId, async ({ config, redis, keys }) => {
     if ((await redis.exists(keys.meta)) !== 1) {
       throw applicationErrors.sessionNotFound();
     }
@@ -96,10 +88,7 @@ export async function deleteExpense(
   sessionId: string,
   expenseId: string,
 ): Promise<void> {
-  const config = getServerConfig();
-  const redis = getRedisClient();
-  const keys = createSessionKeys(config.redisKeyPrefix, sessionId);
-  await redisOperation(async () => {
+  await sessionRedisOperation(sessionId, async ({ redis, keys }) => {
     await redis.hdel(keys.expenses, expenseId);
   });
 }

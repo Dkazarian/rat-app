@@ -1,13 +1,7 @@
-import { getServerConfig } from "@/server/config";
-import { getRedisClient } from "./client";
-import { createSessionKeys } from "./keys";
-import { redisOperation } from "./repository-helpers";
+import { sessionRedisOperation } from "./repository-helpers";
 
 export async function getSessionId(sessionId: string): Promise<string | null> {
-  const config = getServerConfig();
-  const redis = getRedisClient();
-  const keys = createSessionKeys(config.redisKeyPrefix, sessionId);
-  return redisOperation(async () =>
+  return sessionRedisOperation(sessionId, async ({ redis, keys }) =>
     (await redis.exists(keys.meta)) === 1 ? sessionId : null,
   );
 }
@@ -16,10 +10,7 @@ export async function saveSessionId(
   sessionId: string,
   now = Date.now(),
 ): Promise<void> {
-  const config = getServerConfig();
-  const redis = getRedisClient();
-  const keys = createSessionKeys(config.redisKeyPrefix, sessionId);
-  await redisOperation(async () => {
+  await sessionRedisOperation(sessionId, async ({ config, redis, keys }) => {
     await redis
       .multi()
       .hset(keys.meta, {
