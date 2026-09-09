@@ -100,7 +100,7 @@ export function DashboardResults(props: Props) {
   };
 
   return (
-    <div className="grid grid-cols-[250px_minmax(0,1fr)] items-start gap-[18px] max-[850px]:grid-cols-1">
+    <div className="grid min-h-0 flex-1 grid-cols-[250px_minmax(0,1fr)] items-stretch gap-[18px] max-[851px]:flex-none max-[851px]:grid-cols-1">
       <CategoryPanel
         categories={categories}
         disabled={isMutating}
@@ -110,12 +110,12 @@ export function DashboardResults(props: Props) {
         }
         onOperationError={handleCategoryError}
       />
-      <div className="grid min-w-0 gap-[18px] rounded-[20px] border border-[#49404f] bg-[#26222d] p-[17px]">
+      <div className="grid h-full min-h-0 min-w-0 grid-rows-[auto_minmax(0,1fr)] gap-[18px] rounded-[20px] border border-[#49404f] bg-[#26222d] p-[17px] max-[851px]:h-auto">
         <SpendingSummary
           totalMinor={response.totalMinor}
           items={spendingItems}
         />
-        <div className="border-t border-[#49404f] pt-[17px]">
+        <div className="min-h-0 overflow-hidden border-t border-[#49404f] pt-[17px] max-[851px]:overflow-visible">
           <ApiExpenseList
             api={api}
             categories={categories}

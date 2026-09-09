@@ -57,7 +57,7 @@ export function CategoryForm({
         aria-invalid={validationCode ? true : undefined}
         aria-describedby={validationCode ? errorId : undefined}
         onChange={(event) => onDraftChange(event.target.value)}
-        className="w-full rounded-[10px] border border-[#5c5362] bg-[#18151d] px-3 py-2 text-[#f7f2fa] outline-offset-2 placeholder:text-[#827886] focus-visible:outline-2 focus-visible:outline-[#86afe0]"
+        className="w-full rounded-[10px] border border-[#5c5362] bg-[#18151d] px-3 py-2 text-base text-[#f7f2fa] outline-offset-2 placeholder:text-[#827886] focus-visible:outline-2 focus-visible:outline-[#86afe0] min-[851px]:text-sm"
       />
       {validationCode ? (
         <p id={errorId} role="alert" className="mt-1.5 text-sm text-[#ffaaa0]">

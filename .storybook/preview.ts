@@ -42,9 +42,21 @@ const preview: Preview = {
           name: "Desktop (1200px)",
           styles: { width: "1200px", height: "900px" },
         },
+        desktopConstrained: {
+          name: "Desktop constrained (1200×700px)",
+          styles: { width: "1200px", height: "700px" },
+        },
         desktop: {
           name: "Desktop (1440px)",
           styles: { width: "1440px", height: "900px" },
+        },
+        dashboardBoundaryAbove: {
+          name: "Dashboard boundary above (851px)",
+          styles: { width: "851px", height: "900px" },
+        },
+        dashboardBoundary: {
+          name: "Dashboard boundary (850px)",
+          styles: { width: "850px", height: "900px" },
         },
         captureBoundaryAbove: {
           name: "Capture Boundary (841px)",
