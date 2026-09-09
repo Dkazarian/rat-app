@@ -81,9 +81,9 @@ export function CategoryPanel({
   return (
     <aside
       aria-labelledby={titleId}
-      className="min-w-0 rounded-[20px] border border-[#49404f] bg-[#26222d] p-[17px]"
+      className="flex h-full min-h-0 min-w-0 flex-col rounded-[20px] border border-[#49404f] bg-[#26222d] p-[17px] max-[851px]:h-auto"
     >
-      <div className="mb-[15px] flex items-center justify-between gap-[10px]">
+      <div className="mb-[15px] flex shrink-0 items-center justify-between gap-[10px]">
         <h2 id={titleId} className="font-medium">
           {t("categories")}
         </h2>
@@ -116,7 +116,7 @@ export function CategoryPanel({
           onCancel={closeForm}
         />
       ) : null}
-      <ul className="grid list-none gap-2 p-0">
+      <ul className="-mx-1 grid min-h-0 flex-1 list-none gap-2 overflow-y-auto px-1 py-0 max-[851px]:flex-none max-[851px]:overflow-visible">
         {categories.map((category) => (
           <CategoryItem
             key={category.id ?? "unclassified"}

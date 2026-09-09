@@ -133,12 +133,12 @@ export function DashboardPage({ api = browserSessionApi }: DashboardPageProps) {
   };
 
   return (
-    <div className="min-h-screen bg-[#151515] px-3 py-3 text-sm max-[680px]:px-0 max-[680px]:py-0">
-      <div className="mx-auto w-full max-w-[1200px]">
+    <div className="h-screen h-dvh overflow-hidden bg-[#151515] px-3 py-3 text-sm max-[680px]:px-0 max-[680px]:py-0 max-[851px]:h-auto max-[851px]:min-h-screen max-[851px]:overflow-visible">
+      <div className="mx-auto flex h-full min-h-0 w-full max-w-[1200px] flex-col max-[851px]:h-auto">
         <AppShell label={t("appLabel")}>
           <Header appName={t("appName")} />
-          <main className="p-[22px] max-[680px]:p-[15px]">
-            <div className="mb-[22px]">
+          <main className="flex min-h-0 flex-1 flex-col overflow-hidden p-[22px] max-[680px]:p-[15px] max-[851px]:flex-none max-[851px]:overflow-visible">
+            <div className="mb-[22px] shrink-0">
               <CapturePanel
                 feedback={feedback}
                 inputValue={inputValue}
