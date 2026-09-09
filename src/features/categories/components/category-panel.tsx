@@ -116,7 +116,7 @@ export function CategoryPanel({
           onCancel={closeForm}
         />
       ) : null}
-      <ul className="-mx-1 grid min-h-0 flex-1 list-none gap-2 overflow-y-auto px-1 py-0 max-[851px]:flex-none max-[851px]:overflow-visible">
+      <ul className="-mx-1 grid min-h-0 flex-1 content-start list-none gap-2 overflow-y-auto px-1 py-0 max-[851px]:flex-none max-[851px]:overflow-visible">
         {categories.map((category) => (
           <CategoryItem
             key={category.id ?? "unclassified"}
