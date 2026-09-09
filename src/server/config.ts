@@ -8,8 +8,6 @@ const positiveIntegerString = (fallback: number) =>
     .transform(Number)
     .pipe(z.number().int().positive().safe());
 
-export const OPENAI_MODEL = "gpt-4.1-nano" as const;
-
 const aiEnvironmentSchema = z.object({
   OPENAI_API_KEY: z
     .string()

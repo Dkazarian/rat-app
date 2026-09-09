@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { OPENAI_MODEL, parseAiConfig, parseServerConfig } from "./config";
+import { parseAiConfig, parseServerConfig } from "./config";
+
+const testModel = "test-model";
 
 const validEnvironment = {
   KV_REST_API_URL: "https://example.upstash.io",
@@ -47,9 +49,9 @@ describe("parseAiConfig", () => {
     expect(
       parseAiConfig({
         OPENAI_API_KEY: "test-only-key",
-        OPENAI_MODEL,
+        OPENAI_MODEL: testModel,
       }),
-    ).toEqual({ apiKey: "test-only-key", model: OPENAI_MODEL });
+    ).toEqual({ apiKey: "test-only-key", model: testModel });
     expect(() => parseServerConfig(validEnvironment)).not.toThrow();
   });
 
@@ -57,11 +59,11 @@ describe("parseAiConfig", () => {
     expect(
       parseAiConfig({
         OPENAI_API_KEY: "test-only-key",
-        OPENAI_MODEL: "  gpt-4.1-nano  ",
+        OPENAI_MODEL: "  test-model  ",
       }),
     ).toEqual({
       apiKey: "test-only-key",
-      model: "gpt-4.1-nano",
+      model: testModel,
     });
   });
 
@@ -70,7 +72,7 @@ describe("parseAiConfig", () => {
     { OPENAI_API_KEY: "" },
     {
       OPENAI_API_KEY: "replace-with-a-key",
-      OPENAI_MODEL,
+      OPENAI_MODEL: testModel,
     },
     { OPENAI_API_KEY: "test-only-key", OPENAI_MODEL: "" },
     { OPENAI_API_KEY: "test-only-key", OPENAI_MODEL: "   " },

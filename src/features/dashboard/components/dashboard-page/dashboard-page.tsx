@@ -178,8 +178,6 @@ export function DashboardPage({ api = browserSessionApi }: DashboardPageProps) {
           </main>
         </AppShell>
         <Footer
-          poweredByLabel={t("poweredBy")}
-          model="gpt-4.1-nano"
           sourceLabel={t("viewSource")}
           sourceAriaLabel={t("viewSourceAria")}
           sourceHref="https://github.com/Dkazarian/rat-app"

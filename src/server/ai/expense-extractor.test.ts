@@ -3,7 +3,6 @@ import {
   CATEGORY_NAME_MAX_LENGTH,
   EXPENSE_DESCRIPTION_MAX_LENGTH,
 } from "@/contracts/session-api";
-import { OPENAI_MODEL } from "@/server/config";
 import {
   buildExtractionUserPrompt,
   expenseExtractionOutputSchema,
@@ -11,6 +10,7 @@ import {
 } from "./expense-extractor";
 
 const fetchMock = vi.fn<typeof fetch>();
+const testModel = "test-model";
 
 function openAiResponse(output: unknown): Response {
   return Response.json({
@@ -21,7 +21,7 @@ function openAiResponse(output: unknown): Response {
 describe("expense extractor", () => {
   beforeEach(() => {
     vi.stubEnv("OPENAI_API_KEY", "test-only-key");
-    vi.stubEnv("OPENAI_MODEL", OPENAI_MODEL);
+    vi.stubEnv("OPENAI_MODEL", testModel);
     vi.stubGlobal("fetch", fetchMock);
     fetchMock.mockResolvedValue(openAiResponse({ expenses: [] }));
   });
@@ -126,7 +126,7 @@ describe("expense extractor", () => {
     });
     const body = JSON.parse(String(init?.body));
     expect(body).toMatchObject({
-      model: "gpt-4.1-nano",
+      model: testModel,
       max_completion_tokens: 1200,
       response_format: {
         type: "json_schema",
