@@ -32,7 +32,7 @@ The composer has enough surplus width at ordinary desktop sizes to rebalance the
 - Do not use a fixed panel height that can clip text under browser zoom, font substitution, or localization.
 - Shorten repetitive feedback where the title already supplies the same context.
 - Prefer a one-line title and no more than two detail lines at the target desktop layout for each known English and Spanish message.
-- Keep error copy actionable and preserve important facts such as the 100-expense limit and loss of an expired anonymous session.
+- Keep error copy actionable and preserve important facts such as reaching the session expense limit and loss of an expired anonymous session. The exact numeric capacity is an implementation detail and should not consume dialogue space.
 
 ### Responsive and accessible behavior
 
@@ -50,7 +50,7 @@ Candidate English reductions include:
 
 - `The request was invalid. Check your input and try again.` → `Check your input and try again.`
 - `This anonymous session expired. Starting a new session…` → copy defined by the Session Expiration Recovery specification.
-- `This session has reached its 100-expense limit.` → `This session is full (100 expenses).`
+- `This session has reached its 100-expense limit.` → `This session reached its expense limit.`
 - `No expenses could be found in that description.` → `Include what you bought and the amount.`
 - `The service is temporarily unavailable. Try again.` → `Service unavailable. Try again.`
 - `Something went wrong. Try again.` → `Try again.` when paired with the existing error title.

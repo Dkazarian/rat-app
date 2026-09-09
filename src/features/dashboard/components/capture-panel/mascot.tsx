@@ -36,7 +36,7 @@ export function Mascot({ state, priority = false }: MascotProps) {
       width={116}
       height={116}
       priority={priority}
-      className="size-[116px] max-w-none self-end object-contain max-[680px]:size-[88px]"
+      className="size-[116px] max-w-none self-end object-contain max-[681px]:size-[88px]"
     />
   );
 }

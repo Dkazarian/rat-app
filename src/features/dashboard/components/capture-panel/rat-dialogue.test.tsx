@@ -5,9 +5,10 @@ import { RatDialogue } from "./rat-dialogue";
 
 function renderDialogue(
   feedback: Parameters<typeof RatDialogue>[0]["feedback"],
+  initialLocale: "en" | "es" = "en",
 ) {
   return render(
-    <I18nProvider>
+    <I18nProvider initialLocale={initialLocale}>
       <RatDialogue feedback={feedback} />
     </I18nProvider>,
   );
@@ -33,7 +34,44 @@ describe("RatDialogue", () => {
     });
 
     expect(screen.getByRole("alert")).toHaveTextContent(
-      "The service is temporarily unavailable. Try again.",
+      "Service unavailable. Try again.",
+    );
+  });
+
+  it("renders concise session-expiration feedback", () => {
+    renderDialogue({
+      state: "provider-error",
+      detailKey: "apiErrorSessionNotFound",
+    });
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Session expired. Continue to start fresh.",
+    );
+  });
+
+  it("keeps the expense-limit reason without the numeric aside", () => {
+    renderDialogue({
+      state: "provider-error",
+      detailKey: "apiErrorExpenseLimitReached",
+    });
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "This session reached its expense limit.",
+    );
+    expect(screen.getByRole("alert")).not.toHaveTextContent("100 expenses");
+  });
+
+  it("keeps extraction failure urgent with Spanish copy", () => {
+    renderDialogue(
+      {
+        state: "extraction-failure",
+        detailKey: "apiErrorNoExpensesExtracted",
+      },
+      "es",
+    );
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Incluí qué compraste y el monto.",
     );
   });
 

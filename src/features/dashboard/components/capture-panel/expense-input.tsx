@@ -43,7 +43,7 @@ export function ExpenseInput({
       <label htmlFor={inputId} className="mb-[9px] block font-medium">
         {t("inputLabel")}
       </label>
-      <div className="flex items-stretch gap-[10px] max-[680px]:flex-col">
+      <div className="flex items-stretch gap-[10px] max-[681px]:flex-col">
         <textarea
           ref={inputRef}
           id={inputId}
@@ -59,7 +59,7 @@ export function ExpenseInput({
         <button
           type="submit"
           disabled={disabled}
-          className="min-w-24 cursor-pointer rounded-[14px] border-0 bg-[#efe7f2] px-4 font-medium text-[#26222d] outline-offset-2 focus-visible:outline-2 focus-visible:outline-[#86afe0] disabled:cursor-not-allowed disabled:opacity-60 max-[680px]:min-h-[46px]"
+          className="min-w-24 cursor-pointer rounded-[14px] border-0 bg-[#efe7f2] px-4 font-medium text-[#26222d] outline-offset-2 focus-visible:outline-2 focus-visible:outline-[#86afe0] disabled:cursor-not-allowed disabled:opacity-60 max-[681px]:min-h-[46px]"
         >
           {t("sortAction")}
         </button>
