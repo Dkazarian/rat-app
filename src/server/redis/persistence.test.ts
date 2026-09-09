@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Redis } from "@upstash/redis";
 import type { ServerConfig } from "@/server/config";
 import { InMemoryRedis } from "@/test/in-memory-redis";
@@ -36,6 +36,125 @@ describe("Redis persistence", () => {
       maxExpensesPerSession: 100,
       environment: "test",
     };
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("assigns fixed TTLs on creation without refreshing them on activity", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
+    const sessionId = randomUUID();
+    const config = dependencies.config!;
+    const keys = createSessionKeys(config.redisKeyPrefix, sessionId);
+
+    await saveSessionId(sessionId);
+    expect(await redis.ttl(keys.meta)).toBe(300);
+    vi.advanceTimersByTime(60_000);
+    await expect(getSessionId(sessionId)).resolves.toBe(sessionId);
+    expect(await redis.ttl(keys.meta)).toBe(240);
+
+    const food = await createCategory(sessionId, "Food");
+    expect(await redis.ttl(keys.categories)).toBe(300);
+    vi.advanceTimersByTime(60_000);
+    await createCategory(sessionId, "Unused");
+    expect(await redis.ttl(keys.categories)).toBe(240);
+
+    await createExpenses(sessionId, [
+      { description: "Lunch", amountMinor: 125, categoryId: food.id },
+    ]);
+    expect(await redis.ttl(keys.expenses)).toBe(300);
+    vi.advanceTimersByTime(60_000);
+    await createExpenses(sessionId, [
+      { description: "Coffee", amountMinor: 250, categoryId: null },
+    ]);
+    expect(await redis.ttl(keys.expenses)).toBe(240);
+  });
+
+  it("does not refresh TTLs when deleting or reclassifying data", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
+    const sessionId = randomUUID();
+    const config = dependencies.config!;
+    const keys = createSessionKeys(config.redisKeyPrefix, sessionId);
+    await saveSessionId(sessionId);
+    const food = await createCategory(sessionId, "Food");
+    const expenses = await createExpenses(sessionId, [
+      { description: "Lunch", amountMinor: 125, categoryId: food.id },
+      { description: "Coffee", amountMinor: 250, categoryId: food.id },
+    ]);
+
+    vi.advanceTimersByTime(60_000);
+    const expireSpy = vi.spyOn(redis, "expire");
+    await deleteCategory(sessionId, food.id);
+    expect(expireSpy).not.toHaveBeenCalled();
+    expect(await redis.ttl(keys.categories)).toBe(-2);
+    expect(await redis.ttl(keys.expenses)).toBe(240);
+
+    await deleteExpense(sessionId, expenses[0].id);
+    expect(await redis.ttl(keys.expenses)).toBe(240);
+    expect(await redis.ttl(keys.meta)).toBe(240);
+  });
+
+  it("gives a recreated hash a fresh TTL after its last field is deleted", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
+    const sessionId = randomUUID();
+    const config = dependencies.config!;
+    const keys = createSessionKeys(config.redisKeyPrefix, sessionId);
+    await saveSessionId(sessionId);
+
+    const category = await createCategory(sessionId, "Food");
+    const [originalExpense] = await createExpenses(sessionId, [
+      { description: "Lunch", amountMinor: 125, categoryId: category.id },
+    ]);
+    vi.advanceTimersByTime(60_000);
+    await deleteCategory(sessionId, category.id);
+    expect(await redis.ttl(keys.categories)).toBe(-2);
+    expect(await redis.ttl(keys.expenses)).toBe(240);
+    await deleteExpense(sessionId, originalExpense.id);
+
+    const recreatedCategory = await createCategory(sessionId, "Food again");
+    expect(await redis.ttl(keys.categories)).toBe(300);
+    const [expense] = await createExpenses(sessionId, [
+      { description: "Coffee", amountMinor: 250, categoryId: null },
+    ]);
+    await deleteExpense(sessionId, expense.id);
+    expect(await redis.ttl(keys.expenses)).toBe(-2);
+    await createExpenses(sessionId, [
+      {
+        description: "Tea",
+        amountMinor: 150,
+        categoryId: recreatedCategory.id,
+      },
+    ]);
+    expect(await redis.ttl(keys.expenses)).toBe(300);
+  });
+
+  it("expires independently created keys at their fixed deadlines", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
+    const sessionId = randomUUID();
+    const config = dependencies.config!;
+    const keys = createSessionKeys(config.redisKeyPrefix, sessionId);
+    await saveSessionId(sessionId);
+    vi.advanceTimersByTime(60_000);
+    const category = await createCategory(sessionId, "Food");
+    vi.advanceTimersByTime(60_000);
+    await createExpenses(sessionId, [
+      { description: "Lunch", amountMinor: 125, categoryId: category.id },
+    ]);
+
+    vi.advanceTimersByTime(180_000);
+    expect(await redis.exists(keys.meta)).toBe(0);
+    expect(await redis.exists(keys.categories)).toBe(1);
+    expect(await redis.exists(keys.expenses)).toBe(1);
+    vi.advanceTimersByTime(60_000);
+    expect(await redis.exists(keys.categories)).toBe(0);
+    expect(await redis.exists(keys.expenses)).toBe(1);
+    vi.advanceTimersByTime(60_000);
+    expect(await redis.exists(keys.expenses)).toBe(0);
   });
 
   it("round-trips split resources and keeps cascades and TTLs consistent", async () => {

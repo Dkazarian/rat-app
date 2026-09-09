@@ -1,4 +1,4 @@
-import type { Redis } from "@upstash/redis";
+import type { ExpireOption, Redis } from "@upstash/redis";
 
 type RedisValue = string | Record<string, unknown>;
 type QueuedCommand = () => Promise<unknown>;
@@ -69,6 +69,10 @@ export class InMemoryRedis {
         deleted += 1;
       }
     }
+    if (Object.keys(value).length === 0) {
+      this.values.delete(key);
+      this.expiresAt.delete(key);
+    }
     return deleted;
   }
 
@@ -82,9 +86,16 @@ export class InMemoryRedis {
     return deleted;
   }
 
-  async expire(key: string, seconds: number): Promise<number> {
+  async expire(
+    key: string,
+    seconds: number,
+    option?: ExpireOption,
+  ): Promise<number> {
     this.removeIfExpired(key);
     if (!this.values.has(key)) return 0;
+    if ((option === "NX" || option === "nx") && this.expiresAt.has(key)) {
+      return 0;
+    }
     this.expiresAt.set(key, Date.now() + seconds * 1_000);
     return 1;
   }
@@ -126,8 +137,8 @@ class InMemoryRedisTransaction {
     return this;
   }
 
-  expire(key: string, seconds: number): this {
-    this.commands.push(() => this.redis.expire(key, seconds));
+  expire(key: string, seconds: number, option?: ExpireOption): this {
+    this.commands.push(() => this.redis.expire(key, seconds, option));
     return this;
   }
 

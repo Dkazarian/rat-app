@@ -26,22 +26,7 @@ export async function saveSessionId(
         schemaVersion: "1",
         createdAt: String(now),
       })
-      .expire(keys.meta, config.sessionTtlSeconds)
+      .expire(keys.meta, config.sessionTtlSeconds, "NX")
       .exec();
-  });
-}
-
-export async function renewSessionTtl(sessionId: string): Promise<boolean> {
-  const config = getServerConfig();
-  const redis = getRedisClient();
-  const keys = createSessionKeys(config.redisKeyPrefix, sessionId);
-  return redisOperation(async () => {
-    const result = await redis
-      .multi()
-      .expire(keys.meta, config.sessionTtlSeconds)
-      .expire(keys.categories, config.sessionTtlSeconds)
-      .expire(keys.expenses, config.sessionTtlSeconds)
-      .exec();
-    return result[0] === 1;
   });
 }

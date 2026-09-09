@@ -11,13 +11,15 @@ export async function POST(request: NextRequest) {
       request.cookies.get(SESSION_COOKIE_NAME)?.value,
     );
     const response = new NextResponse(null, { status: 204 });
-    response.cookies.set(SESSION_COOKIE_NAME, resolved.sessionId, {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: config.environment === "production",
-      path: "/",
-      maxAge: config.sessionTtlSeconds,
-    });
+    if (resolved.created) {
+      response.cookies.set(SESSION_COOKIE_NAME, resolved.sessionId, {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: config.environment === "production",
+        path: "/",
+        maxAge: config.sessionTtlSeconds,
+      });
+    }
     return response;
   } catch (error) {
     return errorResponse(error);

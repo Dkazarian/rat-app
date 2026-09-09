@@ -4,7 +4,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const sessions = vi.hoisted(() => ({
   saveSessionId: vi.fn(),
   getSessionId: vi.fn(),
-  renewSessionTtl: vi.fn(),
 }));
 vi.mock("@/server/redis/session-repository", () => sessions);
 import { resolveSession } from "./resolve-session";
@@ -13,7 +12,6 @@ describe("resolveSession", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     sessions.getSessionId.mockResolvedValue(null);
-    sessions.renewSessionTtl.mockResolvedValue(true);
   });
 
   it("resumes a live cookie session", async () => {
@@ -24,7 +22,7 @@ describe("resolveSession", () => {
       created: false,
     });
     expect(sessions.saveSessionId).not.toHaveBeenCalled();
-    expect(sessions.renewSessionTtl).toHaveBeenCalledWith(sessionId);
+    expect(sessions.getSessionId).toHaveBeenCalledWith(sessionId);
   });
 
   it("creates an empty replacement for an invalid or expired cookie", async () => {

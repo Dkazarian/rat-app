@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Redis } from "@upstash/redis";
 import type { ServerConfig } from "@/server/config";
 import { createSessionKeys } from "@/server/redis/keys";
@@ -39,6 +39,48 @@ describe("Redis session seeder", () => {
     dependencies.config = createConfig();
   });
 
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("creates missing fixture hashes with the configured TTL", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
+    const sessionId = randomUUID();
+    const config = dependencies.config!;
+    const keys = createSessionKeys(config.redisKeyPrefix, sessionId);
+    await redis.hset(keys.meta, { schemaVersion: "1", createdAt: "0" });
+    await redis.expire(keys.meta, config.sessionTtlSeconds);
+
+    await seedExistingSession(sessionId);
+
+    expect(await redis.ttl(keys.meta)).toBe(300);
+    expect(await redis.ttl(keys.categories)).toBe(300);
+    expect(await redis.ttl(keys.expenses)).toBe(300);
+  });
+
+  it("preserves reduced TTLs while updating existing fixtures", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
+    const sessionId = randomUUID();
+    const config = dependencies.config!;
+    const keys = createSessionKeys(config.redisKeyPrefix, sessionId);
+    await redis.hset(keys.meta, { schemaVersion: "1", createdAt: "0" });
+    await redis.hset(keys.categories, { old: "category" });
+    await redis.hset(keys.expenses, { old: "expense" });
+    await redis.expire(keys.meta, config.sessionTtlSeconds);
+    await redis.expire(keys.categories, config.sessionTtlSeconds);
+    await redis.expire(keys.expenses, config.sessionTtlSeconds);
+    vi.advanceTimersByTime(60_000);
+
+    await seedExistingSession(sessionId);
+    await seedExistingSession(sessionId);
+
+    expect(await redis.ttl(keys.meta)).toBe(240);
+    expect(await redis.ttl(keys.categories)).toBe(240);
+    expect(await redis.ttl(keys.expenses)).toBe(240);
+  });
+
   it("upserts encoded, expiring fixtures without touching another session", async () => {
     const sessionId = randomUUID();
     const otherSessionId = randomUUID();
@@ -47,6 +89,7 @@ describe("Redis session seeder", () => {
     const otherKeys = createSessionKeys(config.redisKeyPrefix, otherSessionId);
 
     await redis.hset(keys.meta, { schemaVersion: "1", createdAt: "1" });
+    await redis.expire(keys.meta, config.sessionTtlSeconds);
     await redis.hset(keys.categories, {
       [seedCategories[0].id]: JSON.stringify({
         ...seedCategories[0],

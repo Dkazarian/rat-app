@@ -15,7 +15,6 @@ const mocks = vi.hoisted(() => ({
   sessions: {
     saveSessionId: vi.fn(),
     getSessionId: vi.fn(),
-    renewSessionTtl: vi.fn(),
   },
 }));
 
@@ -59,6 +58,7 @@ describe("POST /api/v1/session", () => {
     expect(response.status).toBe(204);
     expect(await response.text()).toBe("");
     expect(mocks.sessions.saveSessionId).not.toHaveBeenCalled();
+    expect(response.headers.get("set-cookie")).toBeNull();
   });
 
   it("marks the cookie Secure in production", async () => {

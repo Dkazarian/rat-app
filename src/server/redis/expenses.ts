@@ -86,7 +86,7 @@ export async function createExpenses(
         [expense.id]: encodeRecord(expense),
       });
     }
-    transaction.expire(keys.expenses, config.sessionTtlSeconds);
+    transaction.expire(keys.expenses, config.sessionTtlSeconds, "NX");
     await transaction.exec();
     return expenses;
   });

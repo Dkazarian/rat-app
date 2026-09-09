@@ -61,7 +61,7 @@ export async function createCategory(
     await redis
       .multi()
       .hset(keys.categories, { [category.id]: encodeRecord(category) })
-      .expire(keys.categories, config.sessionTtlSeconds)
+      .expire(keys.categories, config.sessionTtlSeconds, "NX")
       .exec();
     return { ...category, totalMinor: 0 };
   });
@@ -92,8 +92,6 @@ export async function deleteCategory(
       }
     }
     transaction.hdel(keys.categories, categoryId);
-    transaction.expire(keys.categories, config.sessionTtlSeconds);
-    transaction.expire(keys.expenses, config.sessionTtlSeconds);
     await transaction.exec();
   });
 }

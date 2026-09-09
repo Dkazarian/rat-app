@@ -28,9 +28,8 @@ export async function seedExistingSession(sessionId: string): Promise<string> {
         seedExpenses.map((expense) => [expense.id, encodeRecord(expense)]),
       ),
     )
-    .expire(keys.meta, config.sessionTtlSeconds)
-    .expire(keys.categories, config.sessionTtlSeconds)
-    .expire(keys.expenses, config.sessionTtlSeconds)
+    .expire(keys.categories, config.sessionTtlSeconds, "NX")
+    .expire(keys.expenses, config.sessionTtlSeconds, "NX")
     .exec();
   return sessionId;
 }
