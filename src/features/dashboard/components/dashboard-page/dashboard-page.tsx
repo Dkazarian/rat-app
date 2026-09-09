@@ -78,20 +78,31 @@ export function DashboardPage({ api = browserSessionApi }: DashboardPageProps) {
     },
     [],
   );
-  const handleOperationError = useCallback(
+  const handleOperationError = useCallback((error: unknown) => {
+    setFeedback({
+      state: "provider-error",
+      detailKey: getApiErrorTranslationKey(error),
+    });
+  }, []);
+  const handleSessionExpired = useCallback(() => {
+    setFeedback({
+      state: "provider-error",
+      detailKey: "apiErrorSessionNotFound",
+    });
+    notifyDataChanged();
+  }, [notifyDataChanged]);
+  const handleMutationError = useCallback(
     (error: unknown) => {
-      setFeedback({
-        state: "provider-error",
-        detailKey: getApiErrorTranslationKey(error),
-      });
       if (
         error instanceof SessionApiError &&
         error.code === "session_not_found"
       ) {
-        notifyDataChanged();
+        handleSessionExpired();
+        return;
       }
+      handleOperationError(error);
     },
-    [notifyDataChanged],
+    [handleOperationError, handleSessionExpired],
   );
 
   const submitPrompt = async () => {
@@ -122,12 +133,15 @@ export function DashboardPage({ api = browserSessionApi }: DashboardPageProps) {
       );
       notifyDataChanged();
     } catch (error) {
-      setFeedback(mapPromptOutcomeToRatFeedback(promptOutcomeFromError(error)));
       if (
         error instanceof SessionApiError &&
         error.code === "session_not_found"
       ) {
-        notifyDataChanged();
+        handleSessionExpired();
+      } else {
+        setFeedback(
+          mapPromptOutcomeToRatFeedback(promptOutcomeFromError(error)),
+        );
       }
     }
   };
@@ -158,8 +172,8 @@ export function DashboardPage({ api = browserSessionApi }: DashboardPageProps) {
               isMutating={isMutating}
               runMutation={runMutation}
               onDataChanged={notifyDataChanged}
-              onSessionExpired={notifyDataChanged}
-              onOperationError={handleOperationError}
+              onSessionExpired={handleSessionExpired}
+              onOperationError={handleMutationError}
             />
           </main>
         </AppShell>

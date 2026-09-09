@@ -322,4 +322,191 @@ describe("DashboardPage API composition", () => {
     );
     expect(panel.getByRole("alert")).not.toHaveTextContent("English server");
   });
+
+  it("preserves a prompt draft and refreshes empty state after expiration", async () => {
+    const api = createApi();
+    const emptyCategories = {
+      categories: [],
+      unclassifiedTotalMinor: 0,
+      totalMinor: 0,
+    };
+    vi.mocked(api.submitPrompt).mockRejectedValueOnce(
+      new SessionApiError(
+        "session_not_found",
+        "The session is unavailable or has expired.",
+      ),
+    );
+    const { user } = renderDashboard(api);
+    await screen.findByText("Lunch");
+    vi.mocked(api.getCategories).mockResolvedValue(emptyCategories);
+    vi.mocked(api.getExpenses).mockResolvedValue({ expenses: [] });
+
+    const input = screen.getByRole("textbox", { name: "What did you spend?" });
+    const exact = "  coffee???\n$4.50  ";
+    await user.type(input, exact);
+    await user.click(screen.getByRole("button", { name: "Sort it" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Session expired. Continue to start fresh.",
+    );
+    expect(input).toHaveValue(exact);
+    await waitFor(() => {
+      expect(api.getCategories).toHaveBeenCalledTimes(2);
+      expect(api.getExpenses).toHaveBeenCalledTimes(2);
+      expect(screen.queryByText("Lunch")).not.toBeInTheDocument();
+      expect(screen.queryByText("Food")).not.toBeInTheDocument();
+    });
+    expect(api.submitPrompt).toHaveBeenCalledTimes(1);
+
+    vi.mocked(api.submitPrompt).mockResolvedValueOnce({
+      expenses: [
+        {
+          id: "20000000-0000-4000-8000-000000000002",
+          description: "Coffee",
+          amountMinor: 450,
+          categoryId: null,
+          createdAt: 2,
+        },
+      ],
+      rejectedCount: 0,
+    });
+    await user.click(screen.getByRole("button", { name: "Sort it" }));
+
+    await waitFor(() => expect(api.submitPrompt).toHaveBeenCalledTimes(2));
+    expect(input).toHaveValue("");
+  });
+
+  it("preserves a category draft and does not retry creation after expiration", async () => {
+    const api = createApi();
+    vi.mocked(api.createCategory).mockRejectedValueOnce(
+      new SessionApiError(
+        "session_not_found",
+        "The session is unavailable or has expired.",
+      ),
+    );
+    const { user } = renderDashboard(api);
+    await screen.findByText("Lunch");
+    vi.mocked(api.getCategories).mockResolvedValue({
+      categories: [],
+      unclassifiedTotalMinor: 0,
+      totalMinor: 0,
+    });
+    vi.mocked(api.getExpenses).mockResolvedValue({ expenses: [] });
+
+    const panel = within(
+      screen.getByRole("complementary", { name: "Categories" }),
+    );
+    await user.click(panel.getByRole("button", { name: "New" }));
+    const input = panel.getByRole("textbox", { name: "Category name" });
+    const exact = "  Health  ";
+    await user.type(input, exact);
+    await user.click(panel.getByRole("button", { name: "Add" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Session expired. Continue to start fresh.",
+    );
+    expect(input).toHaveValue(exact);
+    await waitFor(() => {
+      expect(api.getCategories).toHaveBeenCalledTimes(2);
+      expect(api.getExpenses).toHaveBeenCalledTimes(2);
+      expect(screen.queryByText("Lunch")).not.toBeInTheDocument();
+    });
+    expect(api.createCategory).toHaveBeenCalledTimes(1);
+
+    await user.click(panel.getByRole("button", { name: "Add" }));
+    await waitFor(() => expect(api.createCategory).toHaveBeenCalledTimes(2));
+  });
+
+  it("refreshes stale data after an expired expense delete and allows a later prompt", async () => {
+    const api = createApi();
+    vi.mocked(api.deleteExpense).mockRejectedValueOnce(
+      new SessionApiError(
+        "session_not_found",
+        "The session is unavailable or has expired.",
+      ),
+    );
+    const { user } = renderDashboard(api);
+    const expenses = within(
+      await screen.findByRole("region", { name: "Recent expenses" }),
+    );
+    vi.mocked(api.getCategories).mockResolvedValue({
+      categories: [],
+      unclassifiedTotalMinor: 0,
+      totalMinor: 0,
+    });
+    vi.mocked(api.getExpenses).mockResolvedValue({ expenses: [] });
+
+    await user.click(expenses.getByRole("button", { name: "Delete Lunch" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Session expired. Continue to start fresh.",
+    );
+    await waitFor(() => {
+      expect(api.deleteExpense).toHaveBeenCalledTimes(1);
+      expect(api.getCategories).toHaveBeenCalledTimes(2);
+      expect(api.getExpenses).toHaveBeenCalledTimes(2);
+      expect(screen.queryByText("Lunch")).not.toBeInTheDocument();
+    });
+
+    vi.mocked(api.submitPrompt).mockResolvedValueOnce({
+      expenses: [
+        {
+          id: "20000000-0000-4000-8000-000000000002",
+          description: "Coffee",
+          amountMinor: 450,
+          categoryId: null,
+          createdAt: 2,
+        },
+      ],
+      rejectedCount: 0,
+    });
+    const input = screen.getByRole("textbox", { name: "What did you spend?" });
+    await user.type(input, "Coffee $4.50");
+    await user.click(screen.getByRole("button", { name: "Sort it" }));
+    await waitFor(() => expect(api.submitPrompt).toHaveBeenCalledTimes(1));
+  });
+
+  it("refreshes stale data after an expired category delete and allows a later category", async () => {
+    const api = createApi();
+    vi.mocked(api.deleteCategory).mockRejectedValueOnce(
+      new SessionApiError(
+        "session_not_found",
+        "The session is unavailable or has expired.",
+      ),
+    );
+    const { user } = renderDashboard(api);
+    await screen.findByText("Lunch");
+    vi.mocked(api.getCategories).mockResolvedValue({
+      categories: [],
+      unclassifiedTotalMinor: 0,
+      totalMinor: 0,
+    });
+    vi.mocked(api.getExpenses).mockResolvedValue({ expenses: [] });
+
+    const panel = within(
+      screen.getByRole("complementary", { name: "Categories" }),
+    );
+    await user.click(panel.getByRole("button", { name: "Delete Food" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Session expired. Continue to start fresh.",
+    );
+    await waitFor(() => {
+      expect(api.deleteCategory).toHaveBeenCalledTimes(1);
+      expect(api.getCategories).toHaveBeenCalledTimes(2);
+      expect(api.getExpenses).toHaveBeenCalledTimes(2);
+      expect(screen.queryByText("Lunch")).not.toBeInTheDocument();
+      expect(screen.queryByText("Food")).not.toBeInTheDocument();
+    });
+
+    await user.click(panel.getByRole("button", { name: "New" }));
+    await user.type(
+      panel.getByRole("textbox", { name: "Category name" }),
+      "Health",
+    );
+    await user.click(panel.getByRole("button", { name: "Add" }));
+    await waitFor(() =>
+      expect(api.createCategory).toHaveBeenCalledWith("Health"),
+    );
+  });
 });

@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { expect, it, vi } from "vitest";
+import { beforeEach, expect, it, vi } from "vitest";
 import {
   expenseId,
   otherSessionId,
@@ -7,12 +7,20 @@ import {
 } from "@/test/session-route-helpers";
 
 const mocks = vi.hoisted(() => ({
-  sessions: { getSessionId: vi.fn(async (id: string) => id) },
+  sessions: {
+    getSessionId: vi.fn(),
+    saveSessionId: vi.fn(),
+  },
   expenses: { deleteExpense: vi.fn() },
 }));
 vi.mock("@/server/redis/session-repository", () => mocks.sessions);
 vi.mock("@/server/redis/expenses", () => mocks.expenses);
 import { DELETE } from "./route";
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  mocks.sessions.getSessionId.mockImplementation(async (id: string) => id);
+});
 
 it("deletes the typed route expense within the cookie-selected session", async () => {
   const response = await DELETE(
@@ -49,4 +57,25 @@ it("rejects malformed expense IDs", async () => {
     error: { code: "invalid_request" },
   });
   expect(mocks.expenses.deleteExpense).not.toHaveBeenCalled();
+});
+
+it("does not create a session when deleting after expiration", async () => {
+  mocks.sessions.getSessionId.mockResolvedValue(null);
+
+  const response = await DELETE(
+    new NextRequest(`https://rat.test/api/v1/expenses/${expenseId}`, {
+      method: "DELETE",
+      headers: { cookie: `ratapp_session=${sessionId}` },
+    }),
+    { params: Promise.resolve({ expenseId }) },
+  );
+
+  expect(response.status).toBe(401);
+  expect(await response.json()).toMatchObject({
+    error: { code: "session_not_found" },
+  });
+  expect(mocks.sessions.getSessionId).toHaveBeenCalledWith(sessionId);
+  expect(mocks.sessions.saveSessionId).not.toHaveBeenCalled();
+  expect(mocks.expenses.deleteExpense).not.toHaveBeenCalled();
+  expect(response.headers.get("set-cookie")).toBeNull();
 });

@@ -81,4 +81,20 @@ describe("RatDialogue", () => {
       "AI is tiredTry again later.",
     );
   });
+
+  it.each([
+    ["en", "Session expired. Continue to start fresh."],
+    ["es", "La sesión venció. Continuá para empezar de nuevo."],
+  ] as const)("renders session expiration feedback in %s", (locale, text) => {
+    renderDialogue(
+      { state: "provider-error", detailKey: "apiErrorSessionNotFound" },
+      locale,
+    );
+
+    expect(screen.getByRole("alert")).toHaveTextContent(text);
+    expect(screen.getByRole("alert")).toHaveAttribute(
+      "data-state",
+      "provider-error",
+    );
+  });
 });

@@ -57,6 +57,7 @@ describe("/api/v1/categories", () => {
   it("uses only the cookie session even when another identifier is supplied", async () => {
     await GET(request());
     expect(mocks.sessions.getSessionId).toHaveBeenCalledWith(sessionId);
+    expect(mocks.sessions.getSessionId).toHaveBeenCalledTimes(1);
     expect(mocks.categories.listCategories).toHaveBeenCalledWith(sessionId);
     expect(mocks.expenses.listExpenses).toHaveBeenCalledWith(sessionId);
     expect(mocks.sessions.getSessionId).not.toHaveBeenCalledWith(
@@ -74,6 +75,24 @@ describe("/api/v1/categories", () => {
       unclassifiedTotalMinor: 0,
       totalMinor: 0,
     });
+    expect(mocks.categories.listCategories).not.toHaveBeenCalled();
+    expect(mocks.expenses.listExpenses).not.toHaveBeenCalled();
+    expect(mocks.sessions.saveSessionId).not.toHaveBeenCalled();
+    expect(response.headers.get("set-cookie")).toBeNull();
+  });
+
+  it("returns empty state without creating a session for an expired cookie", async () => {
+    mocks.sessions.getSessionId.mockResolvedValue(null);
+
+    const response = await GET(request());
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      categories: [],
+      unclassifiedTotalMinor: 0,
+      totalMinor: 0,
+    });
+    expect(mocks.sessions.getSessionId).toHaveBeenCalledWith(sessionId);
     expect(mocks.categories.listCategories).not.toHaveBeenCalled();
     expect(mocks.expenses.listExpenses).not.toHaveBeenCalled();
     expect(mocks.sessions.saveSessionId).not.toHaveBeenCalled();
@@ -132,6 +151,26 @@ describe("/api/v1/categories", () => {
     );
     expect(mocks.sessions.saveSessionId).not.toHaveBeenCalled();
     expect(response.headers.get("set-cookie")).toBeNull();
+  });
+
+  it("creates exactly one replacement and completes a category mutation after expiration", async () => {
+    mocks.sessions.getSessionId.mockResolvedValue(null);
+
+    const response = await POST(request("POST", { name: "Food" }));
+
+    expect(response.status).toBe(201);
+    const [replacementId] = mocks.sessions.saveSessionId.mock.calls[0];
+    expect(mocks.sessions.saveSessionId).toHaveBeenCalledTimes(1);
+    expect(replacementId).not.toBe(sessionId);
+    expect(mocks.categories.createCategory).toHaveBeenCalledTimes(1);
+    expect(mocks.categories.createCategory).toHaveBeenCalledWith(
+      replacementId,
+      "Food",
+    );
+    expect(response.headers.get("set-cookie")).toContain(
+      `ratapp_session=${replacementId}`,
+    );
+    expect(response.headers.get("set-cookie")).toContain("Max-Age=172800");
   });
 
   it("rejects unexpected category body fields", async () => {
