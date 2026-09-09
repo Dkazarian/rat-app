@@ -78,18 +78,20 @@ function renderDashboard(api: SessionApi) {
 }
 
 describe("DashboardPage API composition", () => {
-  it("validates empty prompts locally and retains textarea focus", async () => {
+  it("disables sorting for empty and whitespace-only prompts", async () => {
     const api = createApi();
     const { user } = renderDashboard(api);
     const input = await screen.findByRole("textbox", {
       name: "What did you spend?",
     });
+    const sortButton = screen.getByRole("button", { name: "Sort it" });
 
     expect(input).toHaveAttribute("maxLength", "500");
-    await user.click(screen.getByRole("button", { name: "Sort it" }));
+    expect(sortButton).toBeDisabled();
 
-    expect(screen.getByText("Enter an expense to sort.")).toBeVisible();
-    expect(input).toHaveFocus();
+    await user.type(input, "   \n\t  ");
+
+    expect(sortButton).toBeDisabled();
     expect(api.submitPrompt).not.toHaveBeenCalled();
   });
 

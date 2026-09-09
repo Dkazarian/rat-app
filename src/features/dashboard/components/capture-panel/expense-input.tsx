@@ -24,6 +24,7 @@ export function ExpenseInput({
 }: ExpenseInputProps) {
   const inputId = useId();
   const { t } = useLocale();
+  const isSubmitDisabled = disabled || !value.trim();
   const validationId = validationCode ? `${inputId}-validation` : undefined;
   const validationMessage = validationCode
     ? t(
@@ -58,7 +59,7 @@ export function ExpenseInput({
         />
         <button
           type="submit"
-          disabled={disabled}
+          disabled={isSubmitDisabled}
           className="min-w-24 cursor-pointer rounded-[14px] border-0 bg-[#efe7f2] px-4 font-medium text-[#26222d] outline-offset-2 focus-visible:outline-2 focus-visible:outline-[#86afe0] disabled:cursor-not-allowed disabled:opacity-60 max-[681px]:min-h-[46px]"
         >
           {t("sortAction")}
