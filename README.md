@@ -1,6 +1,6 @@
-# Ratapp
+# RatApp
 
-Ratapp is a personal expense-tracking demo built with Next.js, React, and TypeScript. Users can create custom spending categories, record expenses, and view a synchronized spending summary.
+RatApp is a personal expense-tracking demo built with Next.js, React, and TypeScript. Users can create custom spending categories, record expenses, and view a synchronized spending summary.
 
 It also supports natural-language expense entry powered by OpenAI: users can describe one or more expenses in English or Spanish, and Ratapp extracts and classifies them using their current category set.
 
