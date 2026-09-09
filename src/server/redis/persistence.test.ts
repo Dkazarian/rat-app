@@ -17,8 +17,9 @@ vi.mock("@/server/redis/client", () => ({
   getRedisClient: () => dependencies.client!,
 }));
 
-import { createCategory, deleteCategory, getCategories } from "./categories";
-import { createExpenses, deleteExpense, getExpenses } from "./expenses";
+import { createCategory, listCategories } from "./categories";
+import { deleteCategory } from "./category-deletion";
+import { createExpenses, deleteExpense, listExpenses } from "./expenses";
 import { createSessionKeys } from "./keys";
 import { getSessionId, saveSessionId } from "./session-repository";
 
@@ -164,12 +165,8 @@ describe("Redis persistence", () => {
 
     await saveSessionId(sessionId, 1_000);
     expect(await getSessionId(sessionId)).toBe(sessionId);
-    expect(await getCategories(sessionId)).toEqual({
-      categories: [],
-      unclassifiedTotalMinor: 0,
-      totalMinor: 0,
-    });
-    expect(await getExpenses(sessionId)).toEqual({ expenses: [] });
+    expect(await listCategories(sessionId)).toEqual([]);
+    expect(await listExpenses(sessionId)).toEqual([]);
 
     const food = await createCategory(sessionId, "Food");
     const unused = await createCategory(sessionId, "Unused");
@@ -181,14 +178,9 @@ describe("Redis persistence", () => {
       ],
       2_000,
     );
-    expect(await getCategories(sessionId)).toEqual({
-      categories: expect.arrayContaining([
-        { ...food, totalMinor: 125 },
-        unused,
-      ]),
-      unclassifiedTotalMinor: 300,
-      totalMinor: 425,
-    });
+    expect(await listCategories(sessionId)).toEqual(
+      expect.arrayContaining([food, unused]),
+    );
     await expect(
       createExpenses(
         sessionId,
@@ -201,12 +193,8 @@ describe("Redis persistence", () => {
     ).rejects.toMatchObject({ code: "expense_limit_reached" });
 
     await deleteCategory(sessionId, food.id);
-    expect(await getCategories(sessionId)).toEqual({
-      categories: [unused],
-      unclassifiedTotalMinor: 425,
-      totalMinor: 425,
-    });
-    expect((await getExpenses(sessionId)).expenses).toEqual(
+    expect(await listCategories(sessionId)).toEqual([unused]);
+    expect(await listExpenses(sessionId)).toEqual(
       expect.arrayContaining([
         { ...categorized, categoryId: null },
         { ...unclassified, categoryId: null },
@@ -214,11 +202,11 @@ describe("Redis persistence", () => {
     );
 
     await deleteExpense(sessionId, categorized.id);
-    expect((await getExpenses(sessionId)).expenses).toEqual([unclassified]);
+    expect(await listExpenses(sessionId)).toEqual([unclassified]);
     await expect(
       deleteExpense(sessionId, categorized.id),
     ).resolves.toBeUndefined();
-    expect((await getExpenses(sessionId)).expenses).toEqual([unclassified]);
+    expect(await listExpenses(sessionId)).toEqual([unclassified]);
 
     dependencies.config = {
       ...config,
@@ -227,7 +215,7 @@ describe("Redis persistence", () => {
     await saveSessionId(sessionId);
     await createCategory(sessionId, "Only isolated");
     dependencies.config = config;
-    expect((await getCategories(sessionId)).categories).toEqual([unused]);
+    expect(await listCategories(sessionId)).toEqual([unused]);
 
     for (const key of Object.values(keys)) {
       expect(await redis.ttl(key)).toBeGreaterThan(0);
@@ -240,7 +228,7 @@ describe("Redis persistence", () => {
     await redis.hset(keys.expenses, {
       [corruptExpenseId]: JSON.stringify({ id: corruptExpenseId, bad: true }),
     });
-    await expect(getExpenses(sessionId)).rejects.toMatchObject({
+    await expect(listExpenses(sessionId)).rejects.toMatchObject({
       name: "RepositoryUnavailableError",
     });
   });
@@ -255,8 +243,6 @@ describe("Redis persistence", () => {
       ])
     )[0];
     await deleteExpense(sessionId, otherSessionExpense.id);
-    expect((await getExpenses(otherSessionId)).expenses).toEqual([
-      otherSessionExpense,
-    ]);
+    expect(await listExpenses(otherSessionId)).toEqual([otherSessionExpense]);
   });
 });

@@ -1,7 +1,12 @@
 import type { NextRequest } from "next/server";
 import type { CategoryMutationResponse } from "@/contracts/session-api";
+import { toCategoriesResponse } from "@/server/domain/category-rules";
 import { errorResponse } from "@/server/http/responses";
-import { createCategory, getCategories } from "@/server/redis/categories";
+import {
+  createCategory,
+  listCategories,
+} from "@/server/redis/categories";
+import { listExpenses } from "@/server/redis/expenses";
 import {
   withLazySession,
   withOptionalSession,
@@ -17,7 +22,11 @@ export async function GET(request: NextRequest) {
         totalMinor: 0,
       });
     }
-    return Response.json(await getCategories(sessionId));
+    const [categories, expenses] = await Promise.all([
+      listCategories(sessionId),
+      listExpenses(sessionId),
+    ]);
+    return Response.json(toCategoriesResponse(categories, expenses));
   });
 }
 
@@ -26,9 +35,12 @@ export async function POST(request: NextRequest) {
     const { name } = categoryNameBodySchema.parse(await request.json());
     return withLazySession(request, async (sessionId) => {
       const category = await createCategory(sessionId, name);
-      return Response.json({ category } satisfies CategoryMutationResponse, {
-        status: 201,
-      });
+      return Response.json(
+        {
+          category: { ...category, totalMinor: 0 },
+        } satisfies CategoryMutationResponse,
+        { status: 201 },
+      );
     });
   } catch (error) {
     return errorResponse(error);

@@ -8,10 +8,10 @@ import {
 
 const mocks = vi.hoisted(() => ({
   sessions: { getSessionId: vi.fn(async (id: string) => id) },
-  categories: { deleteCategory: vi.fn() },
+  categoryDeletion: { deleteCategory: vi.fn() },
 }));
 vi.mock("@/server/redis/session-repository", () => mocks.sessions);
-vi.mock("@/server/redis/categories", () => mocks.categories);
+vi.mock("@/server/redis/category-deletion", () => mocks.categoryDeletion);
 import { DELETE } from "./route";
 
 it("deletes the typed route category within the cookie-selected session", async () => {
@@ -27,7 +27,7 @@ it("deletes the typed route category within the cookie-selected session", async 
   );
   expect(response.status).toBe(204);
   expect(await response.text()).toBe("");
-  expect(mocks.categories.deleteCategory).toHaveBeenCalledWith(
+  expect(mocks.categoryDeletion.deleteCategory).toHaveBeenCalledWith(
     sessionId,
     categoryId,
   );

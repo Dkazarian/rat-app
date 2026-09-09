@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 import { errorResponse } from "@/server/http/responses";
-import { deleteCategory } from "@/server/redis/categories";
+import { deleteCategory } from "@/server/redis/category-deletion";
 import {
   requireSessionId,
   SESSION_COOKIE_NAME,

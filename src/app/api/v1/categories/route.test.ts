@@ -9,7 +9,8 @@ import {
 
 const mocks = vi.hoisted(() => ({
   sessions: { getSessionId: vi.fn(), saveSessionId: vi.fn() },
-  categories: { getCategories: vi.fn(), createCategory: vi.fn() },
+  categories: { listCategories: vi.fn(), createCategory: vi.fn() },
+  expenses: { listExpenses: vi.fn() },
   config: {
     redisUrl: "https://redis.test",
     redisToken: "mock-token",
@@ -21,6 +22,7 @@ const mocks = vi.hoisted(() => ({
 }));
 vi.mock("@/server/redis/session-repository", () => mocks.sessions);
 vi.mock("@/server/redis/categories", () => mocks.categories);
+vi.mock("@/server/redis/expenses", () => mocks.expenses);
 vi.mock("@/server/config", () => ({ getServerConfig: () => mocks.config }));
 import { GET, POST } from "./route";
 
@@ -41,18 +43,22 @@ describe("/api/v1/categories", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.sessions.getSessionId.mockImplementation(async (id: string) => id);
-    mocks.categories.getCategories.mockResolvedValue({
-      categories: [category],
-      unclassifiedTotalMinor: 0,
-      totalMinor: category.totalMinor,
+    mocks.categories.listCategories.mockResolvedValue([
+      { id: category.id, name: category.name, color: category.color },
+    ]);
+    mocks.expenses.listExpenses.mockResolvedValue([]);
+    mocks.categories.createCategory.mockResolvedValue({
+      id: category.id,
+      name: category.name,
+      color: category.color,
     });
-    mocks.categories.createCategory.mockResolvedValue(category);
   });
 
   it("uses only the cookie session even when another identifier is supplied", async () => {
     await GET(request());
     expect(mocks.sessions.getSessionId).toHaveBeenCalledWith(sessionId);
-    expect(mocks.categories.getCategories).toHaveBeenCalledWith(sessionId);
+    expect(mocks.categories.listCategories).toHaveBeenCalledWith(sessionId);
+    expect(mocks.expenses.listExpenses).toHaveBeenCalledWith(sessionId);
     expect(mocks.sessions.getSessionId).not.toHaveBeenCalledWith(
       otherSessionId,
     );
@@ -68,7 +74,8 @@ describe("/api/v1/categories", () => {
       unclassifiedTotalMinor: 0,
       totalMinor: 0,
     });
-    expect(mocks.categories.getCategories).not.toHaveBeenCalled();
+    expect(mocks.categories.listCategories).not.toHaveBeenCalled();
+    expect(mocks.expenses.listExpenses).not.toHaveBeenCalled();
     expect(mocks.sessions.saveSessionId).not.toHaveBeenCalled();
     expect(response.headers.get("set-cookie")).toBeNull();
   });

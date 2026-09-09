@@ -16,8 +16,8 @@ import {
 } from "@/server/domain/expense-rules";
 import { normalizeCategoryName } from "@/server/domain/category-rules";
 import { errorResponse } from "@/server/http/responses";
-import { getCategories } from "@/server/redis/categories";
-import { createExpenses, getExpenses } from "@/server/redis/expenses";
+import { listCategories } from "@/server/redis/categories";
+import { createExpenses, listExpenses } from "@/server/redis/expenses";
 import { consumeAiRateLimit } from "@/server/redis/ai-rate-limiter";
 import { withLazySession } from "@/server/session/session-handler";
 import { promptBodySchema } from "@/server/validation";
@@ -81,23 +81,21 @@ async function submitPrompt(
   if (!rateLimit.allowed) {
     throw applicationErrors.rateLimited(rateLimit.retryAfterSeconds);
   }
-  const [categoriesResponse, expensesResponse] = await Promise.all([
-    getCategories(sessionId),
-    getExpenses(sessionId),
+  const [categories, currentExpenses] = await Promise.all([
+    listCategories(sessionId),
+    listExpenses(sessionId),
   ]);
   const config = getServerConfig();
   const remainingCapacity =
-    config.maxExpensesPerSession - expensesResponse.expenses.length;
+    config.maxExpensesPerSession - currentExpenses.length;
   if (remainingCapacity <= 0) throw applicationErrors.expenseLimit();
 
   const extraction = await extractExpenses({
     prompt,
     locale,
-    categoryNames: categoriesResponse.categories.map(({ name }) => name),
+    categoryNames: categories.map(({ name }) => name),
   });
-  const categoryIds = new Set(
-    categoriesResponse.categories.map(({ id }) => id),
-  );
+  const categoryIds = new Set(categories.map(({ id }) => id));
   const acceptedCandidates: ExpenseCandidate[] = [];
   let rejectedCount = 0;
 
@@ -109,7 +107,7 @@ async function submitPrompt(
           amountMinor: candidate.amountMinor,
           categoryId: resolveCategoryId(
             candidate.categoryName,
-            categoriesResponse.categories,
+            categories,
           ),
         },
         categoryIds,

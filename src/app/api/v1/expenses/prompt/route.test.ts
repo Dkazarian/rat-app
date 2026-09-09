@@ -8,8 +8,8 @@ const mocks = vi.hoisted(() => ({
     getSessionId: vi.fn(async (id: string) => id),
     saveSessionId: vi.fn(),
   },
-  categories: { getCategories: vi.fn() },
-  expenses: { getExpenses: vi.fn(), createExpenses: vi.fn() },
+  categories: { listCategories: vi.fn() },
+  expenses: { listExpenses: vi.fn(), createExpenses: vi.fn() },
   extractor: { extractExpenses: vi.fn() },
   rateLimit: { consumeAiRateLimit: vi.fn() },
   config: { getServerConfig: vi.fn() },
@@ -42,7 +42,6 @@ const food = {
   id: categoryId,
   name: "Food",
   color: "coral" as const,
-  totalMinor: 0,
 };
 
 const createdExpense = {
@@ -68,12 +67,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   config.maxExpensesPerSession = 100;
   mocks.config.getServerConfig.mockReturnValue(config);
-  mocks.categories.getCategories.mockResolvedValue({
-    categories: [food],
-    unclassifiedTotalMinor: 0,
-    totalMinor: 0,
-  });
-  mocks.expenses.getExpenses.mockResolvedValue({ expenses: [] });
+  mocks.categories.listCategories.mockResolvedValue([food]);
+  mocks.expenses.listExpenses.mockResolvedValue([]);
   mocks.expenses.createExpenses.mockResolvedValue([createdExpense]);
   mocks.extractor.extractExpenses.mockResolvedValue({
     expenses: [
@@ -111,8 +106,8 @@ describe("POST /api/v1/expenses/prompt", () => {
     expect(mocks.sessions.getSessionId).not.toHaveBeenCalled();
     expect(mocks.sessions.saveSessionId).not.toHaveBeenCalled();
     expect(mocks.rateLimit.consumeAiRateLimit).not.toHaveBeenCalled();
-    expect(mocks.categories.getCategories).not.toHaveBeenCalled();
-    expect(mocks.expenses.getExpenses).not.toHaveBeenCalled();
+    expect(mocks.categories.listCategories).not.toHaveBeenCalled();
+    expect(mocks.expenses.listExpenses).not.toHaveBeenCalled();
     expect(mocks.extractor.extractExpenses).not.toHaveBeenCalled();
     expect(mocks.expenses.createExpenses).not.toHaveBeenCalled();
   });
@@ -173,11 +168,9 @@ describe("POST /api/v1/expenses/prompt", () => {
 
   it("accepts partial batches in extraction order when capacity is limited", async () => {
     config.maxExpensesPerSession = 2;
-    mocks.expenses.getExpenses.mockResolvedValue({
-      expenses: [
-        { ...createdExpense, id: "30000000-0000-4000-8000-000000000001" },
-      ],
-    });
+    mocks.expenses.listExpenses.mockResolvedValue([
+      { ...createdExpense, id: "30000000-0000-4000-8000-000000000001" },
+    ]);
     mocks.extractor.extractExpenses.mockResolvedValue({
       expenses: [
         { description: "Coffee", amountMinor: 450, categoryName: null },
@@ -209,9 +202,7 @@ describe("POST /api/v1/expenses/prompt", () => {
 
   it("returns the limit before calling the extractor for a full session", async () => {
     config.maxExpensesPerSession = 1;
-    mocks.expenses.getExpenses.mockResolvedValue({
-      expenses: [createdExpense],
-    });
+    mocks.expenses.listExpenses.mockResolvedValue([createdExpense]);
 
     const response = await POST(request({ prompt: "Lunch $18", locale: "en" }));
 

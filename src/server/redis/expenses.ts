@@ -1,8 +1,6 @@
 import type { Redis } from "@upstash/redis";
-import type { ExpenseDto, ExpensesResponse } from "@/contracts/session-api";
 import { applicationErrors } from "@/server/domain/errors";
 import {
-  toExpensesResponse,
   validateExpenseCandidate,
   type ExpenseCandidate,
   type StoredExpense,
@@ -29,26 +27,19 @@ export async function readExpenses(
   });
 }
 
-export async function getExpenses(
+export async function listExpenses(
   sessionId: string,
-): Promise<ExpensesResponse> {
-  return sessionRedisOperation(sessionId, async ({ redis, keys }) => {
-    const [categories, expenses] = await Promise.all([
-      readCategories(redis, keys),
-      readExpenses(redis, keys),
-    ]);
-    return toExpensesResponse(
-      expenses,
-      new Set(categories.map(({ id }) => id)),
-    );
-  });
+): Promise<StoredExpense[]> {
+  return sessionRedisOperation(sessionId, ({ redis, keys }) =>
+    readExpenses(redis, keys),
+  );
 }
 
 export async function createExpenses(
   sessionId: string,
   candidates: ReadonlyArray<ExpenseCandidate>,
   now = Date.now(),
-): Promise<ReadonlyArray<ExpenseDto>> {
+): Promise<ReadonlyArray<StoredExpense>> {
   return sessionRedisOperation(sessionId, async ({ config, redis, keys }) => {
     if ((await redis.exists(keys.meta)) !== 1) {
       throw applicationErrors.sessionNotFound();
