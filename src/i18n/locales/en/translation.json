@@ -68,7 +68,7 @@
   "retry": "Retry",
   "apiErrorInvalidRequest": "The request was invalid. Check your input and try again.",
   "apiErrorInvalidCategoryName": "Enter a valid category name.",
-  "apiErrorSessionNotFound": "This anonymous session expired. Starting a new session…",
+  "apiErrorSessionNotFound": "Session expired. Continue to start fresh.",
   "apiErrorCategoryNotFound": "That category no longer exists.",
   "apiErrorCategoryNameDuplicate": "That category already exists.",
   "apiErrorCategoryLimitReached": "You can have up to 10 categories.",

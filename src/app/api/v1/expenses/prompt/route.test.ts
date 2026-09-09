@@ -1,11 +1,12 @@
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ExpenseExtractorError } from "@/server/ai/expense-extractor";
+import { applicationErrors } from "@/server/domain/errors";
 import { categoryId, expenseId, sessionId } from "@/test/session-route-helpers";
 
 const mocks = vi.hoisted(() => ({
   sessions: {
-    getSessionId: vi.fn(async (id: string) => id),
+    getSessionId: vi.fn(),
     saveSessionId: vi.fn(),
   },
   categories: { listCategories: vi.fn() },
@@ -65,6 +66,7 @@ function request(body: unknown, cookie: string = sessionId) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.sessions.getSessionId.mockImplementation(async (id: string) => id);
   config.maxExpensesPerSession = 100;
   mocks.config.getServerConfig.mockReturnValue(config);
   mocks.categories.listCategories.mockResolvedValue([food]);
@@ -129,6 +131,8 @@ describe("POST /api/v1/expenses/prompt", () => {
     expect(mocks.expenses.createExpenses).toHaveBeenCalledWith(sessionId, [
       { description: "Lunch", amountMinor: 1800, categoryId },
     ]);
+    expect(mocks.sessions.saveSessionId).not.toHaveBeenCalled();
+    expect(response.headers.get("set-cookie")).toBeNull();
   });
 
   it("keeps valid candidates in order and counts invalid candidates", async () => {
@@ -263,6 +267,65 @@ describe("POST /api/v1/expenses/prompt", () => {
     );
     expect(response.headers.get("set-cookie")).toContain(
       `ratapp_session=${createdSessionId}`,
+    );
+  });
+
+  it("creates exactly one replacement and completes a prompt after expiration", async () => {
+    mocks.sessions.getSessionId.mockResolvedValue(null);
+
+    const response = await POST(request({ prompt: "Lunch $18", locale: "en" }));
+
+    expect(response.status).toBe(200);
+    const [replacementId] = mocks.sessions.saveSessionId.mock.calls[0];
+    expect(mocks.sessions.getSessionId).toHaveBeenCalledWith(sessionId);
+    expect(mocks.sessions.getSessionId).toHaveBeenCalledTimes(1);
+    expect(mocks.sessions.saveSessionId).toHaveBeenCalledTimes(1);
+    expect(replacementId).not.toBe(sessionId);
+    expect(mocks.rateLimit.consumeAiRateLimit).toHaveBeenCalledWith(
+      replacementId,
+    );
+    expect(mocks.categories.listCategories).toHaveBeenCalledWith(replacementId);
+    expect(mocks.expenses.listExpenses).toHaveBeenCalledWith(replacementId);
+    expect(mocks.extractor.extractExpenses).toHaveBeenCalledTimes(1);
+    expect(mocks.expenses.createExpenses).toHaveBeenCalledWith(
+      replacementId,
+      expect.any(Array),
+    );
+    expect(response.headers.get("set-cookie")).toContain(
+      `ratapp_session=${replacementId}`,
+    );
+  });
+
+  it("does not replay a prompt after a post-resolution expiration race", async () => {
+    mocks.rateLimit.consumeAiRateLimit.mockRejectedValueOnce(
+      applicationErrors.sessionNotFound(),
+    );
+
+    const failedResponse = await POST(
+      request({ prompt: "Lunch $18", locale: "en" }),
+    );
+
+    expect(failedResponse.status).toBe(401);
+    await expect(failedResponse.json()).resolves.toMatchObject({
+      error: { code: "session_not_found" },
+    });
+    expect(mocks.sessions.getSessionId).toHaveBeenCalledWith(sessionId);
+    expect(mocks.sessions.saveSessionId).not.toHaveBeenCalled();
+    expect(mocks.extractor.extractExpenses).not.toHaveBeenCalled();
+    expect(mocks.expenses.createExpenses).not.toHaveBeenCalled();
+    expect(failedResponse.headers.get("set-cookie")).toBeNull();
+
+    mocks.sessions.getSessionId.mockResolvedValue(null);
+    const recoveredResponse = await POST(
+      request({ prompt: "Lunch $18", locale: "en" }),
+    );
+
+    expect(recoveredResponse.status).toBe(200);
+    expect(mocks.sessions.saveSessionId).toHaveBeenCalledTimes(1);
+    expect(mocks.extractor.extractExpenses).toHaveBeenCalledTimes(1);
+    expect(mocks.expenses.createExpenses).toHaveBeenCalledTimes(1);
+    expect(recoveredResponse.headers.get("set-cookie")).toContain(
+      `ratapp_session=${mocks.sessions.saveSessionId.mock.calls[0][0]}`,
     );
   });
 });

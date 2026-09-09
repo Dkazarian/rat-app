@@ -5,9 +5,10 @@ import { RatDialogue } from "./rat-dialogue";
 
 function renderDialogue(
   feedback: Parameters<typeof RatDialogue>[0]["feedback"],
+  initialLocale: "en" | "es" = "en",
 ) {
   return render(
-    <I18nProvider>
+    <I18nProvider initialLocale={initialLocale}>
       <RatDialogue feedback={feedback} />
     </I18nProvider>,
   );
@@ -41,6 +42,22 @@ describe("RatDialogue", () => {
     renderDialogue({ state: "rate-limited" });
     expect(screen.getByRole("alert")).toHaveTextContent(
       "AI is tiredTry again later.",
+    );
+  });
+
+  it.each([
+    ["en", "Session expired. Continue to start fresh."],
+    ["es", "La sesión venció. Continuá para empezar de nuevo."],
+  ] as const)("renders session expiration feedback in %s", (locale, text) => {
+    renderDialogue(
+      { state: "provider-error", detailKey: "apiErrorSessionNotFound" },
+      locale,
+    );
+
+    expect(screen.getByRole("alert")).toHaveTextContent(text);
+    expect(screen.getByRole("alert")).toHaveAttribute(
+      "data-state",
+      "provider-error",
     );
   });
 });

@@ -26,10 +26,29 @@ describe("resolveSession", () => {
     expect(sessions.getSessionId).toHaveBeenCalledTimes(1);
   });
 
-  it("creates an empty replacement for an invalid or expired cookie", async () => {
+  it("creates an empty replacement without querying Redis for a malformed cookie", async () => {
     const result = await resolveSession("invalid");
     expect(result.created).toBe(true);
     expect(result.sessionId).toMatch(/^[0-9a-f-]{36}$/);
+    expect(sessions.getSessionId).not.toHaveBeenCalled();
     expect(sessions.saveSessionId).toHaveBeenCalledWith(result.sessionId);
+    expect(sessions.saveSessionId).toHaveBeenCalledTimes(1);
+  });
+
+  it("creates one fresh replacement for an expired canonical cookie", async () => {
+    const expiredSessionId = randomUUID();
+    sessions.getSessionId.mockResolvedValue(null);
+
+    const result = await resolveSession(expiredSessionId);
+
+    expect(result).toEqual({
+      sessionId: expect.any(String),
+      created: true,
+    });
+    expect(result.sessionId).not.toBe(expiredSessionId);
+    expect(sessions.getSessionId).toHaveBeenCalledWith(expiredSessionId);
+    expect(sessions.getSessionId).toHaveBeenCalledTimes(1);
+    expect(sessions.saveSessionId).toHaveBeenCalledWith(result.sessionId);
+    expect(sessions.saveSessionId).toHaveBeenCalledTimes(1);
   });
 });

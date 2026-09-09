@@ -68,7 +68,7 @@
   "retry": "Reintentar",
   "apiErrorInvalidRequest": "La solicitud no es válida. Revisá los datos e intentá de nuevo.",
   "apiErrorInvalidCategoryName": "Ingresá un nombre de categoría válido.",
-  "apiErrorSessionNotFound": "Esta sesión anónima venció. Iniciando una nueva sesión…",
+  "apiErrorSessionNotFound": "La sesión venció. Continuá para empezar de nuevo.",
   "apiErrorCategoryNotFound": "Esa categoría ya no existe.",
   "apiErrorCategoryNameDuplicate": "Esa categoría ya existe.",
   "apiErrorCategoryLimitReached": "Podés tener hasta 10 categorías.",
